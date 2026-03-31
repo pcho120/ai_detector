@@ -1,0 +1,16 @@
+
+> ai-detector@0.1.0 test
+> vitest run
+
+
+ RUN  v3.2.4 /home/paul/dev/personal/projects/ai_detector
+
+ ✓ tests/unit/temp.test.ts (8 tests) 14ms
+ ✓ tests/unit/validate.test.ts (13 tests) 16ms
+ ✓ tests/unit/homepage.test.tsx (1 test) 98ms
+
+ Test Files  3 passed (3)
+      Tests  22 passed (22)
+   Start at  13:17:28
+   Duration  1.38s (transform 112ms, setup 260ms, collect 246ms, tests 128ms, environment 1.37s, prepare 1.04s)
+

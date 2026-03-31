@@ -1,0 +1,38 @@
+ ✓ tests/unit/highlights.test.ts > buildHighlightSpans - empty inputs > returns empty array for empty sentence list 2ms
+ ✓ tests/unit/highlights.test.ts > buildHighlightSpans - empty inputs > returns empty array when text is empty string 1ms
+ ✓ tests/unit/highlights.test.ts > buildHighlightSpans - empty inputs > returns empty array when all sentences are empty strings 0ms
+ ✓ tests/unit/highlights.test.ts > buildHighlightSpans - empty inputs > returns empty array when no sentence matches the text 1ms
+ ✓ tests/unit/highlights.test.ts > buildHighlightSpans - single sentence > maps a single sentence to correct start/end offsets 1ms
+ ✓ tests/unit/highlights.test.ts > buildHighlightSpans - single sentence > span text slice matches the original extracted text (not the sentence string) 1ms
+ ✓ tests/unit/highlights.test.ts > buildHighlightSpans - single sentence > attaches correct score to the span 0ms
+ ✓ tests/unit/highlights.test.ts > buildHighlightSpans - multiple sentences > returns spans for both sentences in a two-sentence text 1ms
+ ✓ tests/unit/highlights.test.ts > buildHighlightSpans - multiple sentences > output is sorted ascending by start offset regardless of sentence input order 1ms
+ ✓ tests/unit/highlights.test.ts > buildHighlightSpans - multiple sentences > spans do not overlap for adjacent non-overlapping sentences 1ms
+ ✓ tests/unit/highlights.test.ts > buildHighlightSpans - duplicate sentences > maps first occurrence to the first position 0ms
+ ✓ tests/unit/highlights.test.ts > buildHighlightSpans - duplicate sentences > maps two identical sentences to two different offsets 1ms
+ ✓ tests/unit/highlights.test.ts > buildHighlightSpans - duplicate sentences > second duplicate maps to later offset than first 0ms
+ ✓ tests/unit/highlights.test.ts > buildHighlightSpans - duplicate sentences > third occurrence of a sentence is not returned when only two provided 1ms
+ ✓ tests/unit/highlights.test.ts > buildHighlightSpans - duplicate sentences > preserves correct score per duplicate occurrence 1ms
+ ✓ tests/unit/highlights.test.ts > buildHighlightSpans - whitespace/punctuation normalisation > matches sentence with extra surrounding whitespace in the detector output 0ms
+ ✓ tests/unit/highlights.test.ts > buildHighlightSpans - whitespace/punctuation normalisation > matches sentence with internal whitespace variations 0ms
+ ✓ tests/unit/highlights.test.ts > buildHighlightSpans - whitespace/punctuation normalisation > does not mutate the original text string 0ms
+ ✓ tests/unit/highlights.test.ts > buildHighlightSpans - offset correctness > span offsets are valid indices into the original text 0ms
+ ✓ tests/unit/highlights.test.ts > buildHighlightSpans - offset correctness > unmatched sentences are skipped without affecting matched ones 0ms
+ ✓ tests/unit/highlights.test.ts > buildHighlightSpans - label assignment > assigns high label for scores at or above HIGH_RISK_THRESHOLD 0ms
+ ✓ tests/unit/highlights.test.ts > buildHighlightSpans - label assignment > assigns medium label for scores at MEDIUM_RISK_THRESHOLD 0ms
+ ✓ tests/unit/highlights.test.ts > buildHighlightSpans - label assignment > assigns low label for scores below MEDIUM_RISK_THRESHOLD 0ms
+ ✓ tests/unit/highlights.test.ts > scoreToLabel > returns high for score at exactly HIGH_RISK_THRESHOLD 0ms
+ ✓ tests/unit/highlights.test.ts > scoreToLabel > returns high for score above HIGH_RISK_THRESHOLD 0ms
+ ✓ tests/unit/highlights.test.ts > scoreToLabel > returns medium for score at exactly MEDIUM_RISK_THRESHOLD 0ms
+ ✓ tests/unit/highlights.test.ts > scoreToLabel > returns medium for score between MEDIUM_RISK_THRESHOLD and HIGH_RISK_THRESHOLD 0ms
+ ✓ tests/unit/highlights.test.ts > scoreToLabel > returns low for score below MEDIUM_RISK_THRESHOLD 0ms
+ ✓ tests/unit/highlights.test.ts > buildHighlightSpans - deterministic ordering > output order is stable across multiple calls with same inputs 1ms
+ ✓ tests/unit/highlights.test.ts > buildHighlightSpans - deterministic ordering > spans are sorted by start offset even with out-of-order sentence input 0ms
+ ✓ tests/unit/highlights.test.ts > buildHighlightSpans - sentenceIndex correctness > single sentence gets sentenceIndex 0 0ms
+ ✓ tests/unit/highlights.test.ts > buildHighlightSpans - sentenceIndex correctness > sentenceIndex reflects original array position, not sorted span position 0ms
+ ✓ tests/unit/highlights.test.ts > buildHighlightSpans - sentenceIndex correctness > duplicate sentences get distinct sentenceIndex values matching their input positions 0ms
+ ✓ tests/unit/highlights.test.ts > buildHighlightSpans - sentenceIndex correctness > sentenceIndex is within bounds of the sentences array 1ms
+ ✓ tests/unit/highlights.test.ts > buildHighlightSpans - sentenceIndex correctness > sentenceIndex of matched span indexes back into the sentences input array 0ms
+ ✓ tests/unit/highlights.test.ts > buildHighlightSpans - sentenceIndex correctness > unmatched sentences do not affect sentenceIndex of matched spans 0ms
+ ✓ tests/unit/highlights.test.ts > buildHighlightSpans - result is a HighlightSpan array > each span has start, end, score, label properties 1ms
+ ✓ tests/unit/highlights.test.ts > buildHighlightSpans - result is a HighlightSpan array > each span has a sentenceIndex property that is a number 0ms

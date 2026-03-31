@@ -1,0 +1,20 @@
+{
+  "score": 0.8016229165451867,
+  "sentence_scores": [
+    {
+      "score": 0.92,
+      "sentence": "The rapid advancement of artificial intelligence has transformed numerous industries."
+    },
+    {
+      "score": 0.85,
+      "sentence": "Machine learning algorithms now power recommendation systems, medical diagnostics, and autonomous vehicles."
+    },
+    {
+      "score": 0.12,
+      "sentence": "However, I think these changes raise important ethical questions about privacy and accountability."
+    }
+  ],
+  "text": "The rapid advancement of artificial intelligence has transformed numerous industries. Machine learning algorithms now power recommendation systems, medical diagnostics, and autonomous vehicles. However, I think these changes raise important ethical questions about privacy and accountability.",
+  "tokens": ["The", " rapid", " advancement", " of", " artificial", " intelligence"],
+  "token_probs": [0.8062, 0.8068, 0.8062, 0.8080, 0.8062, 0.8045]
+}

@@ -1,0 +1,20 @@
+{
+  "score": 0.97,
+  "sentence_scores": [
+    {
+      "score": 0.98,
+      "sentence": "In conclusion, the implementation of machine learning models demonstrates significant potential for optimization across various domains."
+    },
+    {
+      "score": 0.96,
+      "sentence": "Furthermore, the utilization of advanced algorithms enables the processing of large datasets with high efficiency and accuracy."
+    },
+    {
+      "score": 0.95,
+      "sentence": "It is important to note that these methodologies provide substantial improvements over traditional approaches."
+    }
+  ],
+  "text": "In conclusion, the implementation of machine learning models demonstrates significant potential for optimization across various domains. Furthermore, the utilization of advanced algorithms enables the processing of large datasets with high efficiency and accuracy. It is important to note that these methodologies provide substantial improvements over traditional approaches.",
+  "tokens": ["In", " conclusion", ",", " the", " implementation"],
+  "token_probs": [0.97, 0.98, 0.97, 0.97, 0.98]
+}

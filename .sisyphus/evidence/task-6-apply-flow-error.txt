@@ -1,0 +1,30 @@
+ ✓ tests/unit/revisedAnalysisReducer.test.ts > revisedAnalysisReducer > SET_ORIGINAL_RESULT > sets originalResult and resets all other fields 3ms
+ ✓ tests/unit/revisedAnalysisReducer.test.ts > revisedAnalysisReducer > RESET > returns to initial state 0ms
+ ✓ tests/unit/revisedAnalysisReducer.test.ts > revisedAnalysisReducer > SELECT_SENTENCE > updates selectedSentenceIndex and opens drawer 0ms
+ ✓ tests/unit/revisedAnalysisReducer.test.ts > revisedAnalysisReducer > SELECT_SENTENCE > allows re-selecting a different sentence index 0ms
+ ✓ tests/unit/revisedAnalysisReducer.test.ts > revisedAnalysisReducer > CLOSE_DRAWER > closes drawer but retains selected sentence index 0ms
+ ✓ tests/unit/revisedAnalysisReducer.test.ts > revisedAnalysisReducer > SUGGESTION_FETCH_START > sets status to loading for the given index 0ms
+ ✓ tests/unit/revisedAnalysisReducer.test.ts > revisedAnalysisReducer > SUGGESTION_FETCH_START > does not affect other cache entries 0ms
+ ✓ tests/unit/revisedAnalysisReducer.test.ts > revisedAnalysisReducer > SUGGESTION_FETCH_SUCCESS > stores rewrite and explanation with success status 0ms
+ ✓ tests/unit/revisedAnalysisReducer.test.ts > revisedAnalysisReducer > SUGGESTION_FETCH_UNAVAILABLE > marks the entry as success with unavailable:true 0ms
+ ✓ tests/unit/revisedAnalysisReducer.test.ts > revisedAnalysisReducer > SUGGESTION_FETCH_ERROR > marks the entry as error 0ms
+ ✓ tests/unit/revisedAnalysisReducer.test.ts > revisedAnalysisReducer > APPLY_REPLACEMENT > stores replacement keyed by sentence index 0ms
+ ✓ tests/unit/revisedAnalysisReducer.test.ts > revisedAnalysisReducer > APPLY_REPLACEMENT > overwrites a previous replacement for the same index 0ms
+ ✓ tests/unit/revisedAnalysisReducer.test.ts > revisedAnalysisReducer > APPLY_REPLACEMENT > allows multiple concurrent replacements at different indices 1ms
+ ✓ tests/unit/revisedAnalysisReducer.test.ts > revisedAnalysisReducer > REMOVE_REPLACEMENT > removes the replacement for the given index 1ms
+ ✓ tests/unit/revisedAnalysisReducer.test.ts > revisedAnalysisReducer > REMOVE_REPLACEMENT > leaves other replacements intact when removing one 1ms
+ ✓ tests/unit/revisedAnalysisReducer.test.ts > revisedAnalysisReducer > REMOVE_REPLACEMENT > is a no-op if the index was not applied 1ms
+ ✓ tests/unit/revisedAnalysisReducer.test.ts > revisedAnalysisReducer > REVISED_ANALYSIS_START > sets revisedLoading to true and clears error 1ms
+ ✓ tests/unit/revisedAnalysisReducer.test.ts > revisedAnalysisReducer > REVISED_ANALYSIS_SUCCESS > stores the result and clears loading/error 1ms
+ ✓ tests/unit/revisedAnalysisReducer.test.ts > revisedAnalysisReducer > REVISED_ANALYSIS_ERROR > stores the error message and clears loading 0ms
+ ✓ tests/unit/revisedAnalysisReducer.test.ts > deriveRevisedText > returns all original sentences joined when no replacements 0ms
+ ✓ tests/unit/revisedAnalysisReducer.test.ts > deriveRevisedText > replaces only the targeted sentence index 0ms
+ ✓ tests/unit/revisedAnalysisReducer.test.ts > deriveRevisedText > applies multiple replacements simultaneously 0ms
+ ✓ tests/unit/revisedAnalysisReducer.test.ts > deriveRevisedText > returns to original when replacements are empty 1ms
+ ✓ tests/unit/revisedAnalysisReducer.test.ts > deriveRevisedText > does not mutate original result 0ms
+ ✓ tests/unit/revisedAnalysisReducer.test.ts > deriveRevisedText > handles duplicate sentence text — only targeted index is replaced 0ms
+ ✓ tests/unit/revisedAnalysisReducer.test.ts > deriveRevisedText > handles a single-sentence document 0ms
+ ✓ tests/unit/revisedAnalysisReducer.test.ts > deriveRevisedText > preserves untouched sentences when only first or last index is replaced 0ms
+ ✓ tests/unit/revisedAnalysisReducer.test.ts > Task 6: apply flow — cumulative text derivation > second apply accumulates with first — both sentences replaced in derived text 0ms
+ ✓ tests/unit/revisedAnalysisReducer.test.ts > Task 6: apply flow — cumulative text derivation > each apply step produces correct cumulative text for rescoring payload 0ms
+ ✓ tests/unit/revisedAnalysisReducer.test.ts > Task 6: apply flow — cumulative text derivation > replacing the same sentence index twice keeps only the latest rewrite 0ms

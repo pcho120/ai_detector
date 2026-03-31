@@ -1,0 +1,35 @@
+
+> ai-detector@0.1.0 test
+> vitest run --reporter=verbose
+
+
+ RUN  v3.2.4 /home/paul/dev/personal/projects/ai_detector
+
+ ✓ tests/unit/temp.test.ts > writeTempFile > creates a file in /tmp with the correct extension 4ms
+ ✓ tests/unit/temp.test.ts > writeTempFile > creates distinct paths for concurrent calls 2ms
+ ✓ tests/unit/temp.test.ts > deleteTempFile > removes the temp file from disk 1ms
+ ✓ tests/unit/temp.test.ts > deleteTempFile > does not throw when called on an already-deleted file 1ms
+ ✓ tests/unit/temp.test.ts > withTempFile - cleanup on success path > deletes the temp file after the callback resolves 1ms
+ ✓ tests/unit/temp.test.ts > withTempFile - cleanup on success path > returns the value from the callback 1ms
+ ✓ tests/unit/temp.test.ts > withTempFile - cleanup on failure path > deletes the temp file even when the callback throws 2ms
+ ✓ tests/unit/temp.test.ts > withTempFile - no path leakage > does not include the temp path in thrown errors 1ms
+ ✓ tests/unit/validate.test.ts > validateFileBuffer - size > accepts a file exactly at the 5 MB limit 5ms
+ ✓ tests/unit/validate.test.ts > validateFileBuffer - size > rejects a file one byte over the 5 MB limit with FILE_TOO_LARGE 5ms
+ ✓ tests/unit/validate.test.ts > validateFileBuffer - extension > rejects unsupported extension with UNSUPPORTED_FORMAT 0ms
+ ✓ tests/unit/validate.test.ts > validateFileBuffer - extension > rejects files with no extension with UNSUPPORTED_FORMAT 0ms
+ ✓ tests/unit/validate.test.ts > validateFileBuffer - MIME type > rejects an invalid MIME type with UNSUPPORTED_FORMAT 0ms
+ ✓ tests/unit/validate.test.ts > validateFileBuffer - MIME type > accepts application/octet-stream as a valid MIME type 0ms
+ ✓ tests/unit/validate.test.ts > validateFileBuffer - magic bytes > accepts a valid .docx buffer with correct DOCX magic bytes 0ms
+ ✓ tests/unit/validate.test.ts > validateFileBuffer - magic bytes > accepts a valid .doc buffer with correct DOC magic bytes 0ms
+ ✓ tests/unit/validate.test.ts > validateFileBuffer - magic bytes > rejects garbage bytes regardless of extension with UNSUPPORTED_FORMAT 0ms
+ ✓ tests/unit/validate.test.ts > validateFileBuffer - magic bytes > rejects .docx extension with DOC magic bytes (spoofed extension) with UNSUPPORTED_FORMAT 0ms
+ ✓ tests/unit/validate.test.ts > validateFileBuffer - magic bytes > rejects .doc extension with DOCX magic bytes (spoofed extension) with UNSUPPORTED_FORMAT 0ms
+ ✓ tests/unit/validate.test.ts > validateFileBuffer - returned shape > returns correct extension and sizeBytes on success 0ms
+ ✓ tests/unit/validate.test.ts > validateFileBuffer - returned shape > is case-insensitive for file extension 0ms
+ ✓ tests/unit/homepage.test.tsx > HomePage > renders the upload shell 92ms
+
+ Test Files  3 passed (3)
+      Tests  22 passed (22)
+   Start at  13:17:40
+   Duration  1.33s (transform 114ms, setup 225ms, collect 240ms, tests 121ms, environment 1.31s, prepare 870ms)
+

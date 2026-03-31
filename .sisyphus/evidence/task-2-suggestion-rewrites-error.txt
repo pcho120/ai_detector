@@ -1,0 +1,15 @@
+
+> ai-detector@0.1.0 test
+> vitest run tests/unit/suggestions.test.ts tests/integration/suggestions-route.test.ts
+
+
+ RUN  v3.2.4 /home/paul/dev/personal/projects/ai_detector
+
+ ✓ tests/integration/suggestions-route.test.ts (16 tests) 38ms
+ ✓ tests/unit/suggestions.test.ts (44 tests) 26ms
+
+ Test Files  2 passed (2)
+      Tests  60 passed (60)
+   Start at  15:06:04
+   Duration  1.38s (transform 161ms, setup 159ms, collect 221ms, tests 64ms, environment 489ms, prepare 547ms)
+

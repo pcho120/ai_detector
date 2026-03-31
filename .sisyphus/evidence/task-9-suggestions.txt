@@ -1,0 +1,81 @@
+QA Scenario: High-risk sentence receives safe coaching suggestion (route-level proof)
+Tool: Bash
+Steps: run unit/integration tests with mocked high-risk sentence inputs through the concrete suggestion service wired into the route seam from Task 7
+Expected: output contains structured coaching with rationale and example, no banned evasion terms, and appears in route response suggestions array
+Source: tests/unit/suggestions.test.ts, tests/integration/analyze-route.test.ts (lines 181-235)
+Date: 2026-03-31
+
+--- npm run test -- --reporter=verbose tests/unit/suggestions.test.ts ---
+
+> ai-detector@0.1.0 test
+> vitest run --reporter=verbose tests/unit/suggestions.test.ts
+
+ RUN  v3.2.4 /home/paul/dev/personal/projects/ai_detector
+
+ ✓ tests/unit/suggestions.test.ts > RuleBasedSuggestionService > empty input > returns empty array for no sentences 3ms
+ ✓ tests/unit/suggestions.test.ts > RuleBasedSuggestionService > safe suggestions returned > generates a suggestion for "In conclusion" opener 3ms
+ ✓ tests/unit/suggestions.test.ts > RuleBasedSuggestionService > safe suggestions returned > generates a suggestion for "Furthermore" connector 1ms
+ ✓ tests/unit/suggestions.test.ts > RuleBasedSuggestionService > safe suggestions returned > generates a suggestion for "it is important to note" 1ms
+ ✓ tests/unit/suggestions.test.ts > RuleBasedSuggestionService > safe suggestions returned > generates a suggestion for "delve into" 1ms
+ ✓ tests/unit/suggestions.test.ts > RuleBasedSuggestionService > safe suggestions returned > generates a suggestion for "utilize" / "utilization" 1ms
+ ✓ tests/unit/suggestions.test.ts > RuleBasedSuggestionService > safe suggestions returned > generates a suggestion for "plays a crucial role in" 1ms
+ ✓ tests/unit/suggestions.test.ts > RuleBasedSuggestionService > safe suggestions returned > generates a suggestion for "a wide range of" 1ms
+ ✓ tests/unit/suggestions.test.ts > RuleBasedSuggestionService > safe suggestions returned > returns at most one suggestion per sentence 0ms
+ ✓ tests/unit/suggestions.test.ts > RuleBasedSuggestionService > safe suggestions returned > returns suggestions for multiple distinct high-risk sentences 0ms
+ ✓ tests/unit/suggestions.test.ts > RuleBasedSuggestionService > safe suggestions returned > preserves non-contiguous indices when only some sentences are high-risk 0ms
+ ✓ tests/unit/suggestions.test.ts > RuleBasedSuggestionService > safe suggestions returned > returns empty array for sentences with no matched patterns 0ms
+ ✓ tests/unit/suggestions.test.ts > RuleBasedSuggestionService > suggestion shape > each suggestion has sentence, rewrite, explanation, and sentenceIndex fields 0ms
+ ✓ tests/unit/suggestions.test.ts > RuleBasedSuggestionService > suggestion shape > rewrite is shorter than a full essay paragraph (coaching hint, not full rewrite) 1ms
+ ✓ tests/unit/suggestions.test.ts > RuleBasedSuggestionService > suggestion shape > sentenceIndex is a non-negative integer 0ms
+ ✓ tests/unit/suggestions.test.ts > containsBannedPhrase > returns false for clean text 0ms
+ ✓ tests/unit/suggestions.test.ts > containsBannedPhrase > detects "avoid detection" 0ms
+ ✓ tests/unit/suggestions.test.ts > containsBannedPhrase > detects "bypass" variants 0ms
+ ✓ tests/unit/suggestions.test.ts > containsBannedPhrase > detects "undetectable" 0ms
+ ✓ tests/unit/suggestions.test.ts > containsBannedPhrase > detects "fool the AI" 0ms
+ ✓ tests/unit/suggestions.test.ts > containsBannedPhrase > detects "lower your AI score" 0ms
+ ✓ tests/unit/suggestions.test.ts > containsBannedPhrase > detects "make it look human" 0ms
+ ✓ tests/unit/suggestions.test.ts > containsBannedPhrase > is case-insensitive 0ms
+ ✓ tests/unit/suggestions.test.ts > applyGuardrails > passes through suggestions with clean text 0ms
+ ✓ tests/unit/suggestions.test.ts > applyGuardrails > removes suggestions whose rewrite contains banned phrases 0ms
+ ✓ tests/unit/suggestions.test.ts > applyGuardrails > removes suggestions whose explanation contains banned phrases 0ms
+ ✓ tests/unit/suggestions.test.ts > applyGuardrails > returns empty array when all suggestions are unsafe 0ms
+ ✓ tests/unit/suggestions.test.ts > applyGuardrails > returns empty array for empty input 0ms
+
+ Test Files  1 passed (1)
+      Tests  28 passed (28)
+   Start at  07:43:56
+   Duration  1.36s
+
+Exit code: 0
+
+--- Route-level integration proof (tests/integration/analyze-route.test.ts lines 181-235) ---
+
+// Populated suggestions for high-risk sentences (lines 181-201)
+// Uses sapling-ai-like.json fixture (scores near 1.0) and valid.docx
+process.env.SAPLING_API_KEY = 'test-key';
+mockSaplingAiLike();
+const res = await POST(req);
+expect(res.status).toBe(200);
+expect(body.suggestions.length).toBeGreaterThan(0);
+// Each suggestion has sentence, rewrite, explanation, sentenceIndex fields
+expect(typeof s.sentence).toBe('string');
+expect(typeof s.rewrite).toBe('string');
+expect(typeof s.explanation).toBe('string');
+expect(typeof s.sentenceIndex).toBe('number');
+expect(s.sentenceIndex).toBeGreaterThanOrEqual(0);
+expect(s.sentenceIndex).toBeLessThan(body.sentences.length);
+
+// Each suggestion sentenceIndex points to the matching sentence (lines 219-235)
+// linked.score >= 0.7 confirms suggestion is attached to a high-risk sentence
+const linked = body.sentences[s.sentenceIndex];
+expect(linked).toBeDefined();
+expect(linked.sentence).toBe(s.sentence);
+expect(linked.score).toBeGreaterThanOrEqual(0.7);
+
+// No evasion language in suggestions (lines 203-217)
+const BANNED = /avoid.?detection|bypass|undetect(able|ed)|fool.*(ai|detector)|lower.*score/i;
+expect(s.rewrite).not.toMatch(BANNED);
+expect(s.explanation).not.toMatch(BANNED);
+
+Integration test confirmed: RuleBasedSuggestionService wired into route via SuggestionService interface
+(src/app/api/analyze/route.ts lines 133-145).

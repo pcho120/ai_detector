@@ -1,0 +1,52 @@
+
+> ai-detector@0.1.0 test
+> vitest run --reporter=verbose
+
+
+ RUN  v3.2.4 /home/paul/dev/personal/projects/ai_detector
+
+ ✓ tests/unit/temp.test.ts > writeTempFile > creates a file in /tmp with the correct extension 4ms
+ ✓ tests/unit/temp.test.ts > writeTempFile > creates distinct paths for concurrent calls 2ms
+ ✓ tests/unit/temp.test.ts > deleteTempFile > removes the temp file from disk 1ms
+ ✓ tests/unit/temp.test.ts > deleteTempFile > does not throw when called on an already-deleted file 2ms
+ ✓ tests/unit/temp.test.ts > deleteTempFile > rethrows non-ENOENT unlink errors 3ms
+ ✓ tests/unit/temp.test.ts > withTempFile - cleanup on success path > deletes the temp file after the callback resolves 2ms
+ ✓ tests/unit/temp.test.ts > withTempFile - cleanup on success path > returns the value from the callback 1ms
+ ✓ tests/unit/temp.test.ts > withTempFile - cleanup on failure path > deletes the temp file even when the callback throws 3ms
+ ✓ tests/unit/temp.test.ts > withTempFile - no path leakage > does not include the temp path in thrown errors 2ms
+ ✓ tests/unit/validate.test.ts > validateFileBuffer - size > accepts a file exactly at the 5 MB limit 7ms
+ ✓ tests/unit/validate.test.ts > validateFileBuffer - size > rejects a file one byte over the 5 MB limit with FILE_TOO_LARGE 6ms
+ ✓ tests/unit/validate.test.ts > validateFileBuffer - extension > rejects unsupported extension with UNSUPPORTED_FORMAT 1ms
+ ✓ tests/unit/validate.test.ts > validateFileBuffer - extension > rejects files with no extension with UNSUPPORTED_FORMAT 1ms
+ ✓ tests/unit/validate.test.ts > validateFileBuffer - MIME type > rejects an invalid MIME type with UNSUPPORTED_FORMAT 1ms
+ ✓ tests/unit/validate.test.ts > validateFileBuffer - MIME type > accepts application/octet-stream as a valid MIME type for .docx 0ms
+ ✓ tests/unit/validate.test.ts > validateFileBuffer - MIME type > accepts application/octet-stream as a valid MIME type for .doc 1ms
+ ✓ tests/unit/validate.test.ts > validateFileBuffer - MIME type > rejects .docx with application/msword MIME (wrong-format MIME) with UNSUPPORTED_FORMAT 1ms
+ ✓ tests/unit/validate.test.ts > validateFileBuffer - MIME type > rejects .doc with docx MIME (wrong-format MIME) with UNSUPPORTED_FORMAT 1ms
+ ✓ tests/unit/validate.test.ts > validateFileBuffer - magic bytes > accepts a valid .docx buffer with correct DOCX magic bytes 0ms
+ ✓ tests/unit/validate.test.ts > validateFileBuffer - magic bytes > accepts a valid .doc buffer with correct DOC magic bytes 0ms
+ ✓ tests/unit/validate.test.ts > validateFileBuffer - magic bytes > rejects garbage bytes regardless of extension with UNSUPPORTED_FORMAT 0ms
+ ✓ tests/unit/validate.test.ts > validateFileBuffer - magic bytes > rejects .docx extension with DOC magic bytes (spoofed extension) with UNSUPPORTED_FORMAT 0ms
+ ✓ tests/unit/validate.test.ts > validateFileBuffer - magic bytes > rejects .doc extension with DOCX magic bytes (spoofed extension) with UNSUPPORTED_FORMAT 0ms
+ ✓ tests/unit/validate.test.ts > validateFileBuffer - returned shape > returns correct extension and sizeBytes on success 0ms
+ ✓ tests/unit/validate.test.ts > validateFileBuffer - returned shape > is case-insensitive for file extension 0ms
+ ✓ tests/unit/homepage.test.tsx > HomePage > renders the upload shell 121ms
+ ✓ tests/unit/docx.test.ts > extractDocx - valid document > extracts normalized non-empty text from a valid .docx fixture 23ms
+ ✓ tests/unit/docx.test.ts > extractDocx - valid document > returns no warnings for a clean .docx 8ms
+ ✓ tests/unit/docx.test.ts > extractDocx - valid document > normalizes trailing whitespace and multiple blank lines 8ms
+ ✓ tests/unit/docx.test.ts > extractDocx - empty / image-only document > throws EXTRACTION_FAILED for an empty .docx 5ms
+ ✓ tests/unit/docx.test.ts > extractDocx - empty / image-only document > throws FileProcessingError for an empty .docx 3ms
+ ✓ tests/unit/docx.test.ts > extractDocx - corrupted / invalid document > throws EXTRACTION_FAILED for a corrupted .docx 1ms
+ ✓ tests/unit/docx.test.ts > extractDocx - corrupted / invalid document > throws FileProcessingError for a corrupted .docx 1ms
+ ✓ tests/unit/docx.test.ts > extractDocx - corrupted / invalid document > throws EXTRACTION_FAILED for a password-protected-style invalid document 0ms
+ ✓ tests/unit/docx.test.ts > extractDocx - text length bounds > throws TEXT_TOO_SHORT when extracted text is under 300 chars 4ms
+ ✓ tests/unit/docx.test.ts > extractDocx - text length bounds > throws TEXT_TOO_LONG when extracted text is over 100000 chars 15ms
+ ✓ tests/unit/docx.test.ts > extractDocx - text length bounds > accepts text exactly at MIN_TEXT_LENGTH boundary 7ms
+ ✓ tests/unit/docx.test.ts > extractDocx - text length bounds > accepts text exactly at MAX_TEXT_LENGTH boundary 13ms
+ ✓ tests/unit/docx.test.ts > extractDocx - garbled text detection > throws EXTRACTION_FAILED when extracted text is mostly non-alphanumeric 5ms
+
+ Test Files  4 passed (4)
+      Tests  39 passed (39)
+   Start at  13:27:13
+   Duration  1.34s (transform 156ms, setup 340ms, collect 461ms, tests 263ms, environment 1.65s, prepare 1.17s)
+

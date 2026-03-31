@@ -1,0 +1,105 @@
+{
+  "active_plan": "/home/paul/dev/personal/projects/ai_detector/.sisyphus/plans/suggestion-preview-workflow.md",
+  "started_at": "2026-03-31T18:50:56.351Z",
+  "session_ids": [
+    "ses_2bbd870e8ffeyHS2bZ7plVkKUq",
+    "ses_2bac25722ffeKBHmysmdrV8qyZ",
+    "ses_2babc36e0ffe5S2rgpt1WpKBIh",
+    "ses_2bab2faacffeT1HJo47ooIuRl6",
+    "ses_2baacb8a6ffe0z17rdu1M747vD",
+    "ses_2baa38777ffeT3l1ERrZCpIgkm",
+    "ses_2ba907e03ffeo9kD9BGFvdQQYk",
+    "ses_2ba8630ebffeX7HaSj1TkEzDf9",
+    "ses_2ba7e3d92ffe1JamXQxgXuabzN",
+    "ses_2ba75f9beffevUO5nG2Z90Wz9m",
+    "ses_2ba75f9b9ffeTS3zYV5HYFRuBL",
+    "ses_2ba75f9bbffefutTXsJsjRZKF3",
+    "ses_2ba75fbeeffeS2QiGYK5omMOF4",
+    "ses_2ba6f1184ffeKIVMe5X2kcxyKe"
+  ],
+  "plan_name": "suggestion-preview-workflow",
+  "agent": "atlas",
+  "task_sessions": {
+    "todo:1": {
+      "task_key": "todo:1",
+      "task_label": "1",
+      "task_title": "Extend highlight and analysis response types with stable sentence linkage",
+      "session_id": "ses_2bac25722ffeKBHmysmdrV8qyZ",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-03-31T18:56:21.078Z"
+    },
+    "todo:2": {
+      "task_key": "todo:2",
+      "task_label": "2",
+      "task_title": "Add on-demand full rewrite suggestion API for clicked labeled spans",
+      "session_id": "ses_2babc36e0ffe5S2rgpt1WpKBIh",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-03-31T19:07:04.420Z"
+    },
+    "todo:3": {
+      "task_key": "todo:3",
+      "task_label": "3",
+      "task_title": "Introduce reducer-based revised-analysis state and text-derivation logic",
+      "session_id": "ses_2bab2faacffeT1HJo47ooIuRl6",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-03-31T19:14:19.933Z"
+    },
+    "todo:4": {
+      "task_key": "todo:4",
+      "task_label": "4",
+      "task_title": "Make original-panel risk labels clickable and reveal sentence suggestion actions",
+      "session_id": "ses_2baacb8a6ffe0z17rdu1M747vD",
+      "agent": "Sisyphus-Junior",
+      "category": "visual-engineering",
+      "updated_at": "2026-03-31T19:21:51.976Z"
+    },
+    "todo:5": {
+      "task_key": "todo:5",
+      "task_label": "5",
+      "task_title": "Add revised-analysis request flow and right-side revised preview panel",
+      "session_id": "ses_2baa38777ffeT3l1ERrZCpIgkm",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-03-31T19:36:28.725Z"
+    },
+    "todo:6": {
+      "task_key": "todo:6",
+      "task_label": "6",
+      "task_title": "Wire Apply action into precise sentence replacement and automatic rescoring",
+      "session_id": "ses_2ba907e03ffeo9kD9BGFvdQQYk",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-03-31T19:55:09.912Z"
+    },
+    "todo:7": {
+      "task_key": "todo:7",
+      "task_label": "7",
+      "task_title": "Support click-to-revert from the revised panel with automatic rescoring",
+      "session_id": "ses_2ba8630ebffeX7HaSj1TkEzDf9",
+      "agent": "Sisyphus-Junior",
+      "category": "visual-engineering",
+      "updated_at": "2026-03-31T20:03:11.114Z"
+    },
+    "todo:8": {
+      "task_key": "todo:8",
+      "task_label": "8",
+      "task_title": "Complete regression coverage, selectors, and documentation for the dual-pane workflow",
+      "session_id": "ses_2ba7e3d92ffe1JamXQxgXuabzN",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-03-31T20:12:16.591Z"
+    },
+    "final-wave:f1": {
+      "task_key": "final-wave:f1",
+      "task_label": "F1",
+      "task_title": "Plan Compliance Audit — oracle",
+      "session_id": "ses_2ba6f1184ffeKIVMe5X2kcxyKe",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-03-31T20:34:05.055Z"
+    }
+  }
+}

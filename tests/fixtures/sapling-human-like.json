@@ -1,0 +1,16 @@
+{
+  "score": 0.03,
+  "sentence_scores": [
+    {
+      "score": 0.04,
+      "sentence": "My grandmother always said that the smell of rain reminds her of the summer she met my grandfather."
+    },
+    {
+      "score": 0.02,
+      "sentence": "Those particular memories are woven through her stories in ways that no algorithm could replicate."
+    }
+  ],
+  "text": "My grandmother always said that the smell of rain reminds her of the summer she met my grandfather. Those particular memories are woven through her stories in ways that no algorithm could replicate.",
+  "tokens": ["My", " grandmother", " always", " said"],
+  "token_probs": [0.03, 0.04, 0.02, 0.03]
+}

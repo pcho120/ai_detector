@@ -1,0 +1,61 @@
+QA Scenario: Corrupted docx is handled gracefully
+Tool: Bash
+Steps: run unit test suite covering empty, image-only, corrupted, and password-protected .docx fixtures
+Expected: service returns EXTRACTION_FAILED without crashing for each failure case
+Source: tests/unit/docx.test.ts (lines 37-93)
+Date: 2026-03-31
+
+--- npm run test -- --reporter=verbose tests/unit/docx.test.ts ---
+
+> ai-detector@0.1.0 test
+> vitest run --reporter=verbose tests/unit/docx.test.ts
+
+ RUN  v3.2.4 /home/paul/dev/personal/projects/ai_detector
+
+ ✓ tests/unit/docx.test.ts > extractDocx - valid document > extracts normalized non-empty text from a valid .docx fixture 26ms
+ ✓ tests/unit/docx.test.ts > extractDocx - valid document > returns no warnings for a clean .docx 6ms
+ ✓ tests/unit/docx.test.ts > extractDocx - valid document > normalizes trailing whitespace and multiple blank lines 6ms
+ ✓ tests/unit/docx.test.ts > extractDocx - empty / image-only document > throws EXTRACTION_FAILED for an empty .docx 5ms
+ ✓ tests/unit/docx.test.ts > extractDocx - empty / image-only document > throws FileProcessingError for an empty .docx 3ms
+ ✓ tests/unit/docx.test.ts > extractDocx - empty / image-only document > throws EXTRACTION_FAILED for an image-only .docx (valid zip, no text) 3ms
+ ✓ tests/unit/docx.test.ts > extractDocx - empty / image-only document > throws FileProcessingError for an image-only .docx 3ms
+ ✓ tests/unit/docx.test.ts > extractDocx - corrupted / invalid document > throws EXTRACTION_FAILED for a corrupted .docx 2ms
+ ✓ tests/unit/docx.test.ts > extractDocx - corrupted / invalid document > throws FileProcessingError for a corrupted .docx 1ms
+ ✓ tests/unit/docx.test.ts > extractDocx - corrupted / invalid document > throws EXTRACTION_FAILED for a password-protected .docx (OLE2/CFBF format) 1ms
+ ✓ tests/unit/docx.test.ts > extractDocx - corrupted / invalid document > throws FileProcessingError for a password-protected .docx 1ms
+ ✓ tests/unit/docx.test.ts > extractDocx - corrupted / invalid document > throws EXTRACTION_FAILED for a password-protected-style invalid document 1ms
+ ✓ tests/unit/docx.test.ts > extractDocx - text length bounds > throws TEXT_TOO_SHORT when extracted text is under 300 chars 4ms
+ ✓ tests/unit/docx.test.ts > extractDocx - text length bounds > throws TEXT_TOO_LONG when extracted text is over 100000 chars 14ms
+ ✓ tests/unit/docx.test.ts > extractDocx - text length bounds > accepts text exactly at MIN_TEXT_LENGTH boundary 10ms
+ ✓ tests/unit/docx.test.ts > extractDocx - text length bounds > accepts text exactly at MAX_TEXT_LENGTH boundary 14ms
+ ✓ tests/unit/docx.test.ts > extractDocx - garbled text detection > throws EXTRACTION_FAILED when extracted text is mostly non-alphanumeric 7ms
+
+ Test Files  1 passed (1)
+      Tests  17 passed (17)
+   Start at  07:43:28
+   Duration  1.54s
+
+Exit code: 0
+
+--- Key negative-path assertions (tests/unit/docx.test.ts) ---
+
+// empty.docx — line 38-48
+await expect(extractDocx(buf)).rejects.toMatchObject({ code: 'EXTRACTION_FAILED' });
+await expect(extractDocx(buf)).rejects.toBeInstanceOf(FileProcessingError);
+
+// image-only.docx — line 50-60
+await expect(extractDocx(loadFixture('image-only.docx'))).rejects.toMatchObject({ code: 'EXTRACTION_FAILED' });
+await expect(extractDocx(loadFixture('image-only.docx'))).rejects.toBeInstanceOf(FileProcessingError);
+
+// corrupted.docx — line 64-74
+await expect(extractDocx(loadFixture('corrupted.docx'))).rejects.toMatchObject({ code: 'EXTRACTION_FAILED' });
+await expect(extractDocx(loadFixture('corrupted.docx'))).rejects.toBeInstanceOf(FileProcessingError);
+
+// password-protected.docx (OLE2/CFBF format) — line 76-86
+await expect(extractDocx(loadFixture('password-protected.docx'))).rejects.toMatchObject({ code: 'EXTRACTION_FAILED' });
+await expect(extractDocx(loadFixture('password-protected.docx'))).rejects.toBeInstanceOf(FileProcessingError);
+
+// garbled text inside valid zip — line 164-188
+await expect(extractDocx(garbledBuf)).rejects.toMatchObject({ code: 'EXTRACTION_FAILED' });
+
+All EXTRACTION_FAILED rejections are instances of FileProcessingError (src/lib/files/errors.ts).

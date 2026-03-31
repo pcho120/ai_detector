@@ -1,0 +1,106 @@
+QA Scenario: CI-equivalent local verification passes
+Tool: Bash
+Command: npm run lint && npm run typecheck && npm run test && npm run build && npm run test:e2e
+Expected: all commands exit 0
+Date: 2026-03-31
+
+--- npm run lint ---
+
+> ai-detector@0.1.0 lint
+> eslint .
+
+/home/paul/dev/personal/projects/ai_detector/eslint.config.mjs
+  9:1  warning  Assign array to a variable before exporting as module default  import/no-anonymous-default-export
+/home/paul/dev/personal/projects/ai_detector/postcss.config.mjs
+  1:1  warning  Assign object to a variable before exporting as module default  import/no-anonymous-default-export
+/home/paul/dev/personal/projects/ai_detector/src/app/api/analyze/route.ts
+  86:14  warning  '_handle' is defined but never used  @typescript-eslint/no-unused-vars
+
+✖ 3 problems (0 errors, 3 warnings)
+Exit code: 0 (warnings only, no errors)
+
+--- npm run typecheck ---
+
+> ai-detector@0.1.0 typecheck
+> tsc --noEmit
+
+Exit code: 0
+
+--- npm run test ---
+
+> ai-detector@0.1.0 test
+> vitest run
+
+ RUN  v3.2.4 /home/paul/dev/personal/projects/ai_detector
+
+ ✓ tests/unit/temp.test.ts (9 tests) 38ms
+ ✓ tests/unit/doc.test.ts (20 tests) 45ms
+ ✓ tests/unit/doc-mocked.test.ts (8 tests) 47ms
+ ✓ tests/unit/highlights.test.ts (31 tests) 47ms
+ ✓ tests/unit/validate.test.ts (16 tests) 35ms
+ ✓ tests/unit/suggestions.test.ts (28 tests) 53ms
+ ✓ tests/unit/detection.test.ts (20 tests) 70ms
+ ✓ tests/unit/docx.test.ts (17 tests) 236ms
+ ✓ tests/unit/homepage.test.tsx (1 test) 306ms
+ ✓ tests/integration/analyze-route.test.ts (24 tests) 992ms
+
+ Test Files  10 passed (10)
+      Tests  174 passed (174)
+   Start at  07:49:27
+   Duration  3.70s
+Exit code: 0
+
+--- npm run build ---
+
+> ai-detector@0.1.0 build
+> next build
+
+   ▲ Next.js 15.5.14
+   Creating an optimized production build ...
+ ✓ Compiled successfully in 1947ms
+
+Route (app)                                 Size  First Load JS
+┌ ○ /                                    2.19 kB         104 kB
+├ ○ /_not-found                            995 B         103 kB
+└ ƒ /api/analyze                           120 B         102 kB
++ First Load JS shared by all             102 kB
+  ├ chunks/255-38b49df12a94ee57.js         46 kB
+  ├ chunks/4bd1b696-c023c6e3521b1417.js  54.2 kB
+  └ other shared chunks (total)          1.89 kB
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+Exit code: 0
+
+--- npm run test:e2e ---
+
+> ai-detector@0.1.0 test:e2e
+> playwright test
+
+Running 11 tests using 8 workers
+
+  ✓   [chromium] › e2e/home.spec.ts:3:5 › home page renders upload shell (1.8s)
+  ✓   [chromium] › e2e/home.spec.ts:11:5 › handles successful file upload and displays review panel (2.0s)
+  ✓   [chromium] › e2e/home.spec.ts:61:5 › handles successful .doc file upload (1.9s)
+  ✓   [chromium] › e2e/home.spec.ts:91:5 › handles extraction failure gracefully (1.2s)
+  ✓   [chromium] › e2e/home.spec.ts:118:5 › handles unsupported file type gracefully (1.0s)
+  ✓   [chromium] › e2e/home.spec.ts:145:5 › handles API errors gracefully (967ms)
+  ✓   [chromium] › e2e/f3-qa-screenshots.spec.ts:9:5 › F3-1: success path — docx upload shows highlighted review panel (2.3s)
+  ✓   [chromium] › e2e/f3-qa-screenshots.spec.ts:51:5 › F3-2: success path — doc upload shows review panel (2.2s)
+  ✓   [chromium] › e2e/f3-qa-screenshots.spec.ts:81:5 › F3-3: failure path — unsupported file shows error, no review panel (1.9s)
+  ✓   [chromium] › e2e/f3-qa-screenshots.spec.ts:112:5 › F3-4: failure path — extraction failure shows friendly error (1.9s)
+  ✓   [chromium] › e2e/f3-qa-screenshots.spec.ts:139:5 › F3-5: failure path — non-English document shows language error (2.1s)
+
+  11 passed (10.1s)
+Exit code: 0
+
+--- Summary ---
+All 5 CI-equivalent steps passed:
+  lint       → 0 errors, 3 warnings (acceptable)
+  typecheck  → 0 errors
+  test       → 174/174 tests passed (10 test files)
+  build      → production build succeeded, 3 routes
+  test:e2e   → 11/11 Playwright tests passed
+
+CI workflow: .github/workflows/ci.yml (lines 22-45)
+E2E coverage: valid .docx, valid .doc, unsupported file, extraction failure, non-English rejection.

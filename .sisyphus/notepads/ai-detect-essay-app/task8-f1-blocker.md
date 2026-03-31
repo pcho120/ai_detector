@@ -1,0 +1,1 @@
+2026-03-30: Fixed F1 blocker by adding visible risk labels (High/Medium/Low Risk) inside highlighted text spans in ReviewPanel.tsx to meet Task 8 acceptance criteria. Maintained data-ai-score attributes.

@@ -1,0 +1,76 @@
+QA Scenario: Non-English or oversized content is rejected; no detector or suggestion call occurs
+Tool: Bash
+Steps: run integration tests with mocked extracted text outside policy limits
+Expected: response uses correct structured error code; no detector or suggestion call occurs
+Source: tests/integration/analyze-route.test.ts (lines 271-420)
+Date: 2026-03-31
+
+--- npm run test -- --reporter=verbose tests/integration/analyze-route.test.ts ---
+
+> ai-detector@0.1.0 test
+> vitest run --reporter=verbose tests/integration/analyze-route.test.ts
+
+ RUN  v3.2.4 /home/paul/dev/personal/projects/ai_detector
+
+ ✓ tests/integration/analyze-route.test.ts > POST /api/analyze — success path (docx) > returns 200 with score, sentences, highlights, suggestions on valid English docx 117ms
+ ✓ tests/integration/analyze-route.test.ts > POST /api/analyze — success path (docx) > returns suggestions array (may be empty when no coaching patterns match high-risk sentences) 65ms
+ ✓ tests/integration/analyze-route.test.ts > POST /api/analyze — success path (docx) > score matches detection fixture score 57ms
+ ✓ tests/integration/analyze-route.test.ts > POST /api/analyze — success path (docx) > sentences array contains entries from detection fixture 60ms
+ ✓ tests/integration/analyze-route.test.ts > POST /api/analyze — success path (docx) > highlights array contains only valid span entries 55ms
+ ✓ tests/integration/analyze-route.test.ts > POST /api/analyze — success path (docx) > returns populated suggestions when high-risk sentences match coaching patterns 70ms
+ ✓ tests/integration/analyze-route.test.ts > POST /api/analyze — success path (docx) > suggestions do not contain evasion language 69ms
+ ✓ tests/integration/analyze-route.test.ts > POST /api/analyze — success path (docx) > each suggestion sentenceIndex points to the matching sentence in the sentences array 67ms
+ ✓ tests/integration/analyze-route.test.ts > POST /api/analyze — success path (doc) > returns 200 with score, sentences, highlights on valid .doc fixture 21ms
+ ✓ tests/integration/analyze-route.test.ts > POST /api/analyze — missing file field > returns 400 when no file field is provided 1ms
+ ✓ tests/integration/analyze-route.test.ts > POST /api/analyze — unsupported format > returns 422 with UNSUPPORTED_FORMAT for a .txt file 2ms
+ ✓ tests/integration/analyze-route.test.ts > POST /api/analyze — unsupported format > returns 422 with UNSUPPORTED_FORMAT for a file with .docx extension but doc magic bytes 1ms
+ ✓ tests/integration/analyze-route.test.ts > POST /api/analyze — text length policy > returns 422 with TEXT_TOO_SHORT for short.docx 6ms
+ ✓ tests/integration/analyze-route.test.ts > POST /api/analyze — text length policy > returns 422 with EXTRACTION_FAILED for corrupted.docx 5ms
+ ✓ tests/integration/analyze-route.test.ts > POST /api/analyze — UNSUPPORTED_LANGUAGE > returns 422 with UNSUPPORTED_LANGUAGE for a non-English docx 12ms
+ ✓ tests/integration/analyze-route.test.ts > POST /api/analyze — detection failure > returns 502 with DETECTION_FAILED when Sapling returns HTTP 500 5ms
+ ✓ tests/integration/analyze-route.test.ts > POST /api/analyze — detection failure > returns 503 with DETECTION_FAILED when SAPLING_API_KEY is missing 4ms
+ ✓ tests/integration/analyze-route.test.ts > POST /api/analyze — detection failure > detection error does not leak internal messages 5ms
+ ✓ tests/integration/analyze-route.test.ts > POST /api/analyze — error response shape > all error responses have error and message fields 1ms
+ ✓ tests/integration/analyze-route.test.ts > POST /api/analyze — error response shape > error response does not contain raw file paths 5ms
+ ✓ tests/integration/analyze-route.test.ts > POST /api/analyze — temp-file lifecycle cleanup > cleans up the temp file on the success path (docx) 57ms
+ ✓ tests/integration/analyze-route.test.ts > POST /api/analyze — temp-file lifecycle cleanup > cleans up the temp file on the success path (doc) 16ms
+ ✓ tests/integration/analyze-route.test.ts > POST /api/analyze — temp-file lifecycle cleanup > cleans up the temp file when extraction fails (corrupted docx) 4ms
+ ✓ tests/integration/analyze-route.test.ts > POST /api/analyze — temp-file lifecycle cleanup > cleans up the temp file when extraction produces text that is too short 6ms
+
+ Test Files  1 passed (1)
+      Tests  24 passed (24)
+   Start at  07:44:04
+   Duration  1.96s
+
+Exit code: 0
+
+--- Key negative-path assertions ---
+
+// UNSUPPORTED_LANGUAGE — lines 320-372
+// Non-English (Cyrillic) docx built in-memory and submitted to POST /api/analyze
+expect(res.status).toBe(422);
+expect(body.error).toBe('UNSUPPORTED_LANGUAGE');
+// Test sets process.env.SAPLING_API_KEY = 'test-key' (line 322) but does NOT call
+// mockSaplingFailure() or mockSaplingAiLike() — no Sapling fetch is registered.
+// The route returns 422 before reaching the detector adapter; if detect() were called
+// the unmocked fetch would error, so the clean 422 proves the language gate fires first.
+
+// TEXT_TOO_SHORT — lines 298-307
+// short.docx fixture triggers TEXT_TOO_SHORT from extractDocx; route never calls detect().
+expect(res.status).toBe(422);
+expect(body.error).toBe('TEXT_TOO_SHORT');
+// TEXT_TOO_LONG is enforced by extractDocx (src/lib/files/docx.ts:83-87) before detect();
+// live audit of long.docx confirmed HTTP 422 TEXT_TOO_LONG.
+
+// EXTRACTION_FAILED — lines 309-317
+// corrupted.docx triggers EXTRACTION_FAILED from extractDocx; no detect() call made.
+expect(res.status).toBe(422);
+expect(body.error).toBe('EXTRACTION_FAILED');
+
+// Oversized / non-English: in all cases the route returns before reaching the
+// SaplingDetectionAdapter.detect() call (src/app/api/analyze/route.ts error handling).
+// No Sapling API call is made and no suggestion call occurs for these error paths.
+
+// Error response has no raw paths — lines 438-446
+expect(body.message).not.toMatch(/\/tmp\//);
+expect(body.message).not.toMatch(/\/(home|users)\//i);

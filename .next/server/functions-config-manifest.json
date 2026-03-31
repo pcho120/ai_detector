@@ -1,0 +1,8 @@
+{
+  "version": 1,
+  "functions": {
+    "/api/analyze/revised": {},
+    "/api/suggestions": {},
+    "/api/analyze": {}
+  }
+}
