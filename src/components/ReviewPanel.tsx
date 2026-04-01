@@ -1,7 +1,15 @@
-import React, { MouseEvent } from 'react';
+import React, { MouseEvent, useEffect, useRef, useState } from 'react';
 import type { AnalysisSuccessResponse } from '@/app/api/analyze/route';
 import type { UseRevisedAnalysisStateReturn } from '@/app/useRevisedAnalysisState';
 import { deriveRevisedText } from '@/app/useRevisedAnalysisState';
+import type { SuggestionCacheEntry } from '@/lib/review/revisedAnalysisReducer';
+
+export function shouldSkipSuggestionFetch(cached: SuggestionCacheEntry | undefined): boolean {
+  if (!cached) return false;
+  if (cached.status === 'loading') return true;
+  if (cached.status === 'success' && !cached.unavailable) return true;
+  return false;
+}
 
 interface ReviewPanelProps {
   result: AnalysisSuccessResponse;
@@ -10,6 +18,38 @@ interface ReviewPanelProps {
 
 export function ReviewPanel({ result, revisedState }: ReviewPanelProps) {
   const { text, highlights, score } = result;
+  
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [popoverPos, setPopoverPos] = useState<{ top: number; left: number } | null>(null);
+
+  useEffect(() => {
+    if (!revisedState || !revisedState.state.drawerOpen || revisedState.state.selectedSentenceIndex === null) {
+      setPopoverPos(null);
+      return;
+    }
+
+    const container = containerRef.current;
+    if (!container) return;
+
+    const updatePosition = () => {
+      const target = container.querySelector(`span[data-sentence-index="${revisedState.state.selectedSentenceIndex}"]`);
+      if (target) {
+        const containerRect = container.getBoundingClientRect();
+        const targetRect = target.getBoundingClientRect();
+        setPopoverPos({
+          top: targetRect.bottom - containerRect.top + container.scrollTop,
+          left: Math.max(0, targetRect.left - containerRect.left + container.scrollLeft)
+        });
+      } else {
+        setPopoverPos(null);
+      }
+    };
+
+    requestAnimationFrame(updatePosition);
+
+    window.addEventListener('resize', updatePosition);
+    return () => window.removeEventListener('resize', updatePosition);
+  }, [revisedState, text]);
 
   const handleSentenceClick = async (e: MouseEvent, sentenceIndex: number, sentenceText: string, spanScore: number) => {
     e.stopPropagation();
@@ -18,7 +58,10 @@ export function ReviewPanel({ result, revisedState }: ReviewPanelProps) {
     revisedState.selectSentence(sentenceIndex);
     
     const cached = revisedState.getSuggestionCacheEntry(sentenceIndex);
-    if (cached && cached.status !== 'error') {
+    // Dedupe: skip re-fetch only for in-flight requests or already-successful rewrites.
+    // Cached "unavailable" entries (status === 'success' with unavailable: true) are
+    // intentionally NOT short-circuited so the user can retry on a later click.
+    if (shouldSkipSuggestionFetch(cached)) {
       return;
     }
 
@@ -63,15 +106,20 @@ export function ReviewPanel({ result, revisedState }: ReviewPanelProps) {
     }
   };
 
-  const renderPopover = (sentenceIndex: number) => {
+  const renderPopover = () => {
     if (!revisedState) return null;
-    if (revisedState.state.selectedSentenceIndex !== sentenceIndex || !revisedState.state.drawerOpen) return null;
+    const { selectedSentenceIndex, drawerOpen } = revisedState.state;
+    if (selectedSentenceIndex === null || !drawerOpen || !popoverPos) return null;
 
-    const cacheEntry = revisedState.getSuggestionCacheEntry(sentenceIndex);
+    const cacheEntry = revisedState.getSuggestionCacheEntry(selectedSentenceIndex);
     
     return (
       <div 
-        className="absolute top-full left-0 mt-2 z-10 w-96 max-w-[80vw] rounded-lg border border-slate-200 bg-white p-4 shadow-xl font-sans text-base normal-case tracking-normal leading-normal whitespace-normal cursor-auto"
+        className="absolute z-10 w-96 max-w-[80vw] rounded-lg border border-slate-200 bg-white p-4 shadow-xl font-sans text-base normal-case tracking-normal leading-normal whitespace-normal cursor-auto"
+        style={{
+          top: `${popoverPos.top + 8}px`,
+          left: `${popoverPos.left}px`,
+        }}
         onClick={(e) => e.stopPropagation()}
         data-testid="suggestion-popover"
       >
@@ -96,8 +144,8 @@ export function ReviewPanel({ result, revisedState }: ReviewPanelProps) {
             Failed to load suggestion. Please try again.
           </div>
         ) : cacheEntry.unavailable ? (
-          <div className="py-2 text-sm text-slate-600" data-testid="suggestion-empty">
-            No rewrite suggestion available for this sentence.
+          <div className="py-2 text-sm text-slate-600" data-testid="suggestion-empty" role="status" aria-live="polite">
+            We couldn&apos;t generate a rewrite suggestion for this sentence at this time.
           </div>
         ) : (
           <div className="flex flex-col gap-3" data-testid="suggestion-success">
@@ -119,7 +167,7 @@ export function ReviewPanel({ result, revisedState }: ReviewPanelProps) {
               <button
                 type="button"
                 className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
-                onClick={(e) => handleApply(e, sentenceIndex, cacheEntry.rewrite!)}
+                onClick={(e) => handleApply(e, selectedSentenceIndex, cacheEntry.rewrite!)}
                 data-testid="apply-suggestion-btn"
               >
                 Apply
@@ -189,7 +237,6 @@ export function ReviewPanel({ result, revisedState }: ReviewPanelProps) {
             <span className="inline-block ml-1.5 px-1.5 py-0.5 rounded-sm text-[10px] font-bold uppercase tracking-widest bg-black/10 text-slate-800 align-middle whitespace-nowrap">
               {labelText}
             </span>
-            {renderPopover(highlight.sentenceIndex)}
           </span>
         );
       }
@@ -218,8 +265,12 @@ export function ReviewPanel({ result, revisedState }: ReviewPanelProps) {
         </div>
       </div>
 
-      <div className="rounded-lg border bg-slate-50 p-6 leading-relaxed whitespace-pre-wrap font-serif text-slate-800">
+      <div 
+        ref={containerRef}
+        className="relative rounded-lg border bg-slate-50 p-6 leading-relaxed whitespace-pre-wrap font-serif text-slate-800"
+      >
         {renderHighlightedText()}
+        {renderPopover()}
       </div>
     </div>
   );

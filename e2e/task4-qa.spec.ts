@@ -64,7 +64,11 @@ test('Clicking a low-risk or high-risk label opens suggestion details', async ({
 
   await page.getByTestId('highlight-score').nth(0).click(); // Click high risk
   await expect(page.getByTestId('suggestion-popover')).toBeVisible();
+  await expect(page.getByTestId('suggestion-success')).toBeVisible();
+  await expect(page.getByTestId('suggestion-empty')).not.toBeVisible();
   await expect(page.getByText('This is a revised highly risky sentence.')).toBeVisible();
+  await expect(page.getByText('Reduced AI-like tone.')).toBeVisible();
+  await expect(page.getByTestId('apply-suggestion-btn')).toBeVisible();
   
   await page.screenshot({ path: `${EVIDENCE}/task-4-clickable-suggestions.png`, fullPage: true });
 });
@@ -112,4 +116,107 @@ test('Sentence with no safe suggestion shows empty-state instead of Apply', asyn
   await expect(page.getByTestId('apply-suggestion-btn')).not.toBeVisible();
 
   await page.screenshot({ path: `${EVIDENCE}/task-4-clickable-suggestions-error.png`, fullPage: true });
+});
+
+test('available:true high-risk click renders suggestion-success and Apply button', async ({ page }) => {
+  await page.route('**/api/analyze', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        score: 0.9,
+        text: 'This essay is clearly written by an AI system.',
+        sentences: [
+          { sentence: 'This essay is clearly written by an AI system.', score: 0.9 }
+        ],
+        highlights: [
+          { start: 0, end: 46, score: 0.9, label: 'high', sentenceIndex: 0 }
+        ]
+      })
+    });
+  });
+
+  await page.route('**/api/suggestions', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        available: true,
+        sentenceIndex: 0,
+        rewrite: 'A human wrote this paragraph.',
+        explanation: 'Rephrased for natural tone.'
+      })
+    });
+  });
+
+  await page.goto('/');
+  await page.getByTestId('file-input').setInputFiles({
+    name: 'essay.docx',
+    mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    buffer: Buffer.from('mock content')
+  });
+  await page.getByTestId('submit-button').click();
+
+  const highlight = page.getByTestId('highlight-score').nth(0);
+  await expect(highlight).toContainText('High Risk');
+  await highlight.click();
+
+  await expect(page.getByTestId('suggestion-popover')).toBeVisible();
+  await expect(page.getByTestId('suggestion-success')).toBeVisible();
+  await expect(page.getByTestId('suggestion-empty')).not.toBeVisible();
+  await expect(page.getByText('A human wrote this paragraph.')).toBeVisible();
+  await expect(page.getByText('Rephrased for natural tone.')).toBeVisible();
+  await expect(page.getByTestId('apply-suggestion-btn')).toBeVisible();
+});
+
+test('available:true low-risk click renders suggestion-success and Apply button', async ({ page }) => {
+  await page.route('**/api/analyze', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        score: 0.25,
+        text: 'Overall this is fine. But this phrase is a touch suspect.',
+        sentences: [
+          { sentence: 'Overall this is fine.', score: 0.05 },
+          { sentence: 'But this phrase is a touch suspect.', score: 0.22 }
+        ],
+        highlights: [
+          { start: 22, end: 57, score: 0.22, label: 'low', sentenceIndex: 1 }
+        ]
+      })
+    });
+  });
+
+  await page.route('**/api/suggestions', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        available: true,
+        sentenceIndex: 1,
+        rewrite: 'But this part reads naturally enough.',
+        explanation: 'Adjusted phrasing for authenticity.'
+      })
+    });
+  });
+
+  await page.goto('/');
+  await page.getByTestId('file-input').setInputFiles({
+    name: 'essay.docx',
+    mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    buffer: Buffer.from('mock content')
+  });
+  await page.getByTestId('submit-button').click();
+
+  const highlight = page.getByTestId('highlight-score').nth(0);
+  await expect(highlight).toContainText('Low Risk');
+  await highlight.click();
+
+  await expect(page.getByTestId('suggestion-popover')).toBeVisible();
+  await expect(page.getByTestId('suggestion-success')).toBeVisible();
+  await expect(page.getByTestId('suggestion-empty')).not.toBeVisible();
+  await expect(page.getByText('But this part reads naturally enough.')).toBeVisible();
+  await expect(page.getByText('Adjusted phrasing for authenticity.')).toBeVisible();
+  await expect(page.getByTestId('apply-suggestion-btn')).toBeVisible();
 });

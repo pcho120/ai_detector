@@ -10,6 +10,7 @@ import type {
   RevisedAnalysisAction,
 } from '@/lib/review/revisedAnalysisReducer';
 import type { AnalysisSuccessResponse } from '@/app/api/analyze/route';
+import { shouldSkipSuggestionFetch } from '@/components/ReviewPanel';
 
 function makeResult(overrides?: Partial<AnalysisSuccessResponse>): AnalysisSuccessResponse {
   return {
@@ -465,6 +466,34 @@ describe('Task 6: apply flow — duplicate sentence safety', () => {
     state = dispatch(state, { type: 'REMOVE_REPLACEMENT', payload: { sentenceIndex: 0 } });
     expect(state.appliedReplacements[0]).toBeUndefined();
     expect(state.appliedReplacements[1]).toBe('Dup 1 rewrite.');
+  });
+});
+
+describe('shouldSkipSuggestionFetch', () => {
+  it('returns false for undefined (no prior fetch)', () => {
+    expect(shouldSkipSuggestionFetch(undefined)).toBe(false);
+  });
+
+  it('returns true for loading entry (in-flight dedupe)', () => {
+    expect(shouldSkipSuggestionFetch({ status: 'loading' })).toBe(true);
+  });
+
+  it('returns true for success entry with rewrite (result already cached)', () => {
+    expect(shouldSkipSuggestionFetch({ status: 'success', rewrite: 'Rewritten.', explanation: 'Why.' })).toBe(true);
+  });
+
+  it('returns false for success entry with unavailable:true (retry allowed)', () => {
+    expect(shouldSkipSuggestionFetch({ status: 'success', unavailable: true })).toBe(false);
+  });
+
+  it('returns false for error entry (retry allowed)', () => {
+    expect(shouldSkipSuggestionFetch({ status: 'error' })).toBe(false);
+  });
+
+  it('re-fetch path: unavailable entry transitions through loading then settles as success-with-rewrite which blocks further fetches', () => {
+    expect(shouldSkipSuggestionFetch({ status: 'success', unavailable: true })).toBe(false);
+    expect(shouldSkipSuggestionFetch({ status: 'loading' })).toBe(true);
+    expect(shouldSkipSuggestionFetch({ status: 'success', rewrite: 'Now available.', explanation: 'Found.' })).toBe(true);
   });
 });
 

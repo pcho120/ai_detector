@@ -308,3 +308,50 @@ describe('POST /api/suggestions — safe degradation does not break analyze flow
     expect(body.sentenceIndex).toBe(0);
   });
 });
+
+describe('POST /api/suggestions — unavailable response contract', () => {
+  it('unavailable response contains exactly { available, sentenceIndex } with no extra required fields', async () => {
+    delete process.env.COACHING_LLM_API_KEY;
+
+    const req = buildSuggestionRequest({
+      text: SAMPLE_TEXT,
+      sentenceIndex: 2,
+      sentence: 'Furthermore, the data supports this hypothesis.',
+      score: 0.82,
+    });
+
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as Record<string, unknown>;
+
+    expect(body.available).toBe(false);
+    expect(body.sentenceIndex).toBe(2);
+
+    // Contract: unavailable response must NOT add new required fields beyond these two.
+    // If rewrite or explanation appear, the contract is broken — clients rely on their absence
+    // to distinguish unavailable from success entries.
+    expect(body.rewrite).toBeUndefined();
+    expect(body.explanation).toBeUndefined();
+  });
+
+  it('unavailable response from LLM failure also preserves strict contract', async () => {
+    process.env.COACHING_LLM_API_KEY = 'test-key';
+    mockLlmFailure(503);
+
+    const req = buildSuggestionRequest({
+      text: SAMPLE_TEXT,
+      sentenceIndex: 4,
+      sentence: 'In conclusion, this shows the impact.',
+      score: 0.9,
+    });
+
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as Record<string, unknown>;
+
+    expect(body.available).toBe(false);
+    expect(body.sentenceIndex).toBe(4);
+    expect(body.rewrite).toBeUndefined();
+    expect(body.explanation).toBeUndefined();
+  });
+});

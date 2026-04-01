@@ -97,7 +97,7 @@ export function RevisedReviewPanel({ result, isLoading, error, appliedReplacemen
               {labelText}
             </span>
             {isReplaced && (
-              <span className="absolute -top-2 -right-2 hidden group-hover:flex items-center justify-center w-5 h-5 bg-slate-800 text-white rounded-full text-xs font-bold shadow-sm z-10" title="Click to revert">
+              <span className="absolute -top-2 -right-2 flex items-center justify-center w-5 h-5 bg-slate-800 text-white rounded-full text-xs font-bold shadow-sm z-10 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200" title="Click to revert">
                 &times;
               </span>
             )}

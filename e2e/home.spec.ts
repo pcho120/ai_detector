@@ -69,15 +69,81 @@ test('handles successful file upload and displays review panel', async ({ page }
     });
   });
 
-  // Click the highlight to open suggestion
-  await page.getByTestId('highlight-score').click();
+  const highlightToClick = page.getByTestId('highlight-score').first();
+  await highlightToClick.click();
 
-  // Verify inline suggestion popover
   const popover = page.getByTestId('suggestion-popover');
   await expect(popover).toBeVisible();
+
+  await expect(highlightToClick.locator('[data-testid="suggestion-popover"]')).toHaveCount(0);
+
+  await highlightToClick.hover();
+  await popover.hover();
+  await expect(popover).toBeVisible();
+
+  await expect(page.getByTestId('suggestion-success')).toBeVisible();
+  await expect(page.getByTestId('suggestion-empty')).not.toBeVisible();
   await expect(page.getByText('The text contains material produced by an AI.')).toBeVisible();
+  await expect(page.getByText('Consider rephrasing this section to reduce AI-like phrasing.')).toBeVisible();
   await expect(page.getByTestId('apply-suggestion-btn')).toBeVisible();
 
+});
+
+test('available:true low-risk click renders suggestion-success without empty state', async ({ page }) => {
+  await page.route('/api/analyze', async (route) => {
+    await route.fulfill({
+      status: 200,
+      json: {
+        score: 0.3,
+        text: 'Normal opening. This sentence is slightly suspicious.',
+        sentences: [
+          { sentence: 'Normal opening.', score: 0.05 },
+          { sentence: 'This sentence is slightly suspicious.', score: 0.25 }
+        ],
+        highlights: [
+          { start: 16, end: 53, score: 0.25, label: 'low', sentenceIndex: 1 }
+        ],
+        suggestions: []
+      }
+    });
+  });
+
+  await page.route('**/api/suggestions', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        available: true,
+        sentenceIndex: 1,
+        rewrite: 'This sentence reads more naturally now.',
+        explanation: 'Lower AI-like tone.'
+      })
+    });
+  });
+
+  await page.goto('/');
+
+  const fileInput = page.getByTestId('file-input');
+  await fileInput.setInputFiles({
+    name: 'test.docx',
+    mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    buffer: Buffer.from('mock file content')
+  });
+
+  await page.getByTestId('submit-button').click();
+
+  const highlight = page.getByTestId('highlight-score');
+  await expect(highlight).toBeVisible();
+  await expect(highlight).toContainText('Low Risk');
+
+  await highlight.click();
+
+  await expect(page.getByTestId('suggestion-popover')).toBeVisible();
+  await expect(page.getByTestId('suggestion-success')).toBeVisible();
+  await expect(page.getByTestId('suggestion-empty')).not.toBeVisible();
+  await expect(page.getByText('This sentence reads more naturally now.')).toBeVisible();
+  await expect(page.getByText('Lower AI-like tone.')).toBeVisible();
+  await expect(page.getByTestId('apply-suggestion-btn')).toBeVisible();
 });
 
 test('handles successful .doc file upload', async ({ page }) => {
@@ -236,7 +302,7 @@ test('handles clicking highlight with no suggestion available', async ({ page })
   const popover = page.getByTestId('suggestion-popover');
   await expect(popover).toBeVisible();
   await expect(page.getByTestId('suggestion-empty')).toBeVisible();
-  await expect(page.getByText('No rewrite suggestion available for this sentence.')).toBeVisible();
+  await expect(page.getByText("We couldn't generate a rewrite suggestion for this sentence at this time.")).toBeVisible();
   await expect(page.getByTestId('apply-suggestion-btn')).not.toBeVisible();
 });
 
@@ -643,8 +709,20 @@ test('click-to-revert removes applied edit, rescores, and collapses panel when e
   await expect(page.getByTestId('revised-panel-section')).toBeVisible();
   expect(revisedCallBodies.length).toBe(1);
 
-  // Click the rewritten sentence to revert
+  // Hover over the rewritten sentence to check revert affordance
   const revisedHighlight = page.getByTestId('revised-highlight-score');
+  const revertAffordance = revisedHighlight.locator('span[title="Click to revert"]');
+  
+  // Initially hidden via opacity/visibility classes
+  await expect(revertAffordance).toHaveCSS('opacity', '0');
+  await expect(revertAffordance).toHaveCSS('visibility', 'hidden');
+  
+  // Hover makes it visible
+  await revisedHighlight.hover();
+  await expect(revertAffordance).toHaveCSS('opacity', '1');
+  await expect(revertAffordance).toHaveCSS('visibility', 'visible');
+
+  // Click the rewritten sentence to revert
   await revisedHighlight.click();
 
   // Panel should collapse because there are no more applied edits
@@ -654,8 +732,7 @@ test('click-to-revert removes applied edit, rescores, and collapses panel when e
   expect(revisedCallBodies.length).toBe(1);
 });
 
-test('click-to-revert rescores when other applied edits remain', async ({ page }) => {
-  await page.route('/api/analyze', async (route) => {
+test('click-to-revert rescores when other applied edits remain', async ({ page }) => {  await page.route('/api/analyze', async (route) => {
     await route.fulfill({
       status: 200,
       json: {
@@ -755,14 +832,66 @@ test('click-to-revert rescores when other applied edits remain', async ({ page }
   expect(revisedCallBodies[1]).toContain('Rewritten first sentence.');
   expect(revisedCallBodies[1]).toContain('Rewritten second sentence.');
 
-  // Click the first rewritten sentence to revert
   const revisedHighlights = page.getByTestId('revised-highlight-score');
   await revisedHighlights.first().click();
 
-  // It should rescore with only the second replacement applied
   await expect(page.getByTestId('revised-panel-section')).toBeVisible();
   
   expect(revisedCallBodies.length).toBe(3);
   expect(revisedCallBodies[2]).toContain('First AI sentence.');
   expect(revisedCallBodies[2]).toContain('Rewritten second sentence.');
+});
+
+test('unavailable refetch gate — second click on unavailable sentence triggers new API request', async ({ page }) => {
+  await page.route('/api/analyze', async (route) => {
+    await route.fulfill({
+      status: 200,
+      json: {
+        score: 0.85,
+        text: 'This sentence has no suggestion available.',
+        sentences: [
+          { sentence: 'This sentence has no suggestion available.', score: 0.85 }
+        ],
+        highlights: [
+          { start: 0, end: 41, score: 0.85, label: 'high', sentenceIndex: 0 }
+        ],
+        suggestions: []
+      }
+    });
+  });
+
+  let suggestionCallCount = 0;
+  await page.route('**/api/suggestions', async (route) => {
+    suggestionCallCount += 1;
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ available: false, sentenceIndex: 0 })
+    });
+  });
+
+  await page.goto('/');
+  const fileInput = page.getByTestId('file-input');
+  await fileInput.setInputFiles({
+    name: 'test.docx',
+    mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    buffer: Buffer.from('mock file content')
+  });
+  await page.getByTestId('submit-button').click();
+
+  const highlight = page.getByTestId('highlight-score');
+  await expect(highlight).toBeVisible();
+
+  await highlight.click();
+  await expect(page.getByTestId('suggestion-popover')).toBeVisible();
+  await expect(page.getByTestId('suggestion-empty')).toBeVisible();
+  expect(suggestionCallCount).toBe(1);
+
+  const closeBtn = page.getByRole('button', { name: /close suggestion/i });
+  await closeBtn.click();
+
+  await highlight.click();
+  await expect(page.getByTestId('suggestion-popover')).toBeVisible();
+  await expect(page.getByTestId('suggestion-empty')).toBeVisible();
+  expect(suggestionCallCount).toBe(2);
 });
