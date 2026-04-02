@@ -68,7 +68,7 @@ test('Clicking a low-risk or high-risk label opens suggestion details', async ({
   await expect(page.getByTestId('suggestion-empty')).not.toBeVisible();
   await expect(page.getByText('This is a revised highly risky sentence.')).toBeVisible();
   await expect(page.getByText('Reduced AI-like tone.')).toBeVisible();
-  await expect(page.getByTestId('apply-suggestion-btn')).toBeVisible();
+  await expect(page.getByTestId('apply-suggestion-btn-0')).toBeVisible();
   
   await page.screenshot({ path: `${EVIDENCE}/task-4-clickable-suggestions.png`, fullPage: true });
 });
@@ -166,7 +166,7 @@ test('available:true high-risk click renders suggestion-success and Apply button
   await expect(page.getByTestId('suggestion-empty')).not.toBeVisible();
   await expect(page.getByText('A human wrote this paragraph.')).toBeVisible();
   await expect(page.getByText('Rephrased for natural tone.')).toBeVisible();
-  await expect(page.getByTestId('apply-suggestion-btn')).toBeVisible();
+  await expect(page.getByTestId('apply-suggestion-btn-0')).toBeVisible();
 });
 
 test('available:true low-risk click renders suggestion-success and Apply button', async ({ page }) => {
@@ -218,5 +218,52 @@ test('available:true low-risk click renders suggestion-success and Apply button'
   await expect(page.getByTestId('suggestion-empty')).not.toBeVisible();
   await expect(page.getByText('But this part reads naturally enough.')).toBeVisible();
   await expect(page.getByText('Adjusted phrasing for authenticity.')).toBeVisible();
-  await expect(page.getByTestId('apply-suggestion-btn')).toBeVisible();
+  await expect(page.getByTestId('apply-suggestion-btn-0')).toBeVisible();
 });
+
+test('available:true but no rewrite/alternatives renders empty state', async ({ page }) => {
+  await page.route('**/api/analyze', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        score: 0.9,
+        text: 'This is a mocked sentence with no rewrite.',
+        sentences: [
+          { sentence: 'This is a mocked sentence with no rewrite.', score: 0.9 }
+        ],
+        highlights: [
+          { start: 0, end: 42, score: 0.9, label: 'high', sentenceIndex: 0 }
+        ]
+      })
+    });
+  });
+
+  await page.route('**/api/suggestions', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({
+        available: true,
+        sentenceIndex: 0,
+        alternatives: [] // empty array despite available:true
+      })
+    });
+  });
+
+  await page.goto('/');
+  await page.getByTestId('file-input').setInputFiles({
+    name: 'essay.docx',
+    mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    buffer: Buffer.from('mock content')
+  });
+  await page.getByTestId('submit-button').click();
+
+  await page.getByTestId('highlight-score').nth(0).click();
+
+  await expect(page.getByTestId('suggestion-popover')).toBeVisible();
+  await expect(page.getByTestId('suggestion-empty')).toBeVisible();
+  await expect(page.getByTestId('suggestion-success')).not.toBeVisible();
+  await expect(page.getByTestId('apply-suggestion-btn-0')).not.toBeVisible();
+});
+

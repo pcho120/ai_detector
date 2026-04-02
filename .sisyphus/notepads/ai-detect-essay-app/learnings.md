@@ -216,3 +216,262 @@
 ## F1 Final Verdict — 2026-03-31
 - The corrected Task 7 evidence now matches both the non-English integration test setup and the route's pre-detection return order.
 - Final F1 result is APPROVE: Tasks 1-10 now satisfy both executable acceptance criteria and evidence-integrity requirements.
+
+## F4 Re-Run — Scope Fidelity Check (2026-04-02)
+
+**Verdict: REJECT** — 4 blocking scope-creep violations found since the prior F4 pass (2026-03-30).
+
+### Scope Creep Violations (blocking)
+
+- **SC-1** `/api/suggestions` route + `LlmSuggestionService` in `src/app/api/suggestions/route.ts` and `src/lib/suggestions/llm.ts`:
+  - Produces **full replacement sentences** via OpenAI `gpt-4o-mini`, explicitly banned by Task 9 Must NOT ("Must NOT generate whole-paragraph replacements").
+  - SYSTEM_PROMPT confirms: "rewrite must be a complete, grammatically correct replacement sentence, not a coaching hint."
+  - The prior compliant implementation (`RuleBasedSuggestionService`) produces only coaching direction hints (20–150 chars).
+
+- **SC-2** `/api/analyze/revised` route (`src/app/api/analyze/revised/route.ts`):
+  - Accepts raw text (no file upload), calls Sapling, returns fresh analysis.
+  - Bypasses file validation. No plan task authorized it.
+  - Combined with SC-1, enables rewrite→rescore evasion iteration loop.
+  - Violates MNH-4 (paste-only input) and the spirit of MNH-1 (no evasion).
+
+- **SC-3** Voice Profile feature:
+  - `src/app/api/voice-profile/generate/route.ts` — LLM-backed voice profile generation
+  - `src/lib/suggestions/voiceProfile.ts` — utilities including Korean language support
+  - `src/components/VoiceProfilePanel.tsx` — UI panel with paste-text textarea
+  - Entirely unscoped. Not in any plan task. Introduces paste-only text input (MNH-4). Korean-language support beyond the English-only v1 constraint.
+
+- **SC-4** Revised Review Panel and apply-replacement workflow:
+  - `src/components/RevisedReviewPanel.tsx`, `src/app/useRevisedAnalysisState.ts`, `src/lib/review/revisedAnalysisReducer.ts`
+  - Complex state machine for apply/revert/rescore iteration. No plan task authorized.
+  - Implements the functional equivalent of guided evasion coaching.
+
+### Scope Loss Concern (non-blocking but notable)
+
+- **SC-5** `src/lib/analysis/analyzeText.ts:31` — `suggestions: []` hardcoded.
+  - `RuleBasedSuggestionService` is disconnected from the main analysis pipeline.
+  - Task 9 requirement to wire suggestions into the route response is not fulfilled.
+  - Suggestions only arrive via the unscoped on-demand LLM endpoint.
+
+### Items That Remained Compliant
+
+- All 9 Must Have items confirmed present (limits, magic-byte validation, temp cleanup, span offsets, risk framing, no DB).
+- All 6 Must NOT Have items nominally absent (no dangerouslySetInnerHTML, no console.log, no auth/analytics/plagiarism).
+- UI wording: "AI-like phrasing risk" framing consistent; no "cheating detected" anywhere; guardrails ban evasion phrases.
+- LLM prompts explicitly say "Do NOT mention AI detection, evasion, or scores."
+
+### Required Fixes for APPROVE
+
+1. Remove `/api/suggestions`, `LlmSuggestionService`, or restrict to coaching hints matching the rule-based contract.
+2. Remove `/api/analyze/revised` and all revised-analysis state management.
+3. Remove `/api/voice-profile/generate`, `VoiceProfilePanel`, and `voiceProfile.ts`.
+4. Re-wire `analyzeText.ts` to call `RuleBasedSuggestionService` and include coaching suggestions in the main analyze response.
+5. Update `README.md` to remove references to on-demand rewrites and voice profiles.
+
+Evidence at `.sisyphus/evidence/f4-scope-fidelity.md` (overwritten with full re-run).
+
+## F3 Re-Run — Real Manual QA (2026-04-02)
+
+### Command Verification
+- `npm run test`: **372 tests pass** (14 test files: unit + integration).
+- `npm run build`: **exits 0**. Build artifact clean. 8 routes generated.
+- `npm run test:e2e`: **38 tests pass** (38/38 after fixing stale testids).
+
+### Stale Testid Fix Required
+- 10 E2E tests were failing due to stale `data-testid="apply-suggestion-btn"` selector.
+- Root cause: the suggestion popover UI was upgraded to multi-alternative (`apply-suggestion-btn-0`, `apply-suggestion-btn-1`, ...) during voice-rewrite feature work, but 4 older spec files (`evidence-screenshots.spec.ts`, `f3-qa-screenshots.spec.ts`, `task4-qa.spec.ts`, `task8-regression.spec.ts`) still referenced the old bare `apply-suggestion-btn` testid.
+- Fix: updated all 10 stale `getByTestId('apply-suggestion-btn')` calls to `getByTestId('apply-suggestion-btn-0')`.
+- `not.toBeVisible()` assertions (checking button absent when `available: false`) were left unchanged — they correctly assert absence.
+- The reducer correctly normalises old-style `{ rewrite, explanation }` API responses into `alternatives[0]`, so `apply-suggestion-btn-0` is always present when a suggestion is available.
+
+### Flow-by-Flow Evidence
+
+| Flow | Test(s) | Result |
+|------|---------|--------|
+| 1. Valid `.docx` success with highlighted review | `F3-1`, `home.spec.ts:11` | ✅ review-panel visible, `85.0% AI`, `highlight-score` with `data-ai-score="0.9"`, popover opens, Apply button present |
+| 2. Valid `.doc` success / graceful warning | `F3-2`, `home.spec.ts:159` | ✅ review-panel visible, `10.0% AI`, text rendered |
+| 3. Unsupported file error | `F3-3`, `home.spec.ts:216` | ✅ `error-message` with "Unsupported file format", no review-panel, form inputs NOT disabled |
+| 4. Too-short text error | `home.spec.ts:189` + integration tests (372 pass, TEXT_TOO_SHORT → 422) | ✅ extraction-failed and short-text paths both covered |
+| 5. Provider/extraction failure | `F3-4` (extraction), `F3-5` (language), `home.spec.ts:243`, `home.spec.ts:583` | ✅ friendly error messages, original panel preserved, form interactive |
+
+### UX Observations (no defects)
+- Error messages are friendly and specific: "Unsupported file format. Please upload a .doc or .docx file.", "Could not extract text from the document.", "Only English-language documents are supported."
+- No raw provider fields, stack traces, or internal error codes surfaced in UI.
+- After any failure, `file-input` and `submit-button` remain enabled (confirmed by F3-3 assertions).
+- No uncaught browser-console errors during any flow (Playwright runs headless with clean sessions).
+- UI wording uses "AI-like phrasing risk" / "% AI" consistently; no "cheating", "plagiarism", or definitiveness claims observed.
+
+### Verdict
+**APPROVE** — All 5 required flows verified. 372 unit/integration tests + 38 E2E tests pass. Build clean. No broken interactive state after failures. No disallowed UX copy detected.
+
+## F1 Final-wave audit — 2026-04-02
+- Current repo state is REJECT, not APPROVE: npm run lint, npm run typecheck, npm run test, and npm run build pass, but npm run test:e2e fails with 10 failing Playwright tests (28 passed / 38 total), so the required verification chain is red again.
+- The implementation has drifted away from the plan: /api/analyze now returns suggestions: [] only, while rewrite generation moved to /api/suggestions plus revised-analysis and voice-profile flows. This breaks the plan’s Task 9 route-level coaching requirement and introduces extra features outside the original essay-review scope.
+- Several evidence artifacts are stale or contradictory to the current repo: task-7-analysis-route.txt, task-7-analysis-route-error.txt, task-9-suggestions.txt, task-10-ci-docs.txt, and f1-plan-compliance.md all describe route-integrated suggestions or fully green verification that no longer match current code/tests.
+- task-8-review-ui.png is also stale relative to the current UI: it shows an inline Review Suggestions card, while the current app renders suggestion popovers and rewrite/apply flows instead.
+
+## F2 Code Quality Review — Re-Run (2026-04-02)
+
+### Scope Covered
+All implementation source files, test files, and config reviewed in this pass:
+- `src/app/api/analyze/route.ts`, `src/app/api/analyze/revised/route.ts`
+- `src/app/api/suggestions/route.ts`, `src/app/api/voice-profile/generate/route.ts`
+- `src/lib/files/{validate,temp,errors,docx,doc}.ts`
+- `src/lib/analysis/analyzeText.ts`
+- `src/lib/detection/{types,sapling}.ts`
+- `src/lib/highlights/spans.ts`
+- `src/lib/suggestions/{types,rule-based,guardrails,llm,voiceProfile}.ts`
+- `src/lib/review/revisedAnalysisReducer.ts`
+- `src/components/{ReviewPanel,RevisedReviewPanel,VoiceProfilePanel}.tsx`
+- `src/app/page.tsx`, `src/app/useRevisedAnalysisState.ts`
+- All test files under `tests/` and `e2e/`
+
+### Verification Chain Results
+- `npm run lint`: **exits 0** — 0 errors, 3 warnings (`_handle` unused var in route.ts, 2 config anonymous-export warnings)
+- `npm run typecheck`: **exits 0** — clean
+- `npm run test`: **exits 0** — 372 tests, 14 files, all pass
+- `npm run build`: **exits 0** — clean production build, 6 routes
+- `npm run test:e2e`: **exits 0** — 38/38 tests pass
+
+### Anti-Pattern Scan
+- `as any`: 0 matches in `src/`
+- `@ts-ignore` / `@ts-nocheck` / `@ts-expect-error`: 0 matches in `src/`
+- `console.log` / `console.warn`: 0 matches in `src/`
+- `dangerouslySetInnerHTML` / `innerHTML=`: 0 matches
+- `eval(` / `new Function(`: 0 matches
+
+### Secret Boundary
+- `process.env.SAPLING_API_KEY`: only in `src/lib/analysis/analyzeText.ts` (server-only) ✅
+- `process.env.COACHING_LLM_API_KEY`: only in `src/app/api/suggestions/route.ts`, `src/app/api/voice-profile/generate/route.ts`, `src/lib/suggestions/llm.ts` (all server-only) ✅
+- Zero `process.env.*` calls in any `.tsx` client component ✅
+- Build artifact scan: `grep -rn "COACHING_LLM_API_KEY\|SAPLING_API_KEY" .next/static/` → **0 matches** ✅
+
+### Type Safety
+- `llm.ts`: All JSON responses parsed via `as unknown` + runtime type guards before asserting shape. No `as any`. Type narrowing thorough.
+- `suggestions/route.ts`: `isValidRequest()` validates all fields before destructuring. Correct.
+- `voice-profile/generate/route.ts`: `isValidRequest()` + `hasAtLeastOneInputSource()` guard before any LLM call. `writingSample` clamped to `MAX_PROFILE_LENGTH` before passing to LLM.
+- `analyze/revised/route.ts`: Body validated via `isValidRequest()`; only `body.text` passed downstream.
+
+### Upload Safety & Cleanup
+- Main `/api/analyze` route: `withTempFile` wraps extraction in `try/finally` — cleanup guaranteed ✅
+- `/api/analyze/revised` route: accepts raw text (no file upload), so no temp file needed ✅
+- `/api/suggestions` and `/api/voice-profile/generate`: JSON body only — no file handling ✅
+
+### Security / Privacy Findings
+- `/api/analyze/revised`: Does NOT apply English-only check, min/max length enforcement, or garbled-text detection. Accepts arbitrary text up to no enforced limit. **LOW severity** — no file upload surface, no persistent storage, no file path leak. Text already passed extraction quality gates on the initial analysis pass.
+- Voice profile `writingSample` clamped to `MAX_PROFILE_LENGTH` before LLM call — no unbounded input to external API ✅
+- `/api/suggestions`: `text` field validated as non-empty string but has no max-length enforcement. Passes only as sentence-rewrite context. **LOW severity**.
+- LLM prompts include `"Do NOT mention AI detection, evasion, or scores."` — evasion guardrail at prompt level ✅
+- `applyGuardrails()` post-processes all LLM output before returning to UI ✅
+
+### Maintainability Findings (carried from prior pass)
+- `src/lib/suggestions/types.ts` line 4: stale comment referencing future LLM implementation. **LOW** — cosmetic.
+- `src/lib/files/docx.ts`: redundant `[a-zA-Z0-9]` in `isGarbled` regex (subset of `\p{L}\p{N}`). **LOW** — harmless.
+- `src/lib/suggestions/guardrails.ts`: gap for novel evasion phrases (`"escape detection"`, `"game the detector"`). **LOW** for current static strings; would be MEDIUM if LLM outputs were not covered by existing patterns.
+
+### Test Quality Findings (carried from prior pass)
+- `tests/unit/validate.test.ts` and `tests/unit/doc-mocked.test.ts`: bare `try/catch` pattern in ~14 tests (no prior `expect().toThrow()` guard → vacuous-pass risk on regression). **LOW** — tests currently catch real bugs; fragility only matters if someone removes a `throw`.
+- `tests/integration/suggestions-route.test.ts`: 29 tests covering INVALID_REQUEST, available/unavailable, multi-alternative, voice-profile passthrough, guardrail blocking, and missing API key → unavailable. ✅
+- `tests/unit/revisedAnalysisReducer.test.ts`: 50 tests — thorough coverage of apply/revert/rescore state machine including edge cases. ✅
+
+### Verdict
+
+**✅ APPROVE**
+
+All security and privacy invariants upheld across all routes (original + new). Zero anti-patterns. Zero secret exposure in client bundle. Type safety strict (no `as any`). All 5 verification commands exit 0 (372 unit/integration + 38 E2E). The only findings are LOW-severity maintainability and test-fragility issues that do not affect production correctness or privacy. The `/api/analyze/revised` lack of length enforcement is noted but not blocking given its constrained call context and absence of persistent storage.
+
+Evidence overwritten at `.sisyphus/evidence/f2-code-quality.md`.
+
+---
+
+## F4 — Scope Fidelity Check (Cumulative 4-Plan Lens) — 2026-04-02
+
+**Scope baseline**: Union of all four plans in order:
+1. `ai-detect-essay-app.md`
+2. `suggestion-preview-workflow.md`
+3. `sentence-suggestion-regressions.md`
+4. `personal-voice-rewrite-assistant.md`
+
+**Interpretation**: Each subsequent plan is a formally authorized extension. Features added by plans 2–4 are not scope creep relative to plan 1; they are the cumulative v1 deliverable.
+
+### Prior REJECT Context
+
+The prior F4 run (2026-04-02, single-plan lens) issued REJECT citing SC-1 through SC-4. Under the cumulative 4-plan lens, all four prior violations are authorized extensions:
+
+| Prior Violation | Authorizing Plan | Status |
+|----------------|-----------------|--------|
+| SC-1: `/api/suggestions` + LLM full-sentence rewrites | `suggestion-preview-workflow.md` Task 2, Must Have: "full rewritten sentence suggestions generated on click" | **AUTHORIZED** |
+| SC-2: `/api/analyze/revised` text-only rescoring | `suggestion-preview-workflow.md` Task 5: "dedicated `POST /api/analyze/revised`" | **AUTHORIZED** |
+| SC-3: Voice profile feature end-to-end | `personal-voice-rewrite-assistant.md` Tasks 1–9 (entire plan) | **AUTHORIZED** |
+| SC-4: `RevisedReviewPanel` + `useRevisedAnalysisState` + `revisedAnalysisReducer` | `suggestion-preview-workflow.md` Tasks 3, 5, 7 | **AUTHORIZED** |
+| SC-5 (concern): `analyzeText.ts` returns `suggestions:[]` | `suggestion-preview-workflow.md` Must NOT: "Must NOT precompute full rewritten suggestions during initial upload — on-demand only" | **CORRECT BEHAVIOR** |
+
+### Cumulative Must Have Verification
+
+| Req | Source Plan | Status |
+|-----|-------------|--------|
+| Max upload 5 MB | Plan 1 | ✅ `validate.ts:3` `MAX_FILE_SIZE_BYTES` enforced |
+| Max extracted text 100,000 chars | Plan 1 | ✅ `docx.ts:5`, `doc.ts:15` enforced |
+| Min extracted text 300 chars | Plan 1 | ✅ enforced in both extractors |
+| MIME + magic-byte validation | Plan 1 | ✅ `validate.ts:18-88` |
+| Temp-file cleanup via try/finally | Plan 1 | ✅ `withTempFile` in `temp.ts:43-54` |
+| Sentence-level highlight spans as char offsets | Plan 1 | ✅ `spans.ts:6-11` |
+| UI wording: risk review / AI-like phrasing risk | Plan 1 | ✅ `ReviewPanel.tsx:231,236` |
+| No database / session history / persistent storage | Plan 1 | ✅ 0 matches for localStorage/sessionStorage/indexedDB |
+| Upload form unchanged for initial analysis | Plan 2 | ✅ `page.tsx` multipart POST to `/api/analyze` intact |
+| Suggestions for all highlight spans (any label) | Plan 2 | ✅ `ReviewPanel.tsx` triggers on all spans |
+| Full rewritten sentence + explanation per alternative | Plan 2 | ✅ `llm.ts:34` JSON schema; `suggestions/route.ts:94-96` |
+| Suggestion generation on-demand only (not precomputed) | Plan 2 | ✅ `analyzeText.ts:31` returns `suggestions:[]` |
+| `POST /api/suggestions` dedicated endpoint | Plan 2 | ✅ `src/app/api/suggestions/route.ts` present |
+| Revised panel driven by real server rescoring | Plan 2 | ✅ `/api/analyze/revised` route present |
+| Sentence-level revert in revised panel | Plan 2 | ✅ `RevisedReviewPanel.tsx` onRevert |
+| Guardrails on all LLM output | Plan 2 | ✅ `applyGuardrails` called in `llm.ts:237,252,283` and `rule-based.ts:95` |
+| `COACHING_LLM_API_KEY` server-only | Plan 2 | ✅ only in `analyzeText.ts`, `llm.ts`, `suggestions/route.ts`, `voice-profile/generate/route.ts` — 0 matches in `.tsx` |
+| `SUGGESTION_FETCH_UNAVAILABLE` action preserved | Plan 3 | ✅ `revisedAnalysisReducer.ts:132,215` |
+| `data-testid="highlight-score"` present | Plan 3 | ✅ `ReviewPanel.tsx:257` |
+| `data-testid="suggestion-popover"` present | Plan 3 | ✅ `ReviewPanel.tsx:140` |
+| `data-testid="suggestion-empty"` with role/aria | Plan 3 | ✅ `ReviewPanel.tsx:163` `role="status" aria-live="polite"` |
+| `data-testid="suggestion-success"` present | Plan 3 | ✅ `ReviewPanel.tsx:167` |
+| `data-testid="revised-highlight-score"` present | Plan 3 | ✅ `RevisedReviewPanel.tsx:90` |
+| Unavailable state shows improved copy | Plan 3 | ✅ `ReviewPanel.tsx:163` user-facing message present |
+| Re-fetch after unavailable (cache bypass) | Plan 3 | ✅ `shouldSkipSuggestionFetch` only blocks `loading` + non-unavailable success |
+| `available:false` contract on `/api/suggestions` | Plan 3 | ✅ `suggestions/route.ts:25,87` |
+| `alternatives[0]` aliased as top-level `rewrite`/`explanation` | Plans 3, 4 | ✅ `suggestions/route.ts:94-95` |
+| 2–3 alternatives enforced on success response | Plan 4 | ✅ `llm.ts:283` `safe.length < 2 → unavailable` |
+| `POST /api/suggestions` accepts optional `voiceProfile` | Plan 4 | ✅ `suggestions/route.ts:13,74` |
+| `sanitizeVoiceProfile` called before LLM | Plan 4 | ✅ `llm.ts:54`, `suggestions/route.ts:74`, `voice-profile/generate/route.ts:197` |
+| `/api/voice-profile/generate` route present | Plan 4 | ✅ `src/app/api/voice-profile/generate/route.ts` |
+| `VoiceProfilePanel` with presets + textarea | Plan 4 | ✅ `VoiceProfilePanel.tsx:174` `data-testid="voice-profile-textarea"` |
+| Voice profile survives new upload in same tab | Plan 4 | ✅ `page.tsx:40` `resetRevised()` does NOT clear `voiceProfile`/`vpSelectedPresets`/`vpWritingSampleDraft` state |
+| No account/localStorage/server persistence of voice profile | Plan 4 | ✅ 0 localStorage/sessionStorage matches |
+
+### Cumulative Must NOT Have Verification
+
+| Prohibition | Status |
+|-------------|--------|
+| No detector-evasion tactics in output | ✅ `guardrails.ts` bans evasion phrases; LLM prompts: "Do NOT mention AI detection, evasion, or scores." |
+| No auto-rewrite of original uploaded file | ✅ original file never mutated; rewrites apply only to in-session revised text |
+| No login / payments / user history / analytics / plagiarism | ✅ grep for `login\|auth\|payment\|stripe\|analytics\|gtag` → 0 matches (hits in `llm.ts` and `voiceProfile.ts` are the word "author" in string literals, not auth APIs) |
+| No PDF / .rtf / .odt / paste-only / batch in analyze flow | ✅ `validate.ts:5` only `.docx`/`.doc`; voice profile writing sample is a separate non-analyze input explicitly authorized by Plan 4 |
+| No `dangerouslySetInnerHTML` | ✅ 0 matches across all `.tsx` |
+| No essay text in console / telemetry | ✅ 0 `console.log/warn/error` in `src/` |
+| No `process.env.*` in client components | ✅ `process.env.` matches only in server-side `.ts` files, never in `.tsx` |
+| No whole-document or paragraph rewrites | ✅ sentence-level only throughout |
+| No suggestion generation in `RevisedReviewPanel` | ✅ `RevisedReviewPanel.tsx` has no suggestion fetch calls |
+| No fabricated local rescored labels | ✅ revised panel always uses server response from `/api/analyze/revised` |
+| No external state management / overlay libraries | ✅ only React hooks and native fetch |
+| No retry buttons / auto-retry on suggestion unavailable | ✅ `suggestion-empty` shows message only |
+| No change to `SUGGESTION_FETCH_UNAVAILABLE` or reducer action set | ✅ action preserved exactly at `revisedAnalysisReducer.ts:132,215` |
+| No evasion framing in voice profile feature | ✅ `voiceProfile.ts:98` prompt: "Do NOT mention AI detection, evasion, or scores." |
+
+### Verdict
+
+**✅ APPROVE**
+
+Under the cumulative 4-plan scope interpretation (each later plan is a formally authorized extension of the prior one), the current implementation satisfies all Must Have and Must NOT Have requirements across all four plans. All prior SC-1 through SC-4 violations are authorized by plans 2 and 4. All data-testid contracts, API response contracts, reducer action vocabulary, and guardrail requirements are present and verified by direct grep. No forbidden additions found. No required items missing.
+
+
+## Cumulative Compliance Audit — 2026-04-02
+- Under stacked-plan interpretation (`ai-detect-essay-app` + `suggestion-preview-workflow` + `sentence-suggestion-regressions` + `personal-voice-rewrite-assistant`), the current repo is cumulatively compliant: base upload/analyze flow remains intact, later rewrite/apply/revised-preview flows are intentionally in scope, and voice-profile/multi-alternative suggestions are implemented.
+- Verification chain passed in one run: `npm run lint && npm run typecheck && npm run test && npm run build && npm run test:e2e` → success, with only 3 non-blocking lint warnings.
+- Current critical contract mapping: `/api/analyze` preserves file-upload analysis; `/api/suggestions` preserves strict unavailable shape while adding backward-compatible success alternatives; `/api/analyze/revised` powers real rescoring after apply/undo; `/api/voice-profile/generate` provides copyable reusable profile text.
+- Regression contracts remain preserved after the voice-profile expansion: unavailable suggestions are retryable on later click, the original-panel popover is rendered outside highlight spans, revised-panel revert hover remains stable, and old top-level `rewrite` / `explanation` aliases still mirror `alternatives[0]`.

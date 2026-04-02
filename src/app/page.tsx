@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { ReviewPanel } from '@/components/ReviewPanel';
 import { RevisedReviewPanel } from '@/components/RevisedReviewPanel';
+import { VoiceProfilePanel } from '@/components/VoiceProfilePanel';
 import { useRevisedAnalysisState, deriveRevisedText } from '@/app/useRevisedAnalysisState';
 
 export default function HomePage() {
@@ -10,6 +11,13 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null);
   const revisedAnalysis = useRevisedAnalysisState();
   const { state: revisedState, setOriginalResult, reset: resetRevised } = revisedAnalysis;
+
+  const [vpSelectedPresets, setVpSelectedPresets] = useState<string[]>([]);
+  const [vpWritingSampleDraft, setVpWritingSampleDraft] = useState('');
+  const [voiceProfile, setVoiceProfile] = useState('');
+  const [vpLoading, setVpLoading] = useState(false);
+  const [vpError, setVpError] = useState<string | null>(null);
+  const [vpCopied, setVpCopied] = useState(false);
 
   const result = revisedState.originalResult;
 
@@ -75,6 +83,7 @@ export default function HomePage() {
   return (
     <main className="min-h-screen bg-slate-50 px-6 py-12 text-slate-900 font-sans">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-8">
+        <span data-testid="voice-profile-state" data-value={voiceProfile} style={{ display: 'none' }} aria-hidden="true" />
         <header className="flex flex-col gap-2">
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">AI Detect Essay Review</h1>
           <p className="text-slate-500">Upload your essay to analyze it for AI-generated phrasing.</p>
@@ -116,21 +125,39 @@ export default function HomePage() {
         )}
 
         {result && (
-          <div className={`flex gap-6 ${revisedState.revisedResult || revisedState.revisedLoading || revisedState.revisedError ? 'flex-col lg:flex-row' : 'flex-col'}`}>
-            <section className="flex-1 rounded-xl border border-slate-200 bg-white p-6 shadow-sm min-w-0">
-              <ReviewPanel result={result} revisedState={revisedAnalysis} />
+          <div className="flex flex-col gap-6">
+            <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+              <VoiceProfilePanel
+                vpSelectedPresets={vpSelectedPresets}
+                setVpSelectedPresets={setVpSelectedPresets}
+                vpWritingSampleDraft={vpWritingSampleDraft}
+                setVpWritingSampleDraft={setVpWritingSampleDraft}
+                voiceProfile={voiceProfile}
+                setVoiceProfile={setVoiceProfile}
+                vpLoading={vpLoading}
+                setVpLoading={setVpLoading}
+                vpError={vpError}
+                setVpError={setVpError}
+                vpCopied={vpCopied}
+                setVpCopied={setVpCopied}
+              />
             </section>
-            {(revisedState.revisedResult || revisedState.revisedLoading || revisedState.revisedError) && (
-              <section className="flex-1 rounded-xl border border-slate-200 bg-white p-6 shadow-sm min-w-0" data-testid="revised-panel-section">
-                <RevisedReviewPanel
-                  result={revisedState.revisedResult ?? { score: 0, text: '', sentences: [], highlights: [], suggestions: [] }}
-                  isLoading={revisedState.revisedLoading}
-                  error={revisedState.revisedError}
-                  appliedReplacements={revisedState.appliedReplacements}
-                  onRevert={handleRevert}
-                />
+            <div className={`flex gap-6 ${revisedState.revisedResult || revisedState.revisedLoading || revisedState.revisedError ? 'flex-col lg:flex-row' : 'flex-col'}`}>
+              <section className="flex-1 rounded-xl border border-slate-200 bg-white p-6 shadow-sm min-w-0">
+                <ReviewPanel result={result} revisedState={revisedAnalysis} voiceProfile={voiceProfile || undefined} />
               </section>
-            )}
+              {(revisedState.revisedResult || revisedState.revisedLoading || revisedState.revisedError) && (
+                <section className="flex-1 rounded-xl border border-slate-200 bg-white p-6 shadow-sm min-w-0" data-testid="revised-panel-section">
+                  <RevisedReviewPanel
+                    result={revisedState.revisedResult ?? { score: 0, text: '', sentences: [], highlights: [], suggestions: [] }}
+                    isLoading={revisedState.revisedLoading}
+                    error={revisedState.revisedError}
+                    appliedReplacements={revisedState.appliedReplacements}
+                    onRevert={handleRevert}
+                  />
+                </section>
+              )}
+            </div>
           </div>
         )}
       </div>

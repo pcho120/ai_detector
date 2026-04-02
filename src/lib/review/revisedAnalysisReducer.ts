@@ -12,6 +12,7 @@
  */
 
 import type { AnalysisSuccessResponse } from '@/app/api/analyze/route';
+import type { SuggestionAlternative } from '@/lib/suggestions/llm';
 
 // ---------------------------------------------------------------------------
 // Suggestion cache entry
@@ -22,8 +23,20 @@ export type SuggestionFetchStatus = 'idle' | 'loading' | 'success' | 'error';
 
 export interface SuggestionCacheEntry {
   status: SuggestionFetchStatus;
-  /** Present when status === 'success' and a suggestion is available. */
+  /**
+   * All fetched alternatives when status === 'success' and a suggestion is available.
+   * The primary/first alternative is always at index 0.
+   */
+  alternatives?: SuggestionAlternative[];
+  /**
+   * Alias for alternatives[0].rewrite — kept for backward compatibility.
+   * Always equals alternatives[0].rewrite when alternatives is present.
+   */
   rewrite?: string;
+  /**
+   * Alias for alternatives[0].explanation — kept for backward compatibility.
+   * Always equals alternatives[0].explanation when alternatives is present.
+   */
   explanation?: string;
   /** True when status === 'success' but the endpoint returned available:false */
   unavailable?: boolean;
@@ -110,11 +123,9 @@ export type RevisedAnalysisAction =
   /** Store a successfully fetched suggestion for a sentence. */
   | {
       type: 'SUGGESTION_FETCH_SUCCESS';
-      payload: {
-        sentenceIndex: number;
-        rewrite: string;
-        explanation: string;
-      };
+      payload:
+        | { sentenceIndex: number; alternatives: SuggestionAlternative[] }
+        | { sentenceIndex: number; rewrite: string; explanation: string };
     }
 
   /** Store an "unavailable" result (endpoint returned available:false). */
@@ -181,12 +192,22 @@ export function revisedAnalysisReducer(
     }
 
     case 'SUGGESTION_FETCH_SUCCESS': {
-      const { sentenceIndex, rewrite, explanation } = action.payload;
+      const { sentenceIndex } = action.payload;
+      const alternatives: SuggestionAlternative[] =
+        'alternatives' in action.payload
+          ? action.payload.alternatives
+          : [{ rewrite: action.payload.rewrite, explanation: action.payload.explanation }];
+      const first = alternatives[0];
       return {
         ...state,
         suggestionCache: {
           ...state.suggestionCache,
-          [sentenceIndex]: { status: 'success', rewrite, explanation },
+          [sentenceIndex]: {
+            status: 'success',
+            alternatives,
+            rewrite: first.rewrite,
+            explanation: first.explanation,
+          },
         },
       };
     }

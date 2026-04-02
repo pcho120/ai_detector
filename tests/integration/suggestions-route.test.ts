@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { NextRequest } from 'next/server';
 import { POST } from '@/app/api/suggestions/route';
-import type { SuggestionResponse } from '@/app/api/suggestions/route';
+import type { SuggestionResponse, SuggestionAvailableResponse } from '@/app/api/suggestions/route';
 
 const SAMPLE_TEXT =
   'In conclusion, the experiment shows improved outcomes. Furthermore, the data supports this hypothesis.';
@@ -24,7 +24,31 @@ function mockLlmSuccess(rewrite: string, explanation: string): void {
         choices: [
           {
             message: {
-              content: JSON.stringify({ rewrite, explanation }),
+              content: JSON.stringify({
+                alternatives: [
+                  { rewrite, explanation },
+                  { rewrite: 'A second distinct rewrite of the original sentence here.', explanation: 'Second alternative phrasing approach.' },
+                  { rewrite: 'A third distinct rewrite with different vocabulary and structure.', explanation: 'Third alternative phrasing approach.' },
+                ],
+              }),
+            },
+          },
+        ],
+      }),
+    }),
+  );
+}
+
+function mockLlmMultiSuccess(alternatives: Array<{ rewrite: string; explanation: string }>): void {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({ alternatives }),
             },
           },
         ],
@@ -69,6 +93,117 @@ describe('POST /api/suggestions — success path', () => {
       expect(typeof body.explanation).toBe('string');
       expect(body.explanation.length).toBeGreaterThan(0);
     }
+  });
+
+  it('returns alternatives array with 2 or 3 entries on success', async () => {
+    process.env.COACHING_LLM_API_KEY = 'test-key';
+    mockLlmMultiSuccess([
+      { rewrite: 'The experiment consistently demonstrated improved outcomes across all groups.', explanation: 'Direct empirical claim.' },
+      { rewrite: 'Results from the experiment showed consistent improvement.', explanation: 'More concise framing.' },
+      { rewrite: 'Data from the experiment reveals improved outcomes across cohorts.', explanation: 'Evidence-anchored restatement.' },
+    ]);
+
+    const req = buildSuggestionRequest({
+      text: SAMPLE_TEXT,
+      sentenceIndex: 0,
+      sentence: 'In conclusion, the experiment shows improved outcomes.',
+      score: 0.9,
+    });
+    const res = await POST(req);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as SuggestionAvailableResponse;
+    expect(body.available).toBe(true);
+    expect(Array.isArray(body.alternatives)).toBe(true);
+    expect(body.alternatives.length).toBeGreaterThanOrEqual(2);
+    expect(body.alternatives.length).toBeLessThanOrEqual(3);
+    expect(typeof body.alternatives[0].rewrite).toBe('string');
+    expect(typeof body.alternatives[0].explanation).toBe('string');
+  });
+
+  it('top-level rewrite and explanation are aliases to alternatives[0]', async () => {
+    process.env.COACHING_LLM_API_KEY = 'test-key';
+    const first = { rewrite: 'The experiment consistently demonstrated improved outcomes.', explanation: 'Replaced vague conclusion with direct claim.' };
+    mockLlmMultiSuccess([
+      first,
+      { rewrite: 'Results from the experiment showed consistent improvement.', explanation: 'More concise framing.' },
+    ]);
+
+    const req = buildSuggestionRequest({
+      text: SAMPLE_TEXT,
+      sentenceIndex: 0,
+      sentence: 'In conclusion, the experiment shows improved outcomes.',
+      score: 0.9,
+    });
+    const res = await POST(req);
+    const body = (await res.json()) as SuggestionAvailableResponse;
+
+    expect(body.available).toBe(true);
+    expect(body.rewrite).toBe(body.alternatives[0].rewrite);
+    expect(body.explanation).toBe(body.alternatives[0].explanation);
+    expect(body.rewrite).toBe(first.rewrite);
+    expect(body.explanation).toBe(first.explanation);
+  });
+
+  it('accepts optional voiceProfile in request body', async () => {
+    process.env.COACHING_LLM_API_KEY = 'test-key';
+    mockLlmMultiSuccess([
+      { rewrite: 'The experiment consistently demonstrated improved outcomes.', explanation: 'Direct empirical phrasing.' },
+      { rewrite: 'Results from the experiment showed consistent improvement.', explanation: 'Concise framing.' },
+    ]);
+
+    const req = buildSuggestionRequest({
+      text: SAMPLE_TEXT,
+      sentenceIndex: 0,
+      sentence: 'In conclusion, the experiment shows improved outcomes.',
+      score: 0.9,
+      voiceProfile: 'concise sentences, active verbs, first-person academic voice',
+    });
+    const res = await POST(req);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as SuggestionResponse;
+    expect(body.available).toBe(true);
+  });
+
+  it('sanitizes voiceProfile wrapper before forwarding to LLM', async () => {
+    process.env.COACHING_LLM_API_KEY = 'test-key';
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                alternatives: [
+                  { rewrite: 'The experiment demonstrated clear improvements.', explanation: 'Replaced vague opener.' },
+                  { rewrite: 'Results indicate a consistent trend of improvement.', explanation: 'Empirically grounded.' },
+                ],
+              }),
+            },
+          },
+        ],
+      }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const req = buildSuggestionRequest({
+      text: SAMPLE_TEXT,
+      sentenceIndex: 0,
+      sentence: 'In conclusion, the experiment shows improved outcomes.',
+      score: 0.9,
+      voiceProfile: 'Voice profile: concise and direct academic writing',
+    });
+    const res = await POST(req);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as SuggestionResponse;
+    expect(body.available).toBe(true);
+    expect(fetchMock).toHaveBeenCalledOnce();
+    const callBody = JSON.parse((fetchMock.mock.calls[0][1] as { body: string }).body) as { messages: Array<{ content: string }> };
+    const userContent = callBody.messages[1].content;
+    expect(userContent).toContain('concise and direct academic writing');
+    expect(userContent).not.toContain('Voice profile:');
   });
 
   it('links response to the requested sentenceIndex', async () => {
@@ -146,6 +281,79 @@ describe('POST /api/suggestions — success path', () => {
     expect(body.sentenceIndex).toBe(3);
   });
 
+  it('returns available=false when all LLM alternatives contain banned phrases', async () => {
+    process.env.COACHING_LLM_API_KEY = 'test-key';
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  alternatives: [
+                    { rewrite: 'This will help you avoid detection by AI checkers.', explanation: 'Cleaner phrasing.' },
+                    { rewrite: 'Use this to bypass the AI checker.', explanation: 'Alternative phrasing.' },
+                    { rewrite: 'This makes your writing completely undetectable.', explanation: 'Third option.' },
+                  ],
+                }),
+              },
+            },
+          ],
+        }),
+      }),
+    );
+
+    const req = buildSuggestionRequest({
+      text: SAMPLE_TEXT,
+      sentenceIndex: 2,
+      sentence: 'Furthermore, this approach demonstrates the concept.',
+      score: 0.78,
+    });
+    const res = await POST(req);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as SuggestionResponse;
+    expect(body.available).toBe(false);
+  });
+
+  it('returns available=false when LLM returns only 1 safe alternative (below 2-alt minimum)', async () => {
+    process.env.COACHING_LLM_API_KEY = 'test-key';
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  alternatives: [
+                    { rewrite: 'The experiment revealed a consistent improvement across all cohorts.', explanation: 'Direct empirical claim.' },
+                  ],
+                }),
+              },
+            },
+          ],
+        }),
+      }),
+    );
+
+    const req = buildSuggestionRequest({
+      text: SAMPLE_TEXT,
+      sentenceIndex: 0,
+      sentence: 'In conclusion, the experiment shows improved outcomes.',
+      score: 0.9,
+    });
+    const res = await POST(req);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as SuggestionResponse;
+    expect(body.available).toBe(false);
+    expect(body.sentenceIndex).toBe(0);
+  });
+
   it('returns available=false when LLM output contains banned phrases', async () => {
     process.env.COACHING_LLM_API_KEY = 'test-key';
     vi.stubGlobal(
@@ -157,8 +365,9 @@ describe('POST /api/suggestions — success path', () => {
             {
               message: {
                 content: JSON.stringify({
-                  rewrite: 'This will help you avoid detection by AI checkers.',
-                  explanation: 'Cleaner phrasing.',
+                  alternatives: [
+                    { rewrite: 'This will help you avoid detection by AI checkers.', explanation: 'Cleaner phrasing.' },
+                  ],
                 }),
               },
             },
@@ -200,6 +409,10 @@ describe('POST /api/suggestions — success path', () => {
     if (body.available) {
       expect(body.rewrite).not.toMatch(BANNED);
       expect(body.explanation).not.toMatch(BANNED);
+      for (const alt of body.alternatives) {
+        expect(alt.rewrite).not.toMatch(BANNED);
+        expect(alt.explanation).not.toMatch(BANNED);
+      }
     }
   });
 });
@@ -288,6 +501,201 @@ describe('POST /api/suggestions — request validation', () => {
     expect(typeof body.error).toBe('string');
     expect(typeof body.message).toBe('string');
   });
+
+  it('accepts request body without voiceProfile field (backward compat)', async () => {
+    process.env.COACHING_LLM_API_KEY = 'test-key';
+    mockLlmMultiSuccess([
+      { rewrite: 'The experiment demonstrated clear improvements.', explanation: 'Direct empirical claim.' },
+      { rewrite: 'Results indicate consistent improvement across groups.', explanation: 'Empirically grounded.' },
+    ]);
+
+    const req = buildSuggestionRequest({
+      text: SAMPLE_TEXT,
+      sentenceIndex: 0,
+      sentence: 'In conclusion, the experiment shows improved outcomes.',
+      score: 0.9,
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as SuggestionResponse;
+    expect(body.available).toBe(true);
+  });
+
+  it('empty string voiceProfile behaves identically to absent voiceProfile', async () => {
+    process.env.COACHING_LLM_API_KEY = 'test-key';
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                alternatives: [
+                  { rewrite: 'The experiment demonstrated clear improvements.', explanation: 'Direct empirical claim.' },
+                  { rewrite: 'Results indicate consistent improvement.', explanation: 'Concise framing.' },
+                ],
+              }),
+            },
+          },
+        ],
+      }),
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const req = buildSuggestionRequest({
+      text: SAMPLE_TEXT,
+      sentenceIndex: 0,
+      sentence: 'In conclusion, the experiment shows improved outcomes.',
+      score: 0.9,
+      voiceProfile: '',
+    });
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as SuggestionResponse;
+    expect(body.available).toBe(true);
+
+    const callBody = JSON.parse((fetchMock.mock.calls[0][1] as { body: string }).body) as {
+      messages: Array<{ content: string }>;
+    };
+    const userContent = callBody.messages[1].content;
+    expect(userContent).not.toContain('Author voice profile:');
+  });
+});
+
+describe('POST /api/suggestions — unavailable branch isolation', () => {
+  it('branch: missing COACHING_LLM_API_KEY → exact { available:false, sentenceIndex }', async () => {
+    delete process.env.COACHING_LLM_API_KEY;
+
+    const req = buildSuggestionRequest({
+      text: SAMPLE_TEXT,
+      sentenceIndex: 7,
+      sentence: 'In conclusion, the experiment shows improved outcomes.',
+      score: 0.9,
+    });
+    const res = await POST(req);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as Record<string, unknown>;
+
+    expect(body.available).toBe(false);
+    expect(body.sentenceIndex).toBe(7);
+    expect(body.rewrite).toBeUndefined();
+    expect(body.explanation).toBeUndefined();
+    expect(body.alternatives).toBeUndefined();
+  });
+
+  it('branch: multi-call parse failure (malformed JSON from LLM) → exact { available:false, sentenceIndex }', async () => {
+    process.env.COACHING_LLM_API_KEY = 'test-key';
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          choices: [{ message: { content: 'not valid json {{{{' } }],
+        }),
+      }),
+    );
+
+    const req = buildSuggestionRequest({
+      text: SAMPLE_TEXT,
+      sentenceIndex: 8,
+      sentence: 'Furthermore, the data supports this hypothesis.',
+      score: 0.85,
+    });
+    const res = await POST(req);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as Record<string, unknown>;
+
+    expect(body.available).toBe(false);
+    expect(body.sentenceIndex).toBe(8);
+    expect(body.rewrite).toBeUndefined();
+    expect(body.explanation).toBeUndefined();
+    expect(body.alternatives).toBeUndefined();
+  });
+
+  it('branch: all alternatives guardrail-filtered → exact { available:false, sentenceIndex }', async () => {
+    process.env.COACHING_LLM_API_KEY = 'test-key';
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  alternatives: [
+                    { rewrite: 'This will help you avoid detection by AI tools.', explanation: 'Cleaner phrasing.' },
+                    { rewrite: 'Use these changes to bypass the AI checker entirely.', explanation: 'Better structure.' },
+                    { rewrite: 'This approach makes your writing completely undetectable.', explanation: 'Third option.' },
+                  ],
+                }),
+              },
+            },
+          ],
+        }),
+      }),
+    );
+
+    const req = buildSuggestionRequest({
+      text: SAMPLE_TEXT,
+      sentenceIndex: 9,
+      sentence: 'In conclusion, the experiment shows improved outcomes.',
+      score: 0.88,
+    });
+    const res = await POST(req);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as Record<string, unknown>;
+
+    expect(body.available).toBe(false);
+    expect(body.sentenceIndex).toBe(9);
+    expect(body.rewrite).toBeUndefined();
+    expect(body.explanation).toBeUndefined();
+    expect(body.alternatives).toBeUndefined();
+  });
+
+  it('branch: <2 safe alternatives after guardrail filtering → exact { available:false, sentenceIndex }', async () => {
+    process.env.COACHING_LLM_API_KEY = 'test-key';
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  alternatives: [
+                    { rewrite: 'The experiment revealed consistent improvement across cohorts.', explanation: 'Direct empirical claim.' },
+                    { rewrite: 'Results indicate a trend.', explanation: 'This change makes it undetectable to AI tools.' },
+                  ],
+                }),
+              },
+            },
+          ],
+        }),
+      }),
+    );
+
+    const req = buildSuggestionRequest({
+      text: SAMPLE_TEXT,
+      sentenceIndex: 10,
+      sentence: 'Furthermore, the data supports this hypothesis.',
+      score: 0.82,
+    });
+    const res = await POST(req);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as Record<string, unknown>;
+
+    expect(body.available).toBe(false);
+    expect(body.sentenceIndex).toBe(10);
+    expect(body.rewrite).toBeUndefined();
+    expect(body.explanation).toBeUndefined();
+    expect(body.alternatives).toBeUndefined();
+  });
 });
 
 describe('POST /api/suggestions — safe degradation does not break analyze flow', () => {
@@ -327,11 +735,9 @@ describe('POST /api/suggestions — unavailable response contract', () => {
     expect(body.available).toBe(false);
     expect(body.sentenceIndex).toBe(2);
 
-    // Contract: unavailable response must NOT add new required fields beyond these two.
-    // If rewrite or explanation appear, the contract is broken — clients rely on their absence
-    // to distinguish unavailable from success entries.
     expect(body.rewrite).toBeUndefined();
     expect(body.explanation).toBeUndefined();
+    expect(body.alternatives).toBeUndefined();
   });
 
   it('unavailable response from LLM failure also preserves strict contract', async () => {
@@ -353,5 +759,190 @@ describe('POST /api/suggestions — unavailable response contract', () => {
     expect(body.sentenceIndex).toBe(4);
     expect(body.rewrite).toBeUndefined();
     expect(body.explanation).toBeUndefined();
+    expect(body.alternatives).toBeUndefined();
+  });
+
+  it('unavailable response from all-banned alternatives preserves strict contract', async () => {
+    process.env.COACHING_LLM_API_KEY = 'test-key';
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  alternatives: [
+                    { rewrite: 'This will help you avoid detection.', explanation: 'Cleaner phrasing.' },
+                    { rewrite: 'Use this to bypass the AI checker.', explanation: 'Alternative.' },
+                  ],
+                }),
+              },
+            },
+          ],
+        }),
+      }),
+    );
+
+    const req = buildSuggestionRequest({
+      text: SAMPLE_TEXT,
+      sentenceIndex: 6,
+      sentence: 'Furthermore, this confirms the result.',
+      score: 0.8,
+    });
+
+    const res = await POST(req);
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as Record<string, unknown>;
+
+    expect(body.available).toBe(false);
+    expect(body.sentenceIndex).toBe(6);
+    expect(body.rewrite).toBeUndefined();
+    expect(body.explanation).toBeUndefined();
+    expect(body.alternatives).toBeUndefined();
+  });
+});
+
+describe('POST /api/suggestions — recovery path for partial LLM output', () => {
+  it('recovery: first call gives 1 safe alt, second call provides more → available:true with 2-3 alternatives', async () => {
+    process.env.COACHING_LLM_API_KEY = 'test-key';
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          choices: [{
+            message: {
+              content: JSON.stringify({
+                alternatives: [
+                  { rewrite: 'The experiment revealed consistent improvement across cohorts.', explanation: 'Direct empirical claim.' },
+                  { rewrite: 'Results indicate a trend.', explanation: 'This change makes it undetectable to AI tools.' },
+                ],
+              }),
+            },
+          }],
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          choices: [{
+            message: {
+              content: JSON.stringify({
+                alternatives: [
+                  { rewrite: 'The study demonstrates a measurable positive trend.', explanation: 'Evidence-anchored restatement.' },
+                  { rewrite: 'Analysis confirms a consistent pattern of improvement.', explanation: 'Grounded in data analysis.' },
+                ],
+              }),
+            },
+          }],
+        }),
+      });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const req = buildSuggestionRequest({
+      text: SAMPLE_TEXT,
+      sentenceIndex: 11,
+      sentence: 'In conclusion, the experiment shows improved outcomes.',
+      score: 0.9,
+    });
+    const res = await POST(req);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as SuggestionAvailableResponse;
+    expect(body.available).toBe(true);
+    expect(body.sentenceIndex).toBe(11);
+    expect(Array.isArray(body.alternatives)).toBe(true);
+    expect(body.alternatives.length).toBeGreaterThanOrEqual(2);
+    expect(body.alternatives.length).toBeLessThanOrEqual(3);
+    expect(body.rewrite).toBe(body.alternatives[0].rewrite);
+    expect(body.explanation).toBe(body.alternatives[0].explanation);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('recovery: first call returns single-object format, second call provides 2 safe alts → available:true', async () => {
+    process.env.COACHING_LLM_API_KEY = 'test-key';
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          choices: [{
+            message: {
+              content: JSON.stringify({
+                rewrite: 'The experiment revealed consistent improvement across cohorts.',
+                explanation: 'Direct empirical claim.',
+              }),
+            },
+          }],
+        }),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          choices: [{
+            message: {
+              content: JSON.stringify({
+                alternatives: [
+                  { rewrite: 'The study demonstrates a measurable positive trend.', explanation: 'Evidence-anchored restatement.' },
+                  { rewrite: 'Analysis confirms a consistent pattern of improvement.', explanation: 'Grounded in data analysis.' },
+                ],
+              }),
+            },
+          }],
+        }),
+      });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const req = buildSuggestionRequest({
+      text: SAMPLE_TEXT,
+      sentenceIndex: 12,
+      sentence: 'In conclusion, the experiment shows improved outcomes.',
+      score: 0.9,
+    });
+    const res = await POST(req);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as SuggestionAvailableResponse;
+    expect(body.available).toBe(true);
+    expect(body.alternatives.length).toBeGreaterThanOrEqual(2);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('recovery: both calls produce all-banned alternatives → available:false, strict contract preserved', async () => {
+    process.env.COACHING_LLM_API_KEY = 'test-key';
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          choices: [{
+            message: {
+              content: JSON.stringify({
+                alternatives: [
+                  { rewrite: 'This will help you avoid detection by AI tools.', explanation: 'Better phrasing.' },
+                  { rewrite: 'Use this to bypass the AI checker.', explanation: 'Cleaner text.' },
+                ],
+              }),
+            },
+          }],
+        }),
+      }),
+    );
+
+    const req = buildSuggestionRequest({
+      text: SAMPLE_TEXT,
+      sentenceIndex: 13,
+      sentence: 'Furthermore, this demonstrates the concept.',
+      score: 0.78,
+    });
+    const res = await POST(req);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as Record<string, unknown>;
+    expect(body.available).toBe(false);
+    expect(body.sentenceIndex).toBe(13);
+    expect(body.rewrite).toBeUndefined();
+    expect(body.explanation).toBeUndefined();
+    expect(body.alternatives).toBeUndefined();
   });
 });

@@ -64,7 +64,7 @@ test('F3-1: success path — docx upload shows highlighted review panel', async 
   const popover = page.getByTestId('suggestion-popover');
   await expect(popover).toBeVisible();
   await expect(page.getByText('The text contains material produced by an AI.')).toBeVisible();
-  await expect(page.getByTestId('apply-suggestion-btn')).toBeVisible();
+  await expect(page.getByTestId('apply-suggestion-btn-0')).toBeVisible();
 
 
   await page.screenshot({ path: `${EVIDENCE}/f3-manual-qa.png`, fullPage: true });

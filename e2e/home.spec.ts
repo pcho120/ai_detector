@@ -63,8 +63,11 @@ test('handles successful file upload and displays review panel', async ({ page }
       body: JSON.stringify({
         available: true,
         sentenceIndex: 1,
-        rewrite: 'The text contains material produced by an AI.',
-        explanation: 'Consider rephrasing this section to reduce AI-like phrasing.'
+        alternatives: [
+          { rewrite: 'The text contains material produced by an AI.', explanation: 'Consider rephrasing this section to reduce AI-like phrasing.' },
+          { rewrite: 'This document includes AI-generated content.', explanation: 'More direct phrasing.' },
+          { rewrite: 'Artificial intelligence was used to write this.', explanation: 'Active voice.' }
+        ]
       })
     });
   });
@@ -83,9 +86,16 @@ test('handles successful file upload and displays review panel', async ({ page }
 
   await expect(page.getByTestId('suggestion-success')).toBeVisible();
   await expect(page.getByTestId('suggestion-empty')).not.toBeVisible();
+  
+  await expect(page.getByTestId('suggestion-alternative-0')).toBeVisible();
+  await expect(page.getByTestId('suggestion-alternative-1')).toBeVisible();
+  await expect(page.getByTestId('suggestion-alternative-2')).toBeVisible();
+  
   await expect(page.getByText('The text contains material produced by an AI.')).toBeVisible();
   await expect(page.getByText('Consider rephrasing this section to reduce AI-like phrasing.')).toBeVisible();
-  await expect(page.getByTestId('apply-suggestion-btn')).toBeVisible();
+  await expect(page.getByTestId('apply-suggestion-btn-0')).toBeVisible();
+  await expect(page.getByTestId('apply-suggestion-btn-1')).toBeVisible();
+  await expect(page.getByTestId('apply-suggestion-btn-2')).toBeVisible();
 
 });
 
@@ -143,7 +153,7 @@ test('available:true low-risk click renders suggestion-success without empty sta
   await expect(page.getByTestId('suggestion-empty')).not.toBeVisible();
   await expect(page.getByText('This sentence reads more naturally now.')).toBeVisible();
   await expect(page.getByText('Lower AI-like tone.')).toBeVisible();
-  await expect(page.getByTestId('apply-suggestion-btn')).toBeVisible();
+  await expect(page.getByTestId('apply-suggestion-btn-0')).toBeVisible();
 });
 
 test('handles successful .doc file upload', async ({ page }) => {
@@ -303,7 +313,7 @@ test('handles clicking highlight with no suggestion available', async ({ page })
   await expect(popover).toBeVisible();
   await expect(page.getByTestId('suggestion-empty')).toBeVisible();
   await expect(page.getByText("We couldn't generate a rewrite suggestion for this sentence at this time.")).toBeVisible();
-  await expect(page.getByTestId('apply-suggestion-btn')).not.toBeVisible();
+  await expect(page.getByTestId('apply-suggestion-btn-0')).not.toBeVisible();
 });
 
 test('Apply creates rescored revised panel on the right', async ({ page }) => {
@@ -372,7 +382,7 @@ test('Apply creates rescored revised panel on the right', async ({ page }) => {
 
   await page.getByTestId('highlight-score').click();
   await expect(page.getByTestId('suggestion-popover')).toBeVisible();
-  await page.getByTestId('apply-suggestion-btn').click();
+  await page.getByTestId('apply-suggestion-btn-0').click();
 
   await expect(page.getByTestId('revised-panel-section')).toBeVisible();
   await expect(page.getByTestId('revised-review-panel')).toBeVisible();
@@ -471,7 +481,7 @@ test('multiple applies accumulate — both sentences replaced in revised panel',
   const highlights = page.getByTestId('highlight-score');
   await highlights.first().click();
   await expect(page.getByTestId('suggestion-popover')).toBeVisible();
-  await page.getByTestId('apply-suggestion-btn').click();
+  await page.getByTestId('apply-suggestion-btn-0').click();
 
   await expect(page.getByTestId('revised-panel-section')).toBeVisible();
 
@@ -480,7 +490,7 @@ test('multiple applies accumulate — both sentences replaced in revised panel',
 
   await highlights.nth(1).click();
   await expect(page.getByTestId('suggestion-popover')).toBeVisible();
-  await page.getByTestId('apply-suggestion-btn').click();
+  await page.getByTestId('apply-suggestion-btn-0').click();
 
   await expect(page.getByTestId('revised-panel-section')).toBeVisible();
 
@@ -559,7 +569,7 @@ test('duplicate sentence text — apply only updates clicked occurrence by sente
 
   await page.getByTestId('highlight-score').click();
   await expect(page.getByTestId('suggestion-popover')).toBeVisible();
-  await page.getByTestId('apply-suggestion-btn').click();
+  await page.getByTestId('apply-suggestion-btn-0').click();
 
   await expect(page.getByTestId('revised-panel-section')).toBeVisible();
 
@@ -627,7 +637,7 @@ test('revised-analysis failure shows error state without breaking original panel
 
   await page.getByTestId('highlight-score').click();
   await expect(page.getByTestId('suggestion-popover')).toBeVisible();
-  await page.getByTestId('apply-suggestion-btn').click();
+  await page.getByTestId('apply-suggestion-btn-0').click();
 
   await expect(page.getByTestId('revised-panel-section')).toBeVisible();
   await expect(page.getByTestId('revised-error')).toBeVisible();
@@ -703,7 +713,7 @@ test('click-to-revert removes applied edit, rescores, and collapses panel when e
 
   // Apply the suggestion
   await page.getByTestId('highlight-score').click();
-  await page.getByTestId('apply-suggestion-btn').click();
+  await page.getByTestId('apply-suggestion-btn-0').click();
 
   // Revised panel appears
   await expect(page.getByTestId('revised-panel-section')).toBeVisible();
@@ -822,11 +832,11 @@ test('click-to-revert rescores when other applied edits remain', async ({ page }
   
   // Apply first
   await highlights.first().click();
-  await page.getByTestId('apply-suggestion-btn').click();
+  await page.getByTestId('apply-suggestion-btn-0').click();
 
   // Apply second
   await highlights.nth(1).click();
-  await page.getByTestId('apply-suggestion-btn').click();
+  await page.getByTestId('apply-suggestion-btn-0').click();
 
   expect(revisedCallBodies.length).toBe(2);
   expect(revisedCallBodies[1]).toContain('Rewritten first sentence.');

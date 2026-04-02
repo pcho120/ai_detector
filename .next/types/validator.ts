@@ -83,6 +83,15 @@ type RouteHandlerConfig<Route extends AppRouteHandlerRoutes = AppRouteHandlerRou
   type __Unused = __Check
 }
 
+// Validate ../../src/app/api/voice-profile/generate/route.ts
+{
+  type __IsExpected<Specific extends RouteHandlerConfig<"/api/voice-profile/generate">> = Specific
+  const handler = {} as typeof import("../../src/app/api/voice-profile/generate/route.js")
+  type __Check = __IsExpected<typeof handler>
+  // @ts-ignore
+  type __Unused = __Check
+}
+
 
 
 

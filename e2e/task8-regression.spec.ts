@@ -54,7 +54,7 @@ test('medium-risk label click opens suggestion details', async ({ page }) => {
   const popover = page.getByTestId('suggestion-popover');
   await expect(popover).toBeVisible();
   await expect(page.getByText('This sentence carries a moderate level of AI-like phrasing.')).toBeVisible();
-  await expect(page.getByTestId('apply-suggestion-btn')).toBeVisible();
+  await expect(page.getByTestId('apply-suggestion-btn-0')).toBeVisible();
 });
 
 test('full dual-pane happy path: upload → click label → apply → revised panel → revert', async ({ page }) => {
@@ -136,7 +136,7 @@ test('full dual-pane happy path: upload → click label → apply → revised pa
     fullPage: true,
   });
 
-  await page.getByTestId('apply-suggestion-btn').click();
+  await page.getByTestId('apply-suggestion-btn-0').click();
 
   await expect(page.getByTestId('revised-panel-section')).toBeVisible();
   await expect(page.getByTestId('revised-review-panel')).toBeVisible();

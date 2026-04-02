@@ -65,7 +65,7 @@ test('task-5 — Apply creates rescored revised panel (evidence screenshot)', as
 
   await page.getByTestId('highlight-score').click();
   await expect(page.getByTestId('suggestion-popover')).toBeVisible();
-  await page.getByTestId('apply-suggestion-btn').click();
+  await page.getByTestId('apply-suggestion-btn-0').click();
 
   await expect(page.getByTestId('revised-panel-section')).toBeVisible();
   await expect(page.getByTestId('revised-review-panel')).toBeVisible();
@@ -132,7 +132,7 @@ test('task-5 — Revised-analysis request failure is handled cleanly (evidence s
 
   await page.getByTestId('highlight-score').click();
   await expect(page.getByTestId('suggestion-popover')).toBeVisible();
-  await page.getByTestId('apply-suggestion-btn').click();
+  await page.getByTestId('apply-suggestion-btn-0').click();
 
   await expect(page.getByTestId('revised-panel-section')).toBeVisible();
   await expect(page.getByTestId('revised-error')).toBeVisible();
@@ -201,7 +201,7 @@ test('task-7 — click-to-revert removes applied edit and rescores (evidence scr
   await page.getByTestId('submit-button').click();
 
   await page.getByTestId('highlight-score').click();
-  await page.getByTestId('apply-suggestion-btn').click();
+  await page.getByTestId('apply-suggestion-btn-0').click();
 
   await expect(page.getByTestId('revised-panel-section')).toBeVisible();
   await expect(page.getByTestId('revised-overall-score')).toContainText('25.0% AI');
@@ -274,7 +274,7 @@ test('task-7 — undoing the last applied edit clears revised preview state safe
   await page.getByTestId('submit-button').click();
 
   await page.getByTestId('highlight-score').click();
-  await page.getByTestId('apply-suggestion-btn').click();
+  await page.getByTestId('apply-suggestion-btn-0').click();
 
   await expect(page.getByTestId('revised-panel-section')).toBeVisible();
 

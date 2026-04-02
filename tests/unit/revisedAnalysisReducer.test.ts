@@ -10,6 +10,7 @@ import type {
   RevisedAnalysisAction,
 } from '@/lib/review/revisedAnalysisReducer';
 import type { AnalysisSuccessResponse } from '@/app/api/analyze/route';
+import type { SuggestionAlternative } from '@/lib/suggestions/llm';
 import { shouldSkipSuggestionFetch } from '@/components/ReviewPanel';
 
 function makeResult(overrides?: Partial<AnalysisSuccessResponse>): AnalysisSuccessResponse {
@@ -114,7 +115,10 @@ describe('revisedAnalysisReducer', () => {
     it('does not affect other cache entries', () => {
       let state = dispatch(initialRevisedAnalysisState, {
         type: 'SUGGESTION_FETCH_SUCCESS',
-        payload: { sentenceIndex: 0, rewrite: 'r', explanation: 'e' },
+        payload: {
+          sentenceIndex: 0,
+          alternatives: [{ rewrite: 'r', explanation: 'e' }],
+        },
       });
       state = dispatch(state, {
         type: 'SUGGESTION_FETCH_START',
@@ -126,16 +130,94 @@ describe('revisedAnalysisReducer', () => {
   });
 
   describe('SUGGESTION_FETCH_SUCCESS', () => {
-    it('stores rewrite and explanation with success status', () => {
+    it('stores alternatives array with success status', () => {
+      const alternatives: SuggestionAlternative[] = [
+        { rewrite: 'Rewritten.', explanation: 'Cleaner phrasing.' },
+        { rewrite: 'Alt rewrite.', explanation: 'Different approach.' },
+      ];
       const next = dispatch(initialRevisedAnalysisState, {
         type: 'SUGGESTION_FETCH_SUCCESS',
-        payload: { sentenceIndex: 2, rewrite: 'Rewritten.', explanation: 'Cleaner phrasing.' },
+        payload: { sentenceIndex: 2, alternatives },
       });
       expect(next.suggestionCache[2]).toEqual({
         status: 'success',
+        alternatives,
         rewrite: 'Rewritten.',
         explanation: 'Cleaner phrasing.',
       });
+    });
+
+    it('alias fields rewrite and explanation map to alternatives[0]', () => {
+      const alternatives: SuggestionAlternative[] = [
+        { rewrite: 'Primary rewrite.', explanation: 'Primary explanation.' },
+        { rewrite: 'Secondary rewrite.', explanation: 'Secondary explanation.' },
+      ];
+      const next = dispatch(initialRevisedAnalysisState, {
+        type: 'SUGGESTION_FETCH_SUCCESS',
+        payload: { sentenceIndex: 0, alternatives },
+      });
+      const entry = next.suggestionCache[0];
+      expect(entry?.rewrite).toBe(alternatives[0].rewrite);
+      expect(entry?.explanation).toBe(alternatives[0].explanation);
+      expect(entry?.rewrite).not.toBe(alternatives[1].rewrite);
+    });
+
+    it('legacy-compatible access: rewrite and explanation present alongside alternatives', () => {
+      const alternatives: SuggestionAlternative[] = [
+        { rewrite: 'Only option.', explanation: 'Simple.' },
+      ];
+      const next = dispatch(initialRevisedAnalysisState, {
+        type: 'SUGGESTION_FETCH_SUCCESS',
+        payload: { sentenceIndex: 5, alternatives },
+      });
+      const entry = next.suggestionCache[5];
+      expect(entry?.status).toBe('success');
+      expect(entry?.rewrite).toBe('Only option.');
+      expect(entry?.explanation).toBe('Simple.');
+      expect(entry?.alternatives).toHaveLength(1);
+      expect(entry?.alternatives?.[0]).toEqual({ rewrite: 'Only option.', explanation: 'Simple.' });
+    });
+
+    it('legacy payload { rewrite, explanation } is normalized into alternatives array', () => {
+      const next = dispatch(initialRevisedAnalysisState, {
+        type: 'SUGGESTION_FETCH_SUCCESS',
+        payload: { sentenceIndex: 3, rewrite: 'Legacy rewrite.', explanation: 'Legacy explanation.' },
+      });
+      const entry = next.suggestionCache[3];
+      expect(entry?.status).toBe('success');
+      expect(entry?.rewrite).toBe('Legacy rewrite.');
+      expect(entry?.explanation).toBe('Legacy explanation.');
+      expect(entry?.alternatives).toHaveLength(1);
+      expect(entry?.alternatives?.[0]).toEqual({ rewrite: 'Legacy rewrite.', explanation: 'Legacy explanation.' });
+    });
+
+    it('legacy payload produces identical shape to single-item alternatives payload', () => {
+      const viaLegacy = dispatch(initialRevisedAnalysisState, {
+        type: 'SUGGESTION_FETCH_SUCCESS',
+        payload: { sentenceIndex: 7, rewrite: 'Same rewrite.', explanation: 'Same explanation.' },
+      });
+      const viaAlternatives = dispatch(initialRevisedAnalysisState, {
+        type: 'SUGGESTION_FETCH_SUCCESS',
+        payload: { sentenceIndex: 7, alternatives: [{ rewrite: 'Same rewrite.', explanation: 'Same explanation.' }] },
+      });
+      expect(viaLegacy.suggestionCache[7]).toEqual(viaAlternatives.suggestionCache[7]);
+    });
+
+    it('all alternatives preserved in cache (not just first)', () => {
+      const alternatives: SuggestionAlternative[] = [
+        { rewrite: 'First alternative.', explanation: 'Explanation A.' },
+        { rewrite: 'Second alternative.', explanation: 'Explanation B.' },
+        { rewrite: 'Third alternative.', explanation: 'Explanation C.' },
+      ];
+      const next = dispatch(initialRevisedAnalysisState, {
+        type: 'SUGGESTION_FETCH_SUCCESS',
+        payload: { sentenceIndex: 9, alternatives },
+      });
+      const entry = next.suggestionCache[9];
+      expect(entry?.alternatives).toHaveLength(3);
+      expect(entry?.alternatives?.[1].rewrite).toBe('Second alternative.');
+      expect(entry?.alternatives?.[2].rewrite).toBe('Third alternative.');
+      expect(entry?.rewrite).toBe('First alternative.');
     });
   });
 

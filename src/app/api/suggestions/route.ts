@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { generateSingleSuggestion } from '@/lib/suggestions/llm';
+import { generateAlternativeSuggestions } from '@/lib/suggestions/llm';
+import type { SuggestionAlternative } from '@/lib/suggestions/llm';
+import { sanitizeVoiceProfile } from '@/lib/suggestions/voiceProfile';
 
 export const runtime = 'nodejs';
 
@@ -8,6 +10,7 @@ export interface SuggestionRequest {
   sentenceIndex: number;
   sentence: string;
   score: number;
+  voiceProfile?: string;
 }
 
 export interface SuggestionAvailableResponse {
@@ -15,6 +18,7 @@ export interface SuggestionAvailableResponse {
   sentenceIndex: number;
   rewrite: string;
   explanation: string;
+  alternatives: SuggestionAlternative[];
 }
 
 export interface SuggestionUnavailableResponse {
@@ -65,20 +69,31 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   const { sentenceIndex, sentence, score } = body;
+  const rawVoiceProfile = (body as unknown as Record<string, unknown>).voiceProfile;
+  const voiceProfile =
+    typeof rawVoiceProfile === 'string' ? sanitizeVoiceProfile(rawVoiceProfile) : undefined;
+
   const apiKey = process.env.COACHING_LLM_API_KEY;
 
-  const suggestion = await generateSingleSuggestion(apiKey, sentence, sentenceIndex, score);
+  const alternatives = await generateAlternativeSuggestions(
+    apiKey,
+    sentence,
+    sentenceIndex,
+    score,
+    voiceProfile || undefined,
+  );
 
-  if (!suggestion) {
+  if (!alternatives) {
     const response: SuggestionUnavailableResponse = { available: false, sentenceIndex };
     return NextResponse.json(response, { status: 200 });
   }
 
   const response: SuggestionAvailableResponse = {
     available: true,
-    sentenceIndex: suggestion.sentenceIndex,
-    rewrite: suggestion.rewrite,
-    explanation: suggestion.explanation,
+    sentenceIndex,
+    rewrite: alternatives[0].rewrite,
+    explanation: alternatives[0].explanation,
+    alternatives,
   };
   return NextResponse.json(response, { status: 200 });
 }

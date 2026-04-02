@@ -13,10 +13,11 @@ export function shouldSkipSuggestionFetch(cached: SuggestionCacheEntry | undefin
 
 interface ReviewPanelProps {
   result: AnalysisSuccessResponse;
-  revisedState?: UseRevisedAnalysisStateReturn; // optional for fallback if needed
+  revisedState?: UseRevisedAnalysisStateReturn;
+  voiceProfile?: string;
 }
 
-export function ReviewPanel({ result, revisedState }: ReviewPanelProps) {
+export function ReviewPanel({ result, revisedState, voiceProfile }: ReviewPanelProps) {
   const { text, highlights, score } = result;
   
   const containerRef = useRef<HTMLDivElement>(null);
@@ -55,6 +56,17 @@ export function ReviewPanel({ result, revisedState }: ReviewPanelProps) {
     e.stopPropagation();
     if (!revisedState) return;
 
+    const target = e.currentTarget as HTMLElement;
+    const container = containerRef.current;
+    if (container && target) {
+      const containerRect = container.getBoundingClientRect();
+      const targetRect = target.getBoundingClientRect();
+      setPopoverPos({
+        top: targetRect.bottom - containerRect.top + container.scrollTop,
+        left: Math.max(0, targetRect.left - containerRect.left + container.scrollLeft)
+      });
+    }
+
     revisedState.selectSentence(sentenceIndex);
     
     const cached = revisedState.getSuggestionCacheEntry(sentenceIndex);
@@ -68,10 +80,18 @@ export function ReviewPanel({ result, revisedState }: ReviewPanelProps) {
     revisedState.dispatch({ type: 'SUGGESTION_FETCH_START', payload: { sentenceIndex } });
 
     try {
+      const payload = {
+        text: result.text,
+        sentenceIndex,
+        sentence: sentenceText,
+        score: spanScore,
+        ...(voiceProfile ? { voiceProfile } : {})
+      };
+      
       const res = await fetch('/api/suggestions', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: result.text, sentenceIndex, sentence: sentenceText, score: spanScore })
+        body: JSON.stringify(payload)
       });
 
       if (!res.ok) {
@@ -81,10 +101,20 @@ export function ReviewPanel({ result, revisedState }: ReviewPanelProps) {
 
       const data = await res.json();
       if (data.available) {
-        revisedState.dispatch({ 
-          type: 'SUGGESTION_FETCH_SUCCESS', 
-          payload: { sentenceIndex, rewrite: data.rewrite, explanation: data.explanation } 
-        });
+        if (data.alternatives && Array.isArray(data.alternatives) && data.alternatives.length > 0) {
+          revisedState.dispatch({ 
+            type: 'SUGGESTION_FETCH_SUCCESS', 
+            payload: { sentenceIndex, alternatives: data.alternatives } 
+          });
+        } else if (data.rewrite) {
+          revisedState.dispatch({ 
+            type: 'SUGGESTION_FETCH_SUCCESS', 
+            payload: { sentenceIndex, rewrite: data.rewrite, explanation: data.explanation } 
+          });
+        } else {
+          // Fallback if available:true but no actual rewrites returned
+          revisedState.dispatch({ type: 'SUGGESTION_FETCH_UNAVAILABLE', payload: { sentenceIndex } });
+        }
       } else {
         revisedState.dispatch({ type: 'SUGGESTION_FETCH_UNAVAILABLE', payload: { sentenceIndex } });
       }
@@ -143,36 +173,46 @@ export function ReviewPanel({ result, revisedState }: ReviewPanelProps) {
           <div className="py-2 text-sm text-red-600" data-testid="suggestion-error">
             Failed to load suggestion. Please try again.
           </div>
-        ) : cacheEntry.unavailable ? (
+        ) : cacheEntry.unavailable || !cacheEntry.alternatives || cacheEntry.alternatives.length === 0 ? (
           <div className="py-2 text-sm text-slate-600" data-testid="suggestion-empty" role="status" aria-live="polite">
             We couldn&apos;t generate a rewrite suggestion for this sentence at this time.
           </div>
         ) : (
-          <div className="flex flex-col gap-3" data-testid="suggestion-success">
-            <div>
-              <span className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Rewrite</span>
-              <p className="text-sm text-green-700 bg-green-50 rounded p-2 border border-green-100">
-                {cacheEntry.rewrite}
-              </p>
-            </div>
-            {cacheEntry.explanation && (
-              <div>
-                <span className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Why</span>
-                <p className="text-sm text-slate-600 italic">
-                  {cacheEntry.explanation}
-                </p>
-              </div>
-            )}
-            <div className="mt-2 flex justify-end">
-              <button
-                type="button"
-                className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
-                onClick={(e) => handleApply(e, selectedSentenceIndex, cacheEntry.rewrite!)}
-                data-testid="apply-suggestion-btn"
+          <div className="flex flex-col gap-4 max-h-[60vh] overflow-y-auto pr-2" data-testid="suggestion-success">
+            {cacheEntry.alternatives?.map((alt, index) => (
+              <div 
+                key={index} 
+                className="flex flex-col gap-3 pb-4 border-b border-slate-100 last:border-b-0 last:pb-0" 
+                data-testid={`suggestion-alternative-${index}`}
               >
-                Apply
-              </button>
-            </div>
+                <div>
+                  <span className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
+                    Alternative {index + 1}
+                  </span>
+                  <p className="text-sm text-green-700 bg-green-50 rounded p-2 border border-green-100">
+                    {alt.rewrite}
+                  </p>
+                </div>
+                {alt.explanation && (
+                  <div>
+                    <span className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Why</span>
+                    <p className="text-sm text-slate-600 italic">
+                      {alt.explanation}
+                    </p>
+                  </div>
+                )}
+                <div className="mt-1 flex justify-end">
+                  <button
+                    type="button"
+                    className="rounded-md bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-blue-700"
+                    onClick={(e) => handleApply(e, selectedSentenceIndex, alt.rewrite)}
+                    data-testid={`apply-suggestion-btn-${index}`}
+                  >
+                    Apply
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
