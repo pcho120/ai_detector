@@ -92,3 +92,42 @@ Action: Update comment to reflect current implementation.
 ## F1 Final Verdict — 2026-03-31
 - Previously listed evidence blockers are now fully resolved.
 - No remaining Task 1-10 compliance blocker found after re-checking `.sisyphus/evidence/task-7-analysis-route-error.txt:53-56` against `tests/integration/analyze-route.test.ts:321-323`.
+
+## F2 Code Quality Review — Re-Run (2026-04-04)
+
+### LOW: `/api/analyze/revised` missing length/language enforcement
+**File:** `src/app/api/analyze/revised/route.ts`
+No English-only check, no min/max char enforcement, no garbled-text detection on the raw `text` field. Adversarial callers could submit >100k chars or non-English text directly.
+Mitigating factors: no file upload surface, no persistent storage, Sapling result is ephemeral, endpoint is only called client-side after a successful initial analysis.
+Action: Add min/max length guard consistent with extractors (300–100000 chars). Non-blocking.
+
+### LOW: `/api/suggestions` `text` field no max-length cap
+**File:** `src/app/api/suggestions/route.ts:39-41`
+The `text` field (essay context for LLM rewrite) is validated as non-empty but has no maximum length. Large inputs inflate OpenAI token usage.
+Mitigation: `sentence` (primary LLM input) is validated separately; `text` is contextual only.
+Action: Clamp `text` to a reasonable max (e.g., 100000 chars) before LLM call. Non-blocking.
+
+### INFO: `React.FormEvent` deprecated hint in `page.tsx:36`
+LSP hint: `React.FormEvent` is deprecated in React 19. Cosmetic — no runtime impact.
+Action: Replace with `React.ChangeEvent<HTMLFormElement>` or equivalent when convenient. Non-blocking.
+
+- 2026-04-04 F1 blocker: `npm run build` currently fails with `PageNotFoundError: Cannot find module for page: /_document`, so Task 10 verification and Definition of Done are red.
+- 2026-04-04 F1 blocker: `npm run test:e2e` fails in this environment because Playwright Chromium cannot start (`libnspr4.so` missing).
+- 2026-04-04 F1 blocker: stale evidence files (`f1-plan-compliance.md`, `task-7-analysis-route.txt`, `task-9-suggestions.txt`, `task-10-ci-docs.txt`, `task-8-review-ui.png`) contradict the current repo state.
+
+## SL-1 Resolution — 2026-04-04
+
+- **Resolved**: `analyzeText.ts` property name bug (`sentence.text` vs `sentence.sentence`) caused silent empty suggestions. Fixed; suggestions now correctly populated for AI-like fixture sentences.
+- **Edge note**: The `sapling-success.json` fixture sentences do not contain obvious AI clichés, so `body.suggestions` may still be empty for that fixture — this is correct behavior (empty array when no patterns match). The integration test at line 116 correctly uses `(may be empty when no coaching patterns match)`.
+- **Evidence**: `task-9-suggestions.txt` updated with factual test output confirming `suggestions.length > 0` for the AI-like fixture.
+
+## F4 Final Re-Run — Cumulative Lens (2026-04-04)
+
+- **Prior F4 REJECT (single-plan lens) superseded**: User explicitly approved cumulative 4-plan interpretation. All SC-1 through SC-4 are authorized by downstream plans, not violations.
+- **No remaining blockers under cumulative lens**: SL-1 resolved; all Must Have / Must NOT Have items verified across all 4 plans.
+- **Interpreter discipline**: When the scope baseline is ambiguous (single-plan vs cumulative), the interpretation must be explicitly stated at the top of the evidence artifact and confirmed by the user before issuing a verdict. Different interpretations can yield opposite verdicts on the same codebase.
+- **Evidence artifact**: `.sisyphus/evidence/f4-scope-fidelity.md` overwritten with full fresh cumulative-lens APPROVE verdict dated 2026-04-04.
+
+## F1 Re-run Notes — 2026-04-04
+- Several historical task evidence files still contain older paths or outdated test counts; they are poor authority for a re-audit unless revalidated against current code/tests.
+- No new blocking F1 issue was found after the SL-1 fix. Current live blockers are cleared for `lint`, `typecheck`, `test`, and `build`; Playwright remained outside this rerun because F3 was already accepted by user instruction.

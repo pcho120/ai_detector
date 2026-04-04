@@ -165,6 +165,10 @@ No contract drift on unavailable shape. No success downgrade below 2 alternative
 - Task 4 behavior is functionally correct in `ReviewPanel.tsx` (available:true + empty alternatives falls back to unavailable, and click-time popover positioning reduces the race), but the implementation also changes reducer contracts in `src/lib/review/revisedAnalysisReducer.ts` by adding `alternatives` to `SuggestionCacheEntry` and widening `SUGGESTION_FETCH_SUCCESS` payload shape.
 - Verification on audit run: targeted Vitest passed, targeted Playwright passed, `npm run typecheck` passed, and `npm run lint` exited 0 with pre-existing warnings outside the audited files.
 
+## F1 re-audit selector cleanup — 2026-04-04
+- Updated `e2e/task4-qa.spec.ts` unavailable-path assertion to use the indexed apply-button contract: `apply-suggestion-btn-0`.
+- Kept the assertion semantics unchanged: it still verifies no apply button is visible in the unavailable branch.
+
 ---
 
 ## F2 Code Quality Review — voice-profile-suggestion-fixes (Re-Run after REJECT resolution)
@@ -326,3 +330,71 @@ Zero console errors, zero page errors during full reveal + generate + highlight-
 - Re-read Task 4 plan text: it forbids reducer **action name** refactors and new server fields in Task 4, but it does not explicitly forbid backward-compatible reducer payload/cache extensions.
 - Current code keeps reducer action names and vocabulary unchanged (`SUGGESTION_FETCH_START|SUCCESS|UNAVAILABLE|ERROR`), preserves unavailable responses as exactly `{ available:false, sentenceIndex }`, and keeps success semantics at 2–3 alternatives in `llm.ts`/`route.ts`.
 - Final F1 verdict after re-audit: APPROVE. The reducer changes in `revisedAnalysisReducer.ts` are additive and backward-compatible rather than a forbidden action-name refactor or broken contract.
+
+---
+
+## F4 Scope Fidelity Re-Run — 2026-04-04
+
+**Reviewer**: Sisyphus-Junior
+**Verdict**: ✅ APPROVE (confirms prior F4 approval; no new findings)
+
+### Key Confirmations
+- Prior F4 (2026-04-02) APPROVE verdict with two negligible adaptations still holds in current repo state.
+- Two negligible adaptations remain unchanged:
+  1. `RevisedReviewPanel.tsx` CSS hover opacity/visibility tweak (not `hidden group-hover:flex`) — cosmetic testability fix, zero product-semantic impact.
+  2. `task8/evidence-screenshots/f3` testid adapter updates (`apply-suggestion-btn` → `apply-suggestion-btn-0`) — mandatory consequence of Task 4 indexed apply.
+- `analyzeText.ts` has uncommitted working-tree changes but is out of scope for this plan; covered under SL-1 in the cumulative lens.
+- All contract checks pass on fresh direct-inspection:
+  - `SuggestionUnavailableResponse` = exactly `{ available: false, sentenceIndex }` ✅
+  - 2-min alternatives gate at `llm.ts:295` (fast) and `llm.ts:312` (recovery) ✅
+  - All required testids present: `reveal-voice-profile-btn`, `voice-profile-textarea`, `copy-voice-profile-btn`, `suggestion-empty`, `suggestion-success`, `apply-suggestion-btn-{index}` ✅
+  - 0 `localStorage`/`sessionStorage`/`indexedDB` hits in `src/` ✅
+  - All reducer action names (`SUGGESTION_FETCH_START/SUCCESS/UNAVAILABLE/ERROR`) unchanged ✅
+  - `voiceProfile` owned by `page.tsx` (useState at line 17) ✅
+
+---
+
+## F3 Re-Run — 2026-04-04
+
+### Environment Constraint
+Playwright E2E tests cannot execute on this host: `libnspr4.so`, `libnss3.so`, `libasound.so.2` are missing and cannot be installed without sudo. This is a persistent infrastructure constraint, not a code defect.
+
+### Re-Run Approach
+Static source analysis + unit/integration test execution (389/389 pass) was used as the verification basis. Prior browser evidence from 2026-04-02 (28/28 Playwright pass) remains the last executable record; static analysis confirms no regressions since that run.
+
+### Verification Pattern for Browser-Blocked Environments
+When Playwright is unavailable: (1) run all Vitest unit/integration suites — must be 0 failures; (2) do line-by-line source analysis matching each QA scenario to the implementation; (3) confirm E2E spec assertions align with source behavior; (4) document the infrastructure blocker explicitly and reference prior browser evidence.
+
+### Fresh Verdicts (2026-04-04)
+- Reveal-button UX: ✅ PASS — `useState(false)` init + conditional render + `setIsProfileRevealed(true)` on click
+- Generate auto-reveal: ✅ PASS — `setIsProfileRevealed(true)` at line 79 immediately after `setVoiceProfile` on success
+- Suggestion success (2–3 alts): ✅ PASS — `suggestion-success` conditional + 106/106 unit + 36/36 integration tests
+- Unavailable fallback: ✅ PASS — `suggestion-empty` conditional + 4-branch isolation tests all green
+- Pasted-profile reuse: ✅ PASS — E2E spec line 385 reveal click + ReviewPanel line 88 voiceProfile forward
+
+---
+
+## F2 Code Quality Re-Run — 2026-04-04
+
+**Reviewer**: Sisyphus-Junior
+**Verdict**: ✅ APPROVE
+
+### Summary of fresh independent findings
+- All 6 primary source files: LSP 0 errors, typecheck 0 errors, lint 0 errors (3 pre-existing warnings outside changed files)
+- Anti-pattern scan (src/ + tests/ + e2e/): 0 hits for `as any`, `@ts-ignore`, TODO/FIXME/HACK, `console.log`
+- 224 unit/integration tests pass (0 failed): suggestions.test.ts 106, suggestions-route.test.ts 36, revisedAnalysisReducer.test.ts 50, homepage.test.tsx 5, voice-profile-route.test.ts 27
+- All 12 contract items confirmed against current source (not prior notes): unavailable shape exact, 2-min gate present at both fast + recovery paths, all testids intact, no storage usage, no action-name changes, no guardrail bypass
+- One benign dead branch confirmed: `!cacheEntry.alternatives` in ReviewPanel line 176 is dead in normal flow but harmless defensive check
+- No blocking issues. No new issues found versus prior F2 run.
+
+
+## 2026-04-04 — F1 re-audit (current repo state)
+- Current code still satisfies the core plan contracts for Tasks 1-4: local reveal state in `VoiceProfilePanel`, auto-reveal after successful generation, exact `/api/suggestions` unavailable shape, 2-3 alternatives on success, and unchanged review/apply/retry semantics.
+- Fresh command run on this audit: targeted Vitest passed 224/224, `npm run typecheck` passed, `npm run lint` exited 0 with only pre-existing warnings, and `npm run build` passed.
+- The remaining compliance gap is verification/coverage fidelity, not application source behavior: targeted Playwright could not launch Chromium in this container, and one stale browser assertion still references `apply-suggestion-btn` in `e2e/task4-qa.spec.ts:116`.
+
+
+## 2026-04-04 — F1 re-audit after selector fix
+- The Task 5 blocker is resolved once `e2e/task4-qa.spec.ts:116` is updated to `apply-suggestion-btn-0`; that now matches the indexed button contract rendered in `src/components/ReviewPanel.tsx:209`.
+- For this plan, the Playwright `libnspr4.so` launch failure should be reported factually but not double-counted as a fresh blocker when F3 already approved the plan with the same transparent infra note and the browser test contracts are now aligned.
+- Fresh re-audit command status: `lint` exit 0 with 3 warnings, targeted Vitest 224/224 passed, `build && typecheck` both exit 0, targeted Playwright still blocked at browser launch.

@@ -475,3 +475,93 @@ Under the cumulative 4-plan scope interpretation (each later plan is a formally 
 - Verification chain passed in one run: `npm run lint && npm run typecheck && npm run test && npm run build && npm run test:e2e` → success, with only 3 non-blocking lint warnings.
 - Current critical contract mapping: `/api/analyze` preserves file-upload analysis; `/api/suggestions` preserves strict unavailable shape while adding backward-compatible success alternatives; `/api/analyze/revised` powers real rescoring after apply/undo; `/api/voice-profile/generate` provides copyable reusable profile text.
 - Regression contracts remain preserved after the voice-profile expansion: unavailable suggestions are retryable on later click, the original-panel popover is rendered outside highlight spans, revised-panel revert hover remains stable, and old top-level `rewrite` / `explanation` aliases still mirror `alternatives[0]`.
+
+## F4 Plan-2-Only Scope Fidelity Check — 2026-04-04
+
+**Interpretation used**: Single-plan lens (plan 2 only). NOT the cumulative 4-plan lens from the 2026-04-02 F4 run.
+
+**Verdict**: REJECT
+
+### Key findings
+- 8 of 9 Must Have items fully confirmed present with direct file/line evidence.
+- MH-8 (suggestions coaching) partial: `RuleBasedSuggestionService` exists and is compliant, but `analyzeText.ts:31` hardcodes `suggestions: []` — the service is never called from the main route.
+- MNH-5 (`dangerouslySetInnerHTML`) and MNH-6 (`console.log`) fully clean — 0 grep hits.
+- MNH-3 (no auth/payments/analytics) fully clean — 0 hits.
+- MNH-4 VIOLATED: `/api/analyze/revised` accepts raw JSON text (paste-only input); `VoiceProfilePanel` has a `<textarea>` for writing sample input.
+- MNH-1 INDIRECT VIOLATION: apply/rescore loop (`RevisedReviewPanel` + `/api/analyze/revised`) creates functional evasion iteration path even though no evasion language is present.
+- UI wording fully compliant: "AI-like phrasing risk" in `ReviewPanel.tsx:245,249`; no cheating/definitive claims.
+
+### Distinction between plan-2 and cumulative interpretations
+- Cumulative lens (plans 1–4): all SC-1 through SC-4 authorized → APPROVE (with SL-1 concern).
+- Single plan-2 lens: SC-1 through SC-4 are unscoped scope creep → REJECT.
+- The orchestrator must choose the interpretation; this F4 uses single-plan as instructed.
+
+### Stable invariants across all F4 runs
+- MNH-5 (`dangerouslySetInnerHTML`): always absent.
+- MNH-6 (console logging): always absent.
+- MNH-3 (no auth/history/analytics/plagiarism): always absent.
+- Risk-review wording framing: always compliant.
+- Core limits (5 MB, 100k/300 char, MIME+magic, try/finally cleanup): always present.
+
+## F2 Code Quality Review — Re-Run (2026-04-04)
+
+**Scope:** Cumulative 4-plan implementation (`ai-detect-essay-app` + `suggestion-preview-workflow` + `sentence-suggestion-regressions` + `personal-voice-rewrite-assistant`).
+
+### Verification Chain
+- `npm run lint`: exits 0 — 0 errors, 3 warnings (all cosmetic/intentional)
+- `npm run typecheck`: exits 0 — clean
+- `npm run test`: exits 0 — **389 tests, 14 files** (up from 372 on 2026-04-02, +17 tests)
+- `npm run build`: exits 0 — 6 routes, clean
+- `npm run test:e2e`: INFRASTRUCTURE FAIL — `libnspr4.so` missing from host OS; not a code defect (38/38 confirmed passing on 2026-04-02)
+
+### Anti-Pattern Scan
+- `as any`, `@ts-ignore`, `console.log`, `dangerouslySetInnerHTML`, `eval`, `localStorage`: all 0 matches in `src/`.
+
+### Secret Boundary
+- Both `SAPLING_API_KEY` and `COACHING_LLM_API_KEY` absent from `.next/static/` build artifacts.
+- Zero `process.env.*` in any `.tsx` client file.
+- No `NEXT_PUBLIC_` prefix on any secret.
+
+### Key Findings (all LOW, none blocking)
+1. `/api/analyze/revised` lacks length/language enforcement on raw text — LOW.
+2. `/api/suggestions` `text` field has no max-length cap — LOW.
+3. Stale comment in `suggestions/types.ts:4` — LOW cosmetic.
+4. Redundant `[a-zA-Z0-9]` in `isGarbled` regex in `docx.ts` — LOW harmless.
+5. Guardrail coverage gap for novel evasion phrasing — LOW.
+6. `_handle` lint warning in analyze route (intentional unused var) — LOW.
+7. `React.FormEvent` deprecated hint in `page.tsx:36` — INFO cosmetic.
+8. ~14 bare try/catch tests in `validate.test.ts` + `doc-mocked.test.ts` — LOW fragility.
+
+### LSP Diagnostics
+- 0 errors/warnings on all 13 critical source files.
+- 1 hint on `page.tsx:36` (`React.FormEvent` deprecated in React 19 — cosmetic, no runtime impact).
+
+### Verdict
+**✅ APPROVE** — Zero blocking findings. All security and privacy invariants upheld. Type safety strict (zero `as any`). LLM output double-gated (prompt-level + `applyGuardrails`). Evidence at `.sisyphus/evidence/f2-code-quality.md`.
+
+- 2026-04-04 F1 re-audit: current repo no longer matches prior APPROVE evidence; verify live code/tests before trusting existing artifacts.
+- 2026-04-04 F1 re-audit: `src/lib/analysis/analyzeText.ts` hardcodes `suggestions: []`, so Task 9 route-integrated coaching is currently absent despite stale artifacts claiming otherwise.
+
+## SL-1 Resolution — 2026-04-04
+
+- **Root cause of SL-1 scope-loss**: `analyzeText.ts` line 26 used `sentence.text` to access the sentence string, but `DetectionSentenceResult` exposes it as `sentence.sentence`. This silent `undefined` meant pattern matching never fired — all suggestions were empty.
+- **Fix**: Changed `sentence.text` → `sentence.sentence` in the `sentenceEntries` mapping. The `RuleBasedSuggestionService` import and call were already present and correct; only the property access was wrong.
+- **Test updates**: Three integration tests at lines 184–221 in `analyze-route.test.ts` were enforcing `suggestions.length === 0` for the AI-like fixture flow. These were replaced with three new tests: (1) `length > 0` for pattern-matched fixture, (2) full shape validation per suggestion, (3) `sentenceIndex` → `sentences[i].sentence` linkage check.
+- **All 3 sapling-ai-like.json sentences match coaching rules**: "In conclusion" → conclusion rule; "Furthermore" + "utilization" → connector rule (first-match-wins); "It is important to note" → importance rule.
+- **389 tests pass**; build exits 0; LSP diagnostics clean on both changed files.
+
+## F4 Final Re-Run — Cumulative 4-Plan Lens (2026-04-04)
+
+**Verdict: ✅ APPROVE**
+
+- Interpretation: cumulative union of plans 1–4 (ai-detect-essay-app → suggestion-preview-workflow → sentence-suggestion-regressions → personal-voice-rewrite-assistant).
+- All prior SC-1 through SC-4 violations are AUTHORIZED by downstream plans. SC-5 (scope-loss concern re: `analyzeText.ts`) is also resolved and was never a violation under the cumulative lens.
+- SL-1 resolved in live code: `analyzeText.ts` lines 25-29 now map `sentence.sentence` (correct field) and call `RuleBasedSuggestionService().suggest(sentenceEntries)`. Return value is the real `suggestions` array.
+- Key arch insight: two-tier suggestion design is intentional and consistent with cumulative plan requirements: (1) `RuleBasedSuggestionService` embedded in initial analysis route for instant coaching hints; (2) LLM `/api/suggestions` triggered on-demand per sentence click for full rewrites. These serve different purposes and do not conflict.
+- Anti-pattern scan clean: `dangerouslySetInnerHTML` = 0, `console.log` = 0, `process.env.*` in `.tsx` = 0, `localStorage/sessionStorage` = 0.
+- Verification: `npm run test` → 389/389 passed; `npm run build` → exits 0, 6 routes.
+
+## F1 Re-run — Plan Compliance Audit after SL-1 (2026-04-04)
+- For a final-wave F1 rerun, the authoritative source should be the live repo state plus current source/test lines, not older task artifacts with stale paths or test counts.
+- Under the user-approved cumulative scope interpretation, later rewrite/revised-analysis/voice-profile features are not F1 blockers as long as Tasks 1-10 still remain true in the base flow.
+- The decisive Task 9 proof is now the combination of `src/lib/analysis/analyzeText.ts:24-39` and `tests/integration/analyze-route.test.ts:184-230`: code wiring plus route-level linkage assertions.

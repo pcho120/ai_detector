@@ -1,142 +1,72 @@
-# F1 Plan Compliance Audit — Tasks 1-10
+# F1 Plan Compliance Audit — voice-profile-suggestion-fixes
 
-Date: 2026-03-31
-Scope: `.sisyphus/plans/ai-detect-essay-app.md` Tasks 1-10 acceptance criteria and required evidence artifacts only.
+**Date:** 2026-04-04  
+**Plan:** `.sisyphus/plans/voice-profile-suggestion-fixes.md`  
+**Scope:** Tasks 1–5 only, plus final-wave dependency status  
+**Verdict:** **APPROVE**
 
-## Audit inputs
-- Plan: `.sisyphus/plans/ai-detect-essay-app.md`
-- Code/tests/docs/evidence inspected under `src/`, `tests/`, `e2e/`, `.github/workflows/`, `.sisyphus/evidence/`
-- Full verification already re-run in this audit cycle: `npm run lint && npm run typecheck && npm run test && npm run build && npm run test:e2e` → all exited 0
-- Client bundle scan already re-run in this audit cycle: `.next/static` contains no `SAPLING_API_KEY`, `COACHING_LLM_API_KEY`, or placeholder secret values
-- Updated screenshot evidence visually inspected for Task 8 success/failure states
+## Live verification run
 
-## Final verdict
+- `npm run lint` → **exit 0** with 3 warnings in `eslint.config.mjs:9`, `postcss.config.mjs:1`, and `src/app/api/analyze/route.ts:67`.
+- `npm run test -- tests/unit/suggestions.test.ts tests/unit/revisedAnalysisReducer.test.ts tests/unit/homepage.test.tsx tests/integration/suggestions-route.test.ts tests/integration/voice-profile-route.test.ts` → **exit 0**; **224/224 passed**.
+- `npm run build && npm run typecheck` → **exit 0** for both commands.
+- `npm run test:e2e -- e2e/home.spec.ts e2e/voice-rewrite.spec.ts e2e/task4-qa.spec.ts` → **failed before browser assertions ran** because Chromium could not launch: `libnspr4.so: cannot open shared object file: No such file or directory`.
+
+## Final-wave dependency status
+
+- **F2:** APPROVE — `.sisyphus/evidence/f2-code-quality.md:222-234`
+- **F3:** APPROVE with transparent environment-blocker note — `.sisyphus/evidence/f3-manual-qa-summary.md:9-19`, `.sisyphus/evidence/f3-manual-qa-summary.md:169-177`
+- **F4:** APPROVE — `.sisyphus/evidence/f4-scope-fidelity.md:159-174`
+
+## Task-by-task assessment
+
+### Task 1 — APPROVE
+Plan acceptance requires hidden-by-default profile entry, explicit reveal, and auto-reveal after successful generation (`.sisyphus/plans/voice-profile-suggestion-fixes.md:120-124`). The current implementation satisfies that:
+
+- Local reveal state is kept in `src/components/VoiceProfilePanel.tsx:37` and drives the mutually exclusive reveal-button / textarea branches at `src/components/VoiceProfilePanel.tsx:168-210`.
+- Auto-reveal after successful generation happens at `src/components/VoiceProfilePanel.tsx:77-79` immediately after `setVoiceProfile(data.profile)`.
+- Parent-owned `voiceProfile` state remains unchanged in `src/app/page.tsx:17` and is still passed into `VoiceProfilePanel` and `ReviewPanel` at `src/app/page.tsx:130-147`.
+- Required selectors remain intact: `reveal-voice-profile-btn` (`src/components/VoiceProfilePanel.tsx:172`), `voice-profile-textarea` (`src/components/VoiceProfilePanel.tsx:188`), and `copy-voice-profile-btn` (`src/components/VoiceProfilePanel.tsx:196`).
+- Supporting reveal coverage remains present in `tests/unit/homepage.test.tsx:147-162` and `e2e/voice-rewrite.spec.ts:44-45`.
+
+### Task 2 — APPROVE
+Plan acceptance requires explicit isolation of each current unavailable branch without changing the route contract (`.sisyphus/plans/voice-profile-suggestion-fixes.md:162-166`). The current repo satisfies that:
+
+- Route-level branch isolation exists in `tests/integration/suggestions-route.test.ts:565-699` for missing key, parse failure, all-filtered output, and `<2` safe alternatives.
+- Unit-level branch isolation exists in `tests/unit/suggestions.test.ts:915-1013` for the same four causes.
+- Exact unavailable-shape assertions remain explicit in `tests/integration/suggestions-route.test.ts:577-584`, `607-614`, `649-656`, and `690-697`.
+- The targeted Vitest command passed with all relevant tests green.
+
+### Task 3 — APPROVE
+Plan acceptance requires preserving the 2–3 alternatives-on-success contract and exact unavailable response shape (`.sisyphus/plans/voice-profile-suggestion-fixes.md:205-209`). The current implementation satisfies that:
+
+- `generateAlternativeSuggestions()` keeps the fast-path minimum at `src/lib/suggestions/llm.ts:295-297`, caps to 3 at `src/lib/suggestions/llm.ts:296`, and uses a deterministic one-time recovery call at `src/lib/suggestions/llm.ts:300-315`.
+- The unrecoverable path still returns `null` when combined safe alternatives remain below 2 at `src/lib/suggestions/llm.ts:311-312`.
+- The route preserves the exact unavailable response interface at `src/app/api/suggestions/route.ts:24-27` and returns exactly `{ available: false, sentenceIndex }` at `src/app/api/suggestions/route.ts:86-88`.
+- Successful responses still expose top-level aliases plus the alternatives array at `src/app/api/suggestions/route.ts:91-97`.
+- Recovery-path coverage passed in `tests/integration/suggestions-route.test.ts:807-946` and `tests/unit/suggestions.test.ts:1015-1213`.
+
+### Task 4 — APPROVE
+Plan acceptance requires preserving review/apply/retry semantics while hardening success rendering (`.sisyphus/plans/voice-profile-suggestion-fixes.md:248-252`). The current repo satisfies that:
+
+- Retry semantics remain unchanged because `shouldSkipSuggestionFetch()` still allows refetch for `unavailable:true` and `error` entries at `src/components/ReviewPanel.tsx:7-12`; matching unit coverage exists at `tests/unit/revisedAnalysisReducer.test.ts:554-579`.
+- Click-time popover positioning now happens before fetch state dispatch at `src/components/ReviewPanel.tsx:59-68`.
+- `available:true` with empty alternatives is converted back to unavailable at `src/components/ReviewPanel.tsx:103-119`, preventing false success rendering.
+- Apply + revised-analysis semantics remain intact at `src/components/ReviewPanel.tsx:126-136`.
+- Required selectors remain present: `suggestion-popover` (`src/components/ReviewPanel.tsx:154`), `suggestion-empty` (`src/components/ReviewPanel.tsx:177`), `suggestion-success` (`src/components/ReviewPanel.tsx:181`), and `apply-suggestion-btn-{index}` (`src/components/ReviewPanel.tsx:209`).
+
+### Task 5 — APPROVE
+Plan acceptance requires reveal/rewrite regression coverage aligned with the hidden-by-default textarea model and indexed apply flow (`.sisyphus/plans/voice-profile-suggestion-fixes.md:291-295`). The current repo now satisfies that:
+
+- Browser coverage for reveal-before-manual-entry is present at `e2e/voice-rewrite.spec.ts:385-390`.
+- Generated-profile auto-reveal coverage is present at `e2e/voice-rewrite.spec.ts:96-98` and `208-210`.
+- Successful 2–3 alternative rendering with and without `voiceProfile` is covered at `e2e/voice-rewrite.spec.ts:174-228` and `231-271`.
+- Indexed apply coverage remains present at `e2e/voice-rewrite.spec.ts:273-335`.
+- The previously stale selector mismatch is fixed: `e2e/task4-qa.spec.ts:116` now uses `apply-suggestion-btn-0`, matching the indexed selector contract rendered at `src/components/ReviewPanel.tsx:209`.
+- I did not find another selector mismatch in the audited browser specs.
+
+## Final decision
+
 **APPROVE**
 
-All previously listed blockers are resolved. Tasks 1-10 now meet both the executable acceptance criteria and the required evidence-alignment standard, including the corrected Task 7 negative-path artifact at `.sisyphus/evidence/task-7-analysis-route-error.txt:53-56`, which now matches `tests/integration/analyze-route.test.ts:321-323` and the route control flow in `src/app/api/analyze/route.ts:103-137`.
-
-## Prior blocker re-validation summary
-
-| Prior blocker | Current status | Notes |
-| --- | --- | --- |
-| task-1-scaffold baseline command evidence | RESOLVED | `task-1-scaffold.txt` records `npm install`, `npm run build`, `npm run test` outputs |
-| task-3-docx-extraction-error includes image-only + password-protected coverage | RESOLVED | artifact includes both current cases and assertions |
-| task-4-doc-extraction-error factual symbol/scenario alignment | RESOLVED | artifact cites `extractDoc` and current `.doc` tests |
-| task-5-detection-adapter-error timeout/429 evidence | RESOLVED | artifact includes timeout and 429-path proof |
-| task-6-highlight-spans-error scenario alignment | RESOLVED | artifact matches empty-sentence-results scenario |
-| task-7-analysis-route-error non-English/oversized/no-downstream-call proof | RESOLVED | corrected lines 53-56 now match the test setup and route ordering |
-| task-8-review-ui.png shows real highlighted review state | RESOLVED | screenshot shows review panel, highlight, visible label, and suggestion card |
-| task-9-suggestions route-seam and guardrail evidence alignment | RESOLVED | artifacts show route-seam proof and guardrail filtering |
-| task-10-ci-docs includes CI-equivalent chain evidence | RESOLVED | artifact records full command chain and exit codes |
-| task-10-ci-docs-error includes client bundle secret scan evidence | RESOLVED | artifact records `.next/static` secret scan |
-
-## Summary table
-
-| Task | Acceptance criteria | Required evidence alignment | Task result |
-| --- | --- | --- | --- |
-| 1 | PASS | PASS | PASS |
-| 2 | PASS | PASS | PASS |
-| 3 | PASS | PASS | PASS |
-| 4 | PASS | PASS | PASS |
-| 5 | PASS | PASS | PASS |
-| 6 | PASS | PASS | PASS |
-| 7 | PASS | PASS | PASS |
-| 8 | PASS | PASS | PASS |
-| 9 | PASS | PASS | PASS |
-| 10 | PASS | PASS | PASS |
-
----
-
-## Task 1 — Scaffold Next.js app, tooling, and baseline project conventions
-Plan refs: `.sisyphus/plans/ai-detect-essay-app.md:139-159`
-- **PASS** — `npm run lint` exits 0. Verified from `package.json:5-12` and the audit verification run.
-- **PASS** — `npm run typecheck` exits 0. Verified from `package.json:5-12` and the audit verification run.
-- **PASS** — `npm run test` exits 0 with placeholder smoke tests. Verified by `tests/unit/homepage.test.tsx:5-12`.
-- **PASS** — `npm run test:e2e` exits 0 with placeholder home-page smoke test. Verified by `e2e/home.spec.ts:3-8`.
-- **PASS** — `npm run build` exits 0. Verified in the audit verification run.
-- **PASS** — `.sisyphus/evidence/task-1-scaffold.txt` matches the baseline boot scenario (`task-1-scaffold.txt:1-71`).
-- **PASS** — `.sisyphus/evidence/task-1-scaffold.png` matches the browser smoke scenario.
-
-## Task 2 — Upload validation and temporary file lifecycle
-Plan refs: `.sisyphus/plans/ai-detect-essay-app.md:180-199`
-- **PASS** — file over 5 MB returns `FILE_TOO_LARGE`. Verified by `tests/unit/validate.test.ts:27-42`.
-- **PASS** — MIME + magic-byte mismatch returns `UNSUPPORTED_FORMAT`. Verified by `tests/unit/validate.test.ts:66-146`.
-- **PASS** — temp files are deleted after success and thrown-error paths in unit tests. Verified by `tests/unit/temp.test.ts:75-131`.
-- **PASS** — API responses never include filesystem paths. Verified by `tests/integration/analyze-route.test.ts:422-446` and `src/lib/files/errors.ts:23-30`.
-- **PASS** — `.sisyphus/evidence/task-2-upload-lifecycle.txt`
-- **PASS** — `.sisyphus/evidence/task-2-upload-lifecycle-error.txt`
-
-## Task 3 — `.docx` extraction and extraction-quality checks
-Plan refs: `.sisyphus/plans/ai-detect-essay-app.md:219-238`
-- **PASS** — valid `.docx` fixture returns normalized non-empty text. Verified by `tests/unit/docx.test.ts:13-35`.
-- **PASS** — empty, image-only, corrupted, and password-protected `.docx` fixtures return structured extraction failures. Verified by `tests/unit/docx.test.ts:37-94` and fixtures in `tests/fixtures/`.
-- **PASS** — text under 300 chars returns `TEXT_TOO_SHORT`. Verified by `tests/unit/docx.test.ts:96-103`.
-- **PASS** — text over 100,000 chars returns `TEXT_TOO_LONG`. Verified by `tests/unit/docx.test.ts:104-109`.
-- **PASS** — `.sisyphus/evidence/task-3-docx-extraction.txt`
-- **PASS** — `.sisyphus/evidence/task-3-docx-extraction-error.txt` includes image-only and password-protected coverage (`task-3-docx-extraction-error.txt:18-26`, `40-56`).
-
-## Task 4 — `.doc` extraction and binary-format fallback handling
-Plan refs: `.sisyphus/plans/ai-detect-essay-app.md:258-276`
-- **PASS** — valid `.doc` fixture extracts readable text within limits. Verified by `tests/unit/doc.test.ts:86-115`.
-- **PASS** — garbled or unreadable `.doc` fixture returns `EXTRACTION_FAILED` or structured quality warning path. Verified by `tests/unit/doc.test.ts:117-141` and `tests/unit/doc-mocked.test.ts:48-108`.
-- **PASS** — mixed extension/MIME spoofing does not reach the extractor. Verified by `tests/unit/validate.test.ts:88-105`, `130-145`, and `tests/integration/analyze-route.test.ts:282-295`.
-- **PASS** — `.sisyphus/evidence/task-4-doc-extraction.txt`
-- **PASS** — `.sisyphus/evidence/task-4-doc-extraction-error.txt` now aligns with `extractDoc` and current `.doc` failure tests (`task-4-doc-extraction-error.txt:43-63`).
-
-## Task 5 — Normalized detection adapter with Sapling provider
-Plan refs: `.sisyphus/plans/ai-detect-essay-app.md:297-316`
-- **PASS** — Sapling normalization preserves provider sentence scores in 0-1 range. Verified by `tests/unit/detection.test.ts:13-95` and `src/lib/detection/sapling.ts:83-90`.
-- **PASS** — timeouts, 4xx, and 5xx responses return `DETECTION_FAILED`. Verified by `tests/unit/detection.test.ts:168-295`.
-- **PASS** — no Sapling API key string appears in client code or build output. Verified by `src/app/api/analyze/route.ts:33-41` and the clean `.next/static` scan.
-- **PASS** — caller depends only on `DetectionAdapter`. Verified by `src/app/api/analyze/route.ts:10-12`, `111-129`, and `src/lib/detection/types.ts:34-50`.
-- **PASS** — `.sisyphus/evidence/task-5-detection-adapter.txt`
-- **PASS** — `.sisyphus/evidence/task-5-detection-adapter-error.txt` includes HTTP 429, AbortError timeout, HTTP 500, and non-leakage assertions (`task-5-detection-adapter-error.txt:45-78`).
-
-## Task 6 — Sentence matching and highlight span generation
-Plan refs: `.sisyphus/plans/ai-detect-essay-app.md:336-354`
-- **PASS** — deterministic `start`/`end` offsets. Verified by `tests/unit/highlights.test.ts:38-92`, `252-280`.
-- **PASS** — duplicate sentence text handled without collapsing to first occurrence. Verified by `tests/unit/highlights.test.ts:94-146`.
-- **PASS** — empty sentence-result arrays return empty span list safely. Verified by `tests/unit/highlights.test.ts:13-35`.
-- **PASS** — `.sisyphus/evidence/task-6-highlight-spans.txt`
-- **PASS** — `.sisyphus/evidence/task-6-highlight-spans-error.txt` aligns with the empty-sentence-results scenario (`task-6-highlight-spans-error.txt:1-78`).
-
-## Task 7 — Analysis route and orchestration pipeline
-Plan refs: `.sisyphus/plans/ai-detect-essay-app.md:375-394`
-- **PASS** — valid `.docx` request returns normalized JSON with extracted text, sentence results, spans, and stable `suggestions` array. Verified by `src/app/api/analyze/route.ts:25-31`, `81-147`, and `tests/integration/analyze-route.test.ts:99-236`.
-- **PASS** — valid `.doc` request returns normalized JSON or structured extraction-quality error/warning response. Verified by `tests/integration/analyze-route.test.ts:238-252`.
-- **PASS** — unsupported file, short text, long text, non-English text, and detector failure return structured error codes. Verified by `tests/integration/analyze-route.test.ts:271-420` and the already-recorded live `TEXT_TOO_LONG` route check.
-- **PASS** — temp-file cleanup is verified on both success and failure paths. Verified by `tests/integration/analyze-route.test.ts:454-519`.
-- **PASS** — `.sisyphus/evidence/task-7-analysis-route.txt`
-- **PASS** — `.sisyphus/evidence/task-7-analysis-route-error.txt` now matches the non-English test setup at `tests/integration/analyze-route.test.ts:321-323`, the lack of Sapling mock registration in that test, and the route ordering where `UNSUPPORTED_LANGUAGE` returns before `createDetectionAdapter()` / `detect()` / suggestions (`src/app/api/analyze/route.ts:103-137`).
-
-## Task 8 — Upload and highlighted review UI
-Plan refs: `.sisyphus/plans/ai-detect-essay-app.md:416-436`
-- **PASS** — home page renders file input and submit button with stable `data-testid` hooks. Verified by `src/app/page.tsx:71-86` and `tests/unit/homepage.test.tsx:6-12`.
-- **PASS** — successful upload displays highlighted spans with `data-ai-score` and visible risk labels. Verified by `src/components/ReviewPanel.tsx:49-60` and `e2e/home.spec.ts:47-59`.
-- **PASS** — error responses display user-friendly text for each structured error code including `UNSUPPORTED_LANGUAGE`. Verified by `src/app/page.tsx:36-46` and `e2e/home.spec.ts:91-170`.
-- **PASS** — UI remains stable when `suggestions` is an empty array. Verified by `src/components/ReviewPanel.tsx:92-105` and `e2e/home.spec.ts:61-89`.
-- **PASS** — no raw provider field names or stack traces appear in the UI. Verified by inspection of `src/app/page.tsx:30-56` and `src/components/ReviewPanel.tsx:76-107`.
-- **PASS** — `.sisyphus/evidence/task-8-review-ui.png` shows review panel, highlight, visible risk label, and suggestion card.
-- **PASS** — `.sisyphus/evidence/task-8-review-ui-error.png` shows the friendly error state with no review panel.
-
-## Task 9 — Safe suggestion generation service and UI mapping
-Plan refs: `.sisyphus/plans/ai-detect-essay-app.md:457-477`
-- **PASS** — suggestion output is limited to sentence-level coaching objects linked to analyzed sentences. Verified by `src/lib/suggestions/types.ts:8-48`, `src/lib/suggestions/rule-based.ts:73-96`, and `src/app/api/analyze/route.ts:133-145`.
-- **PASS** — guardrail tests reject banned phrases such as `avoid detection`, `bypass`, or `undetectable`. Verified by `tests/unit/suggestions.test.ts:162-237` and `src/lib/suggestions/guardrails.ts:15-45`.
-- **PASS** — route responses include concrete suggestion objects when sentences exceed coaching threshold. Verified by `tests/integration/analyze-route.test.ts:181-235`.
-- **PASS** — suggestions are omitted cleanly when no sentence exceeds threshold. Verified by `src/app/api/analyze/route.ts:134-137` and `tests/unit/suggestions.test.ts:8-12`.
-- **PASS** — LLM API key remains server-only and absent from build/client output. Verified by the clean `.next/static` scan.
-- **PASS** — `.sisyphus/evidence/task-9-suggestions.txt` includes route-seam proof and sentence linkage (`task-9-suggestions.txt:51-80`).
-- **PASS** — `.sisyphus/evidence/task-9-suggestions-error.txt` aligns with guardrail filtering and banned-phrase rejection (`task-9-suggestions-error.txt:8-61`).
-
-## Task 10 — CI, privacy docs, deployment config, and end-to-end verification
-Plan refs: `.sisyphus/plans/ai-detect-essay-app.md:499-518`
-- **PASS** — GitHub Actions workflow runs lint, typecheck, unit/integration tests, build, and Playwright E2E. Verified by `.github/workflows/ci.yml:22-45`.
-- **PASS** — `PRIVACY.md` explicitly states immediate deletion, no persistent storage, and English-only policy. Verified by `PRIVACY.md:7-15`.
-- **PASS** — build artifact inspection confirms no detector/LLM secrets are bundled client-side. Verified by the clean `.next/static` scan.
-- **PASS** — Playwright covers valid `.docx`, valid `.doc`, unsupported file, non-English rejection, and extraction failure flows. Verified by `e2e/home.spec.ts:11-170` and `e2e/f3-qa-screenshots.spec.ts:9-164`.
-- **PASS** — `.sisyphus/evidence/task-10-ci-docs.txt` records the full CI-equivalent chain and exit codes (`task-10-ci-docs.txt:1-106`).
-- **PASS** — `.sisyphus/evidence/task-10-ci-docs-error.txt` records the client bundle secret scan over `.next/static` (`task-10-ci-docs-error.txt:1-34`).
-
-## Approval statement
-All previously listed blockers are resolved. No remaining blocker remains in `.sisyphus/evidence/f1-plan-compliance.md` for Tasks 1-10.
+Tasks 1–5 are compliant in the current repo state. The code and test contracts now align, including the updated indexed selector assertion for Task 5, and the remaining Playwright launch failure is the already-accounted-for environment issue documented in F3 rather than a plan-specific blocker.

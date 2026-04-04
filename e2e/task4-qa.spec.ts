@@ -113,7 +113,7 @@ test('Sentence with no safe suggestion shows empty-state instead of Apply', asyn
   await page.getByTestId('highlight-score').nth(0).click();
   await expect(page.getByTestId('suggestion-popover')).toBeVisible();
   await expect(page.getByTestId('suggestion-empty')).toBeVisible();
-  await expect(page.getByTestId('apply-suggestion-btn')).not.toBeVisible();
+  await expect(page.getByTestId('apply-suggestion-btn-0')).not.toBeVisible();
 
   await page.screenshot({ path: `${EVIDENCE}/task-4-clickable-suggestions-error.png`, fullPage: true });
 });
@@ -266,4 +266,3 @@ test('available:true but no rewrite/alternatives renders empty state', async ({ 
   await expect(page.getByTestId('suggestion-success')).not.toBeVisible();
   await expect(page.getByTestId('apply-suggestion-btn-0')).not.toBeVisible();
 });
-

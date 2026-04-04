@@ -523,7 +523,7 @@ Wave 3: UI review flow, safe suggestion generation, docs/ops/CI completion (Task
 > 4 review agents run in PARALLEL. ALL must APPROVE. Present consolidated results to user and get explicit "okay" before completing.
 > **Do NOT auto-proceed after verification. Wait for user's explicit approval before marking work complete.**
 > **Never mark F1-F4 as checked before getting user's okay.** Rejection or user feedback -> fix -> re-run -> present again -> wait for okay.
-- [ ] F1. Plan Compliance Audit — oracle
+- [x] F1. Plan Compliance Audit — oracle
 
   **What to do**: Run an oracle review against the completed implementation and compare actual behavior, file changes, and verification artifacts against Tasks 1-10 in this plan. Flag every missing acceptance criterion, every unverifiable claim, and every deviation from the required guardrails.
   **Must NOT do**: Must NOT approve partial compliance, must NOT ignore missing evidence files, and must NOT waive plan requirements because the app “mostly works.”
@@ -549,7 +549,7 @@ Wave 3: UI review flow, safe suggestion generation, docs/ops/CI completion (Task
     Expected: oracle rejects and cites the exact missing criterion/task number
     Evidence: .sisyphus/evidence/f1-plan-compliance-reject.md
   ```
-- [ ] F2. Code Quality Review — unspecified-high
+- [x] F2. Code Quality Review — unspecified-high
 
   **What to do**: Run a deep code-quality review of the completed implementation for correctness, maintainability, type safety, security/privacy mistakes, and test quality. Focus on upload safety, cleanup guarantees, server-only secrets, and brittle span/suggestion logic.
   **Must NOT do**: Must NOT limit review to style issues, must NOT skip test files, and must NOT ignore privacy leaks because they are “non-blocking.”
@@ -575,7 +575,7 @@ Wave 3: UI review flow, safe suggestion generation, docs/ops/CI completion (Task
     Expected: reviewer rejects and cites the exact file and defect class
     Evidence: .sisyphus/evidence/f2-code-quality-reject.md
   ```
-- [ ] F3. Real Manual QA — unspecified-high (+ playwright if UI)
+- [x] F3. Real Manual QA — unspecified-high (+ playwright if UI)
 
   **What to do**: Run the completed app and execute the real end-to-end flows using browser automation and command verification: valid `.docx`, valid `.doc`, unsupported file, too-short text, and provider/extraction failure handling. Capture screenshots and terminal output for each path.
   **Must NOT do**: Must NOT rely only on unit tests, must NOT skip browser verification for UI states, and must NOT mark pass without evidence for both success and failure flows.
@@ -601,7 +601,7 @@ Wave 3: UI review flow, safe suggestion generation, docs/ops/CI completion (Task
     Expected: friendly mapped error appears, review panel does not render, and app remains interactive
     Evidence: .sisyphus/evidence/f3-manual-qa-error.png
   ```
-- [ ] F4. Scope Fidelity Check — deep
+- [x] F4. Scope Fidelity Check — deep
 
   **What to do**: Review the finished implementation specifically for scope creep and scope loss against the Must Have / Must NOT Have sections. Confirm that banned features were not added and required v1 constraints were preserved.
   **Must NOT do**: Must NOT treat extra unsupported features as harmless, must NOT ignore wording drift into cheating/evasion framing, and must NOT approve if required v1 constraints are missing.

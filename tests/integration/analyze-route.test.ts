@@ -181,7 +181,7 @@ describe('POST /api/analyze — success path (docx)', () => {
     }
   });
 
-  it('returns empty suggestions array — suggestions are on-demand via /api/suggestions endpoint', async () => {
+  it('returns populated suggestions when AI-like fixture sentences match coaching patterns', async () => {
     process.env.SAPLING_API_KEY = 'test-key';
     mockSaplingAiLike();
 
@@ -193,10 +193,10 @@ describe('POST /api/analyze — success path (docx)', () => {
     const body = (await res.json()) as AnalysisSuccessResponse;
 
     expect(Array.isArray(body.suggestions)).toBe(true);
-    expect(body.suggestions).toHaveLength(0);
+    expect(body.suggestions.length).toBeGreaterThan(0);
   });
 
-  it('suggestions field is always an empty array regardless of high-risk sentences', async () => {
+  it('each suggestion has required fields and valid sentenceIndex for AI-like fixture', async () => {
     process.env.SAPLING_API_KEY = 'test-key';
     mockSaplingAiLike();
 
@@ -205,10 +205,18 @@ describe('POST /api/analyze — success path (docx)', () => {
     const res = await POST(req);
     const body = (await res.json()) as AnalysisSuccessResponse;
 
-    expect(body.suggestions).toHaveLength(0);
+    expect(body.suggestions.length).toBeGreaterThan(0);
+    for (const s of body.suggestions) {
+      expect(typeof s.sentence).toBe('string');
+      expect(typeof s.rewrite).toBe('string');
+      expect(typeof s.explanation).toBe('string');
+      expect(typeof s.sentenceIndex).toBe('number');
+      expect(s.sentenceIndex).toBeGreaterThanOrEqual(0);
+      expect(s.sentenceIndex).toBeLessThan(body.sentences.length);
+    }
   });
 
-  it('suggestions field is always present and empty for on-demand flow', async () => {
+  it('each suggestion sentenceIndex points to the matching sentence in the sentences array', async () => {
     process.env.SAPLING_API_KEY = 'test-key';
     mockSaplingAiLike();
 
@@ -217,7 +225,9 @@ describe('POST /api/analyze — success path (docx)', () => {
     const res = await POST(req);
     const body = (await res.json()) as AnalysisSuccessResponse;
 
-    expect(body.suggestions).toHaveLength(0);
+    for (const s of body.suggestions) {
+      expect(body.sentences[s.sentenceIndex].sentence).toBe(s.sentence);
+    }
   });
 });
 

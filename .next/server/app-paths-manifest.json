@@ -1,3 +1,7 @@
 {
+  "/api/analyze/route": "app/api/analyze/route.js",
+  "/api/voice-profile/generate/route": "app/api/voice-profile/generate/route.js",
+  "/api/suggestions/route": "app/api/suggestions/route.js",
+  "/api/analyze/revised/route": "app/api/analyze/revised/route.js",
   "/page": "app/page.js"
 }
