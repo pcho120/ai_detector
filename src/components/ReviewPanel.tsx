@@ -195,7 +195,9 @@ export function ReviewPanel({ result, revisedState, voiceProfile }: ReviewPanelP
                 </div>
                 {alt.explanation && (
                   <div>
-                    <span className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">Why</span>
+                    <span className="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1">
+                      {alt.previewScore !== undefined ? `Why (${(alt.previewScore * 100).toFixed(1)}% AI if replaced)` : 'Why'}
+                    </span>
                     <p className="text-sm text-slate-600 italic">
                       {alt.explanation}
                     </p>

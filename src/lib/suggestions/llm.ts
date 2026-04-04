@@ -17,27 +17,28 @@ interface LlmRewritePayload {
 export interface SuggestionAlternative {
   rewrite: string;
   explanation: string;
+  previewScore?: number;
 }
 
-const SYSTEM_PROMPT = `You are an academic writing coach helping students improve essay authenticity.
+const SYSTEM_PROMPT = `You are an academic writing coach helping students write more authentically.
 When given an AI-sounding sentence, respond with ONLY valid JSON in this exact shape:
 {"rewrite":"<full replacement sentence>","explanation":"<one concise sentence explaining the change>"}
 Rules:
 - rewrite must be a complete, grammatically correct replacement sentence, not a coaching hint.
 - Do NOT mention AI detection, evasion, or scores.
 - Keep the core meaning of the original sentence.
-- Write at a natural undergraduate academic level.
+- Write like a thoughtful undergraduate: use contractions when they fit, mix short and longer sentences, add concrete details instead of abstract filler, and keep the tone lightly informal with a bit of personality.
 - explanation must be one sentence, <= 120 characters.`;
 
-const MULTI_SYSTEM_PROMPT = `You are an academic writing coach helping students improve essay authenticity.
+const MULTI_SYSTEM_PROMPT = `You are an academic writing coach helping students write more authentically.
 When given an AI-sounding sentence, respond with ONLY valid JSON in this exact shape:
 {"alternatives":[{"rewrite":"<full replacement sentence>","explanation":"<one concise sentence>"},{"rewrite":"<full replacement sentence>","explanation":"<one concise sentence>"},{"rewrite":"<full replacement sentence>","explanation":"<one concise sentence>"}]}
 Rules:
 - Each rewrite must be a complete, grammatically correct replacement sentence, not a coaching hint.
-- Produce exactly 3 distinct alternatives with different phrasing approaches.
+- Produce exactly 3 distinct alternatives with noticeably different phrasing approaches and sentence shapes.
 - Do NOT mention AI detection, evasion, or scores.
 - Keep the core meaning of the original sentence.
-- Write at a natural undergraduate academic level.
+- Write like a thoughtful undergraduate: use contractions when they fit, vary sentence length, favor concrete details over abstract language, and keep the tone lightly informal with a bit of personality.
 - Each explanation must be one sentence, <= 120 characters.`;
 
 function buildUserPrompt(sentence: string, score: number): string {

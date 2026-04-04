@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { generateAlternativeSuggestions } from '@/lib/suggestions/llm';
 import type { SuggestionAlternative } from '@/lib/suggestions/llm';
 import { sanitizeVoiceProfile } from '@/lib/suggestions/voiceProfile';
+import { createAnalysisDetectionAdapter } from '@/lib/analysis/analyzeText';
+import { findSentenceInText } from '@/lib/highlights/spans';
 
 export const runtime = 'nodejs';
 
@@ -88,12 +90,34 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json(response, { status: 200 });
   }
 
+  let adapter: ReturnType<typeof createAnalysisDetectionAdapter> | null = null;
+  try {
+    adapter = createAnalysisDetectionAdapter();
+  } catch {
+    adapter = null;
+  }
+
+  const enrichedAlternatives: SuggestionAlternative[] = await Promise.all(
+    alternatives.map(async (alt) => {
+      if (!adapter) return alt;
+      try {
+        const match = findSentenceInText(body.text, body.sentence, 0);
+        if (!match) return alt;
+        const revisedText = body.text.slice(0, match.start) + alt.rewrite + body.text.slice(match.end);
+        const result = await adapter.detect(revisedText);
+        return { ...alt, previewScore: result.score };
+      } catch {
+        return alt;
+      }
+    }),
+  );
+
   const response: SuggestionAvailableResponse = {
     available: true,
     sentenceIndex,
-    rewrite: alternatives[0].rewrite,
-    explanation: alternatives[0].explanation,
-    alternatives,
+    rewrite: enrichedAlternatives[0].rewrite,
+    explanation: enrichedAlternatives[0].explanation,
+    alternatives: enrichedAlternatives,
   };
   return NextResponse.json(response, { status: 200 });
 }

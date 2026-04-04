@@ -42,7 +42,7 @@ function normLoose(s: string): string {
  * to tolerate surrounding punctuation. Early-bails on normalised-window overshoot
  * to avoid quadratic blowup. Returns {start, end} into the original text or null.
  */
-function findSentenceInText(
+export function findSentenceInText(
   text: string,
   sentence: string,
   fromIndex: number,

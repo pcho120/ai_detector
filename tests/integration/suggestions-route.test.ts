@@ -7,6 +7,9 @@ import type { SuggestionResponse, SuggestionAvailableResponse } from '@/app/api/
 const SAMPLE_TEXT =
   'In conclusion, the experiment shows improved outcomes. Furthermore, the data supports this hypothesis.';
 
+const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
+const SAPLING_URL = 'https://api.sapling.ai/api/v1/aidetect';
+
 function buildSuggestionRequest(body: unknown): NextRequest {
   return new NextRequest('http://localhost/api/suggestions', {
     method: 'POST',
@@ -15,50 +18,75 @@ function buildSuggestionRequest(body: unknown): NextRequest {
   });
 }
 
+function buildRoutedFetchMock(
+  openaiResponder: () => Promise<unknown>,
+  saplingScore?: number,
+): ReturnType<typeof vi.fn> {
+  return vi.fn().mockImplementation((url: string) => {
+    if (url === SAPLING_URL) {
+      if (saplingScore !== undefined) {
+        return Promise.resolve({
+          ok: true,
+          json: async () => ({ score: saplingScore, ai_probability: saplingScore, sentences: [] }),
+        });
+      }
+      return Promise.resolve({ ok: false, status: 503 });
+    }
+    return openaiResponder().then((data) => ({ ok: true, json: async () => data }));
+  });
+}
+
+function openaiMultiResponse(alternatives: Array<{ rewrite: string; explanation: string }>): unknown {
+  return {
+    choices: [
+      {
+        message: {
+          content: JSON.stringify({ alternatives }),
+        },
+      },
+    ],
+  };
+}
+
+function openaiSingleResponse(rewrite: string, explanation: string): unknown {
+  return {
+    choices: [
+      {
+        message: {
+          content: JSON.stringify({
+            alternatives: [
+              { rewrite, explanation },
+              { rewrite: 'A second distinct rewrite of the original sentence here.', explanation: 'Second alternative phrasing approach.' },
+              { rewrite: 'A third distinct rewrite with different vocabulary and structure.', explanation: 'Third alternative phrasing approach.' },
+            ],
+          }),
+        },
+      },
+    ],
+  };
+}
+
 function mockLlmSuccess(rewrite: string, explanation: string): void {
   vi.stubGlobal(
     'fetch',
-    vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        choices: [
-          {
-            message: {
-              content: JSON.stringify({
-                alternatives: [
-                  { rewrite, explanation },
-                  { rewrite: 'A second distinct rewrite of the original sentence here.', explanation: 'Second alternative phrasing approach.' },
-                  { rewrite: 'A third distinct rewrite with different vocabulary and structure.', explanation: 'Third alternative phrasing approach.' },
-                ],
-              }),
-            },
-          },
-        ],
-      }),
-    }),
+    buildRoutedFetchMock(() => Promise.resolve(openaiSingleResponse(rewrite, explanation))),
   );
 }
 
 function mockLlmMultiSuccess(alternatives: Array<{ rewrite: string; explanation: string }>): void {
   vi.stubGlobal(
     'fetch',
-    vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        choices: [
-          {
-            message: {
-              content: JSON.stringify({ alternatives }),
-            },
-          },
-        ],
-      }),
-    }),
+    buildRoutedFetchMock(() => Promise.resolve(openaiMultiResponse(alternatives))),
   );
 }
 
 function mockLlmFailure(status = 500): void {
-  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status }));
+  vi.stubGlobal('fetch', vi.fn().mockImplementation((url: string) => {
+    if (url === SAPLING_URL) {
+      return Promise.resolve({ ok: false, status: 503 });
+    }
+    return Promise.resolve({ ok: false, status });
+  }));
 }
 
 afterEach(() => {
@@ -168,23 +196,14 @@ describe('POST /api/suggestions — success path', () => {
 
   it('sanitizes voiceProfile wrapper before forwarding to LLM', async () => {
     process.env.COACHING_LLM_API_KEY = 'test-key';
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        choices: [
-          {
-            message: {
-              content: JSON.stringify({
-                alternatives: [
-                  { rewrite: 'The experiment demonstrated clear improvements.', explanation: 'Replaced vague opener.' },
-                  { rewrite: 'Results indicate a consistent trend of improvement.', explanation: 'Empirically grounded.' },
-                ],
-              }),
-            },
-          },
-        ],
-      }),
-    });
+    const fetchMock = buildRoutedFetchMock(() =>
+      Promise.resolve(
+        openaiMultiResponse([
+          { rewrite: 'The experiment demonstrated clear improvements.', explanation: 'Replaced vague opener.' },
+          { rewrite: 'Results indicate a consistent trend of improvement.', explanation: 'Empirically grounded.' },
+        ]),
+      ),
+    );
     vi.stubGlobal('fetch', fetchMock);
 
     const req = buildSuggestionRequest({
@@ -199,8 +218,9 @@ describe('POST /api/suggestions — success path', () => {
     expect(res.status).toBe(200);
     const body = (await res.json()) as SuggestionResponse;
     expect(body.available).toBe(true);
-    expect(fetchMock).toHaveBeenCalledOnce();
-    const callBody = JSON.parse((fetchMock.mock.calls[0][1] as { body: string }).body) as { messages: Array<{ content: string }> };
+    const openaiCalls = fetchMock.mock.calls.filter((c) => (c[0] as string) === OPENAI_URL);
+    expect(openaiCalls.length).toBeGreaterThanOrEqual(1);
+    const callBody = JSON.parse((openaiCalls[0][1] as { body: string }).body) as { messages: Array<{ content: string }> };
     const userContent = callBody.messages[1].content;
     expect(userContent).toContain('concise and direct academic writing');
     expect(userContent).not.toContain('Voice profile:');
@@ -523,23 +543,14 @@ describe('POST /api/suggestions — request validation', () => {
 
   it('empty string voiceProfile behaves identically to absent voiceProfile', async () => {
     process.env.COACHING_LLM_API_KEY = 'test-key';
-    const fetchMock = vi.fn().mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        choices: [
-          {
-            message: {
-              content: JSON.stringify({
-                alternatives: [
-                  { rewrite: 'The experiment demonstrated clear improvements.', explanation: 'Direct empirical claim.' },
-                  { rewrite: 'Results indicate consistent improvement.', explanation: 'Concise framing.' },
-                ],
-              }),
-            },
-          },
-        ],
-      }),
-    });
+    const fetchMock = buildRoutedFetchMock(() =>
+      Promise.resolve(
+        openaiMultiResponse([
+          { rewrite: 'The experiment demonstrated clear improvements.', explanation: 'Direct empirical claim.' },
+          { rewrite: 'Results indicate consistent improvement.', explanation: 'Concise framing.' },
+        ]),
+      ),
+    );
     vi.stubGlobal('fetch', fetchMock);
 
     const req = buildSuggestionRequest({
@@ -554,7 +565,9 @@ describe('POST /api/suggestions — request validation', () => {
     const body = (await res.json()) as SuggestionResponse;
     expect(body.available).toBe(true);
 
-    const callBody = JSON.parse((fetchMock.mock.calls[0][1] as { body: string }).body) as {
+    const openaiCalls = fetchMock.mock.calls.filter((c) => (c[0] as string) === OPENAI_URL);
+    expect(openaiCalls.length).toBeGreaterThanOrEqual(1);
+    const callBody = JSON.parse((openaiCalls[0][1] as { body: string }).body) as {
       messages: Array<{ content: string }>;
     };
     const userContent = callBody.messages[1].content;
@@ -944,5 +957,190 @@ describe('POST /api/suggestions — recovery path for partial LLM output', () =>
     expect(body.rewrite).toBeUndefined();
     expect(body.explanation).toBeUndefined();
     expect(body.alternatives).toBeUndefined();
+  });
+});
+
+describe('POST /api/suggestions — previewScore enrichment', () => {
+  it('alternatives carry previewScore numbers when Sapling is available', async () => {
+    process.env.COACHING_LLM_API_KEY = 'test-key';
+    process.env.SAPLING_API_KEY = 'sapling-key';
+    vi.stubGlobal(
+      'fetch',
+      buildRoutedFetchMock(
+        () =>
+          Promise.resolve(
+            openaiMultiResponse([
+              { rewrite: 'The experiment consistently demonstrated improved outcomes.', explanation: 'Direct empirical claim.' },
+              { rewrite: 'Results from the experiment showed consistent improvement.', explanation: 'More concise framing.' },
+              { rewrite: 'Data from the experiment reveals improved outcomes across cohorts.', explanation: 'Evidence-anchored restatement.' },
+            ]),
+          ),
+        0.42,
+      ),
+    );
+
+    const req = buildSuggestionRequest({
+      text: SAMPLE_TEXT,
+      sentenceIndex: 0,
+      sentence: 'In conclusion, the experiment shows improved outcomes.',
+      score: 0.9,
+    });
+    const res = await POST(req);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as SuggestionAvailableResponse;
+    expect(body.available).toBe(true);
+    expect(Array.isArray(body.alternatives)).toBe(true);
+    for (const alt of body.alternatives) {
+      expect(typeof alt.previewScore).toBe('number');
+      expect(alt.previewScore).toBeGreaterThanOrEqual(0);
+      expect(alt.previewScore).toBeLessThanOrEqual(1);
+    }
+
+    delete process.env.SAPLING_API_KEY;
+  });
+
+  it('sends revised full text to Sapling when sentence whitespace does not exactly match', async () => {
+    process.env.COACHING_LLM_API_KEY = 'test-key';
+    process.env.SAPLING_API_KEY = 'sapling-key';
+
+    const saplingRequestBodies: Array<{ key: string; text: string; sent_scores: number[] }> = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
+        if (url === OPENAI_URL) {
+          return {
+            ok: true,
+            json: async () =>
+              openaiMultiResponse([
+                { rewrite: 'The experiment consistently demonstrated improved outcomes.', explanation: 'Direct empirical claim.' },
+                { rewrite: 'Results from the experiment showed consistent improvement.', explanation: 'More concise framing.' },
+                { rewrite: 'Data from the experiment reveals improved outcomes across cohorts.', explanation: 'Evidence-anchored restatement.' },
+              ]),
+          };
+        }
+
+        if (url === SAPLING_URL) {
+          saplingRequestBodies.push(JSON.parse((init?.body as string) ?? '{}') as {
+            key: string;
+            text: string;
+            sent_scores: number[];
+          });
+          return {
+            ok: true,
+            json: async () => ({ score: 0.42, ai_probability: 0.42, sentences: [] }),
+          };
+        }
+
+        throw new Error(`Unexpected fetch url: ${url}`);
+      }),
+    );
+
+    const req = buildSuggestionRequest({
+      text: 'In conclusion, the experiment shows improved outcomes.\n\nFurthermore, the data supports this hypothesis.',
+      sentenceIndex: 0,
+      sentence: 'In conclusion, the experiment shows improved outcomes.',
+      score: 0.9,
+    });
+    const res = await POST(req);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as SuggestionAvailableResponse;
+    expect(body.available).toBe(true);
+    expect(Array.isArray(body.alternatives)).toBe(true);
+    expect(saplingRequestBodies.length).toBeGreaterThan(0);
+    expect(saplingRequestBodies.some((request) => request.text !== 'In conclusion, the experiment shows improved outcomes.\n\nFurthermore, the data supports this hypothesis.')).toBe(true);
+    expect(saplingRequestBodies.some((request) => request.text.includes('reveals improved outcomes across cohorts.'))).toBe(true);
+    expect(saplingRequestBodies.some((request) => request.text.includes('The experiment consistently demonstrated improved outcomes.'))).toBe(true);
+    expect(body.alternatives[0].previewScore).toBe(0.42);
+
+    delete process.env.SAPLING_API_KEY;
+  });
+
+  it('alternatives return without previewScore when SAPLING_API_KEY is absent — response still available:true', async () => {
+    process.env.COACHING_LLM_API_KEY = 'test-key';
+    delete process.env.SAPLING_API_KEY;
+    mockLlmMultiSuccess([
+      { rewrite: 'The experiment consistently demonstrated improved outcomes.', explanation: 'Direct empirical claim.' },
+      { rewrite: 'Results from the experiment showed consistent improvement.', explanation: 'More concise framing.' },
+    ]);
+
+    const req = buildSuggestionRequest({
+      text: SAMPLE_TEXT,
+      sentenceIndex: 0,
+      sentence: 'In conclusion, the experiment shows improved outcomes.',
+      score: 0.9,
+    });
+    const res = await POST(req);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as SuggestionAvailableResponse;
+    expect(body.available).toBe(true);
+    expect(Array.isArray(body.alternatives)).toBe(true);
+    expect(body.alternatives.length).toBeGreaterThanOrEqual(2);
+    for (const alt of body.alternatives) {
+      expect(alt.previewScore).toBeUndefined();
+    }
+    expect(body.rewrite).toBe(body.alternatives[0].rewrite);
+    expect(body.explanation).toBe(body.alternatives[0].explanation);
+  });
+
+  it('alternatives return without previewScore when Sapling call fails — response still available:true', async () => {
+    process.env.COACHING_LLM_API_KEY = 'test-key';
+    process.env.SAPLING_API_KEY = 'sapling-key';
+    vi.stubGlobal(
+      'fetch',
+      buildRoutedFetchMock(
+        () =>
+          Promise.resolve(
+            openaiMultiResponse([
+              { rewrite: 'The experiment consistently demonstrated improved outcomes.', explanation: 'Direct empirical claim.' },
+              { rewrite: 'Results from the experiment showed consistent improvement.', explanation: 'More concise framing.' },
+            ]),
+          ),
+      ),
+    );
+
+    const req = buildSuggestionRequest({
+      text: SAMPLE_TEXT,
+      sentenceIndex: 0,
+      sentence: 'In conclusion, the experiment shows improved outcomes.',
+      score: 0.9,
+    });
+    const res = await POST(req);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as SuggestionAvailableResponse;
+    expect(body.available).toBe(true);
+    expect(Array.isArray(body.alternatives)).toBe(true);
+    expect(body.alternatives.length).toBeGreaterThanOrEqual(2);
+    for (const alt of body.alternatives) {
+      expect(alt.previewScore).toBeUndefined();
+    }
+
+    delete process.env.SAPLING_API_KEY;
+  });
+
+  it('unavailable response has no previewScore even when SAPLING_API_KEY is set', async () => {
+    delete process.env.COACHING_LLM_API_KEY;
+    process.env.SAPLING_API_KEY = 'sapling-key';
+
+    const req = buildSuggestionRequest({
+      text: SAMPLE_TEXT,
+      sentenceIndex: 14,
+      sentence: 'In conclusion, the experiment shows improved outcomes.',
+      score: 0.9,
+    });
+    const res = await POST(req);
+
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as Record<string, unknown>;
+    expect(body.available).toBe(false);
+    expect(body.sentenceIndex).toBe(14);
+    expect(body.rewrite).toBeUndefined();
+    expect(body.explanation).toBeUndefined();
+    expect(body.alternatives).toBeUndefined();
+
+    delete process.env.SAPLING_API_KEY;
   });
 });
