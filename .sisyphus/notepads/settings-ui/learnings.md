@@ -481,3 +481,54 @@ try {
 ✅ TypeScript compilation successful
 ✅ Backward compatibility maintained for all existing code
 ✅ Minimal scope: only llm.ts and bulkRewrite.ts modified, plus test mock setup
+
+# Task 8 Provider-Specific Error Handling Fix
+
+## Problem Identification
+- When routes send `x-llm-provider` override (e.g., Anthropic), the bulk-rewrite endpoint would fail with generic `BULK_REWRITE_FAILED` 500 error
+- Root cause: `FileProcessingError` thrown by unsupported LLM providers (or any provider-specific errors) were caught by generic catch-all in route
+- Needed: provider-aware error responses that map to HTTP 501 instead of generic 500
+
+## Solution Pattern
+- Imported `FileProcessingError` from `@/lib/files/errors` in bulk-rewrite route
+- Updated try-catch to distinguish between:
+  1. `FileProcessingError` (provider-specific issues) → HTTP 501 with error code and message
+  2. Other errors → generic `BULK_REWRITE_FAILED` 500 response
+
+## Implementation
+```typescript
+} catch (err) {
+  // Handle provider-specific errors (e.g., unsupported LLM provider)
+  if (err instanceof FileProcessingError) {
+    return NextResponse.json(
+      { error: err.code, message: err.message },
+      { status: 501 },
+    );
+  }
+  // Generic fallback for unexpected errors
+  return NextResponse.json(
+    { error: 'BULK_REWRITE_FAILED', message: 'Bulk rewrite encountered an unexpected error.' },
+    { status: 500 },
+  );
+}
+```
+
+## Error Response Examples
+- **Unsupported LLM provider**: `{ error: "DETECTION_FAILED", message: "Unknown LLM provider: \"anthropic\"..." }` + 501
+- **Other errors**: `{ error: "BULK_REWRITE_FAILED", message: "..." }` + 500
+- Preserves OpenAI path: normal 200 response when provider is supported
+
+## Integration Points
+- Works with Task 8's real provider override support (internal `generateSingleSuggestionWithProvider()`)
+- Mirrors Task 6/7 error handling pattern (catch specific errors, map to appropriate status)
+- No changes to bulkRewrite.ts needed: error originates from adapter factory or methods, caught at route level
+
+## Test Coverage
+- All 514 tests pass (including 20 bulkRewrite.test.ts tests)
+- Backward compatibility maintained: OpenAI provider path unaffected
+- TypeScript compilation passes with no errors
+
+## Why This Pattern
+- Provider errors should be 501 (Not Implemented / Service Unavailable per provider status)
+- Generic operational errors remain 500 (Internal Server Error)
+- Allows client to distinguish between "feature not ready" (501) vs "service failure" (500)
