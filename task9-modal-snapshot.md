@@ -1,0 +1,46 @@
+- generic [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e5]:
+        - generic [ref=e6]:
+          - heading "AI Detect Essay Review" [level=1] [ref=e7]
+          - paragraph [ref=e8]: Upload your essay to analyze it for AI-generated phrasing.
+        - button "Open settings" [active] [ref=e9] [cursor=pointer]:
+          - img [ref=e10]
+      - generic [ref=e15]:
+        - generic [ref=e16]:
+          - text: Upload essay file (.doc or .docx)
+          - button "Upload essay file (.doc or .docx)" [ref=e17]
+        - button "Submit for Review" [ref=e18] [cursor=pointer]
+    - dialog "Settings" [ref=e30]:
+      - generic [ref=e31]:
+        - heading "Settings" [level=2] [ref=e32]
+        - button "Close settings" [ref=e33] [cursor=pointer]:
+          - img [ref=e34]
+      - generic [ref=e36]:
+        - generic [ref=e37]:
+          - heading "AI Detection" [level=3] [ref=e38]
+          - generic [ref=e39]:
+            - generic [ref=e40]: Provider
+            - combobox "Provider" [ref=e41]
+          - generic [ref=e42]:
+            - generic [ref=e43]: API Key
+            - textbox "API Key" [ref=e44]:
+              - /placeholder: Optional (uses server key if empty)
+        - generic [ref=e46]:
+          - heading "Coaching LLM" [level=3] [ref=e47]
+          - generic [ref=e48]:
+            - generic [ref=e49]: Provider
+            - combobox "Provider" [ref=e50]
+          - generic [ref=e51]:
+            - generic [ref=e52]: API Key
+            - textbox "API Key" [ref=e53]:
+              - /placeholder: Optional (uses server key if empty)
+      - generic [ref=e54]:
+        - paragraph [ref=e55]: Keys are stored locally in your browser's localStorage and are not retained by our servers.
+        - generic [ref=e56]:
+          - button "Cancel" [ref=e57] [cursor=pointer]
+          - button "Save Settings" [ref=e58] [cursor=pointer]
+  - button "Open Next.js Dev Tools" [ref=e24] [cursor=pointer]:
+    - img [ref=e25]
+  - alert [ref=e28]

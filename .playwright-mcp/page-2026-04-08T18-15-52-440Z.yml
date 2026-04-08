@@ -1,0 +1,51 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e5]:
+        - generic [ref=e6]:
+          - heading "AI Detect Essay Review" [level=1] [ref=e7]
+          - paragraph [ref=e8]: Upload your essay to analyze it for AI-generated phrasing.
+        - button "Open settings" [ref=e9] [cursor=pointer]:
+          - img [ref=e10]
+      - generic [ref=e14]:
+        - generic [ref=e15]:
+          - text: Upload essay file (.doc or .docx)
+          - button "Upload essay file (.doc or .docx)" [ref=e16]
+        - button "Submit for Review" [ref=e17] [cursor=pointer]
+      - generic [ref=e19]:
+        - generic [ref=e21]:
+          - generic [ref=e22]:
+            - heading "Voice Profile Setup" [level=2] [ref=e23]
+            - paragraph [ref=e24]: Define a writing style to use for rewrites. Select up to 2 presets, provide a writing sample, or both.
+          - generic [ref=e25]:
+            - generic [ref=e26]:
+              - generic [ref=e27]: Style Presets (max 2)
+              - generic [ref=e28]:
+                - button "academic" [ref=e29] [cursor=pointer]
+                - button "conversational" [ref=e30] [cursor=pointer]
+                - button "formal" [ref=e31] [cursor=pointer]
+                - button "narrative" [ref=e32] [cursor=pointer]
+                - button "technical" [ref=e33] [cursor=pointer]
+            - generic [ref=e34]:
+              - generic [ref=e35]: Writing Sample (Optional)
+              - textbox "Writing Sample (Optional)" [ref=e36]:
+                - /placeholder: Paste a sample of your writing here...
+            - button "Generate Profile" [disabled] [ref=e37]
+            - button "I already have a profile!" [ref=e39] [cursor=pointer]
+        - generic [ref=e41]:
+          - generic [ref=e42]:
+            - heading "Bulk Rewrite to Target Score" [level=2] [ref=e43]
+            - paragraph [ref=e44]: Automatically rewrite high-risk sentences to achieve your desired AI detection score (10-100%).
+          - generic [ref=e45]:
+            - generic [ref=e46]:
+              - generic [ref=e47]: Target Score (%)
+              - spinbutton "Target Score (%)" [ref=e48]
+            - button "Rewrite to Target" [disabled] [ref=e49]
+        - generic [ref=e53]:
+          - heading "Analysis Results" [level=2] [ref=e54]
+          - generic [ref=e55]:
+            - generic [ref=e56]: "Overall Score:"
+            - generic [ref=e57]: NaN% AI
+  - button "Open Next.js Dev Tools" [ref=e64] [cursor=pointer]:
+    - img [ref=e65]
+  - alert [ref=e18]

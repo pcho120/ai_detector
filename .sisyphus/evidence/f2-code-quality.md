@@ -200,3 +200,141 @@ Tests use `try { fn(); } catch (err) { expect(err.code).toBe(X); }` without a pr
 **✅ APPROVE**
 
 The implementation is correct, secure, and maintainable across the full codebase including the new LLM suggestion, revised-analysis, and voice-profile features. All security and privacy invariants are upheld. Type safety is strict with zero `as any`. All 5 verification commands exit 0 (372 unit/integration + 38 E2E). The 5 LOW-severity findings are cosmetic or test-fragility issues that do not affect production behavior. The two input-length gaps on newer routes are noted but not blocking given their constrained call context and absence of persistent storage.
+
+---
+
+# F2 Code Quality Review — Settings-UI Integration Wave
+
+**Date:** 2026-04-08  
+**Reviewer:** Sisyphus (F2 — Final-wave review after settings-ui completion)  
+**Files Audited:** `src/app/page.tsx`, `src/app/useRevisedAnalysisState.ts`, `src/components/SettingsModal.tsx`, `src/components/ReviewPanel.tsx`, `src/components/VoiceProfilePanel.tsx`, `src/hooks/useSettings.ts`, `src/lib/settings/types.ts`, `src/lib/api/requestSettings.ts`, `src/app/api/suggestions/route.ts`, `src/lib/bulk-rewrite/__tests__/bulkRewrite.test.ts`
+
+---
+
+## Build / Lint / Test Results
+
+| Check | Command | Result |
+|-------|---------|--------|
+| TypeScript | `npm run typecheck` | ✅ PASS — exits 0, 0 errors |
+| Lint | `npm run lint` | ⚠️ CONDITIONAL — 1 error, 2 warnings (details below) |
+| Tests | `npm run test` | ✅ PASS — 514/514 tests, 20 test files |
+
+---
+
+## Lint Findings Detail
+
+| Severity | File | Line | Issue |
+|----------|------|------|-------|
+| **ERROR** | `src/app/api/suggestions/route.ts` | 6 | `'createLlmAdapter' is defined but never used` (`@typescript-eslint/no-unused-vars`) |
+| WARNING | `src/lib/bulk-rewrite/__tests__/bulkRewrite.test.ts` | 13:94 | `'provider' is defined but never used` in mock function body |
+| ERROR | `src/lib/bulk-rewrite/__tests__/bulkRewrite.test.ts` | 15:22 | `A require() style import is forbidden` (`@typescript-eslint/no-require-imports`) |
+
+**Analysis:**
+- **`createLlmAdapter` unused import** in `suggestions/route.ts` line 6: `createLlmAdapter` was imported during Task 7 development but the final implementation delegates provider+key handling to `generateAlternativeSuggestions()` instead of calling `createLlmAdapter` directly. The import is dead code. **This is a real defect — unused production import that inflates the module graph.**
+- **`provider` unused in test mock** (warning): The `generateSingleSuggestionWithProvider` mock callback declares `provider` in its parameter list but ignores it. This is a test file; low-severity.
+- **`require()` in test** (error): Line 15 of `bulkRewrite.test.ts` uses `vi.mocked(require('@/lib/suggestions/llm').generateSingleSuggestion)` inside a mock factory. This pattern is a known Vitest workaround for circular mock self-reference inside `vi.mock()` factories. The ESLint rule `no-require-imports` flags it, but it cannot be replaced with an `import` statement inside `vi.mock()` factory functions. **This is a test file only; no production impact.**
+
+---
+
+## Anti-Pattern Scan — Settings-UI Files
+
+| Pattern | Files Scanned | Result |
+|---------|--------------|--------|
+| `as any` | All `src/**/*.ts,tsx` | ✅ None found |
+| `@ts-ignore` / `@ts-nocheck` | All `src/**/*.ts,tsx` | ✅ None found |
+| `console.log/warn/error` | All `src/**/*.ts,tsx` | ✅ None found |
+| `TODO` / `FIXME` | All `src/**/*.ts,tsx` | ✅ Only 2 required `TODO(security)` comments (plan-mandated) |
+| Empty catch blocks | All `src/**/*.ts,tsx` | ✅ No empty catches — all `} catch {` blocks have explicit body with error response or comment |
+
+---
+
+## Code Quality Audit — Settings-UI Files
+
+### `src/lib/settings/types.ts` ✅
+- Clean module: interface + constants. No methods, no logic.
+- `Record<AppSettings['provider'], string>` pattern ensures label keys match provider union — correct.
+- `STUB_DETECTION_PROVIDERS` array used by `SettingsModal` — properly consumed.
+- No AI slop (no over-commenting, no generic names).
+
+### `src/hooks/useSettings.ts` ✅
+- SSR-safe pattern: localStorage read in `useEffect` only, never in `useState` initializer — correct.
+- `buildRequestHeaders` correctly omits empty strings (env-var fallback preserved).
+- `TODO(security)` at API key storage — plan-mandated, not slop.
+- Catch on invalid JSON is non-empty (`// Silently ignore invalid JSON; fall back to defaults`) — acceptable.
+- No unused imports. All exports are consumed.
+
+### `src/components/SettingsModal.tsx` ✅
+- Controlled component pattern — local state reset on `isOpen` change via `useEffect`. Correct.
+- No `as any`. Cast `e.target.value as AppSettings['detectionProvider']` is safe (select values are constrained to valid options).
+- Escape key handled with cleanup on unmount. No memory leak.
+- ARIA: `role="dialog"`, `aria-modal="true"`, `aria-labelledby`. Correct.
+- `STUB_DETECTION_PROVIDERS` used for dynamic "Coming Soon" label — clean.
+- No commented-out code. No console.log. No dead imports.
+
+### `src/components/ReviewPanel.tsx` ✅
+- `settings: AppSettings` prop correctly threaded through to `buildRequestHeaders(settings)` at fetch call.
+- `buildRequestHeaders` import from `@/hooks/useSettings` — correct source.
+- Catch at sentence fetch is non-empty: dispatches `SUGGESTION_FETCH_ERROR` action.
+- `shouldSkipSuggestionFetch` helper exported (testable, correctly named).
+- No `as any`, no `@ts-ignore`, no console output.
+
+### `src/components/VoiceProfilePanel.tsx` ✅
+- Settings prop properly used: `buildRequestHeaders(settings)` spread into fetch headers.
+- VoiceProfilePanel prop surface is large (11 props) but reflects intentional state-lifting from `page.tsx` to avoid cross-component state sync — matches architectural intent from notes.
+- No generic prop names, no over-abstraction.
+- Catch block on network errors is non-empty.
+
+### `src/app/useRevisedAnalysisState.ts` ✅
+- `settings: AppSettings` parameter correctly consumed in `triggerRevisedAnalysis` via `buildRequestHeaders(settings)`.
+- `useCallback` dependency `[settings]` correctly listed — triggers new fetch when settings change.
+- Non-settings functions (setOriginalResult, reset, etc.) defined as plain functions inside hook — correct, no stale closure risk.
+- No `as any`. Cast `(await res.json()) as AnalysisSuccessResponse` is acceptable given prior `res.ok` guard.
+- Re-export of `deriveRevisedText`, `hasAppliedReplacements` — clean re-export pattern.
+
+### `src/app/page.tsx` ✅
+- `useSettings()` called at top; `isLoaded` gates `SettingsModal` render (prevents SSR hydration mismatch).
+- Settings gear icon shows yellow dot when no keys configured — intentional UX presence indicator.
+- `buildRequestHeaders(settings)` applied to all 3 fetch calls: `/api/analyze`, `/api/bulk-rewrite`, and propagated via props to `ReviewPanel` and `VoiceProfilePanel` for `/api/suggestions` and `/api/voice-profile/generate`.
+- Catch blocks on submit and bulk-rewrite are non-empty.
+- `void revisedAnalysis.triggerRevisedAnalysis(revisedText)` — correct suppression of unhandled promise (no await needed in fire-and-forget context).
+- No commented-out code. No dead imports (all 10 imports are used).
+
+### `src/app/api/suggestions/route.ts` ⚠️
+- **Dead import: `createLlmAdapter` on line 6 is imported but never referenced.** All LLM adapter creation is delegated to `generateAlternativeSuggestions()` internally. This import was added during Task 7 development and not cleaned up.
+- All other code correct: error handling, provider routing, fallback to env vars.
+
+---
+
+## Architecture Compliance
+
+| Invariant | Status |
+|-----------|--------|
+| `buildRequestHeaders` omits empty strings (env-var fallback) | ✅ Verified in `useSettings.ts` implementation |
+| Task 7 Anthropic stub 501 handling | ✅ `suggestions/route.ts` catches `not yet implemented` → 501 |
+| Task 8 API compatibility with `generateSingleSuggestionWithProvider` | ✅ Public `generateSingleSuggestion` signature preserved; internal helper used by bulkRewrite |
+| Settings flow: page.tsx → props → components → headers | ✅ Confirmed via all 5 touched component files |
+| SettingsModal gates on `isLoaded` | ✅ `{isLoaded && <SettingsModal .../>}` in `page.tsx` line 284 |
+| Security TODO placed at localStorage write (plan requirement) | ✅ Line 43 of `useSettings.ts` |
+
+---
+
+## Final Findings Summary
+
+| # | Severity | Category | Finding |
+|---|----------|----------|---------|
+| 1 | ⚠️ **MEDIUM** | Code Quality | `createLlmAdapter` unused import in `src/app/api/suggestions/route.ts` line 6 |
+| 2 | ⚠️ LOW | Test Quality | `require()` in `bulkRewrite.test.ts` line 15 (necessary Vitest mock pattern; test-only) |
+| 3 | ⚠️ LOW | Test Quality | Unused `provider` param in mock callback (test-only) |
+| 4 | ✅ NONE | Security | Zero `as any`, `@ts-ignore`, or `console.*` in any src file |
+| 5 | ✅ NONE | Correctness | 514/514 tests pass; 0 TypeScript errors |
+| 6 | ✅ NONE | Architecture | Settings flow correctly wired through all 5 touched components |
+| 7 | ✅ NONE | Correctness | All catch blocks non-empty; no swallowed errors |
+| 8 | ✅ NONE | Security | Both `TODO(security)` comments are plan-mandated; no other TODOs |
+
+**One real code defect:** The unused `createLlmAdapter` import in the production route file (`suggestions/route.ts`) is a MEDIUM-severity finding — it is dead code that inflates the module and indicates incomplete cleanup. It does not affect runtime behavior or tests, but violates the clean import hygiene standard and is flagged as an ESLint error.
+
+---
+
+## Verdict
+
+**⚠️ CONDITIONAL APPROVE** — APPROVE if the unused `createLlmAdapter` import in `src/app/api/suggestions/route.ts` line 6 is removed. The import is dead code left over from Task 7 development. All other files are clean, the test suite is green (514/514), and TypeScript is error-free. The two test-file lint issues (`require()` and unused param) are acceptable given the Vitest mock constraints.

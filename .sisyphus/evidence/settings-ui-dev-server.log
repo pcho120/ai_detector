@@ -9,11 +9,35 @@
  Detected additional lockfiles: 
    * C:\Users\pcho\Documents\GitHub\ai_detector\package-lock.json
 
- ⚠ Port 3000 is in use by process 38840, using available port 3002 instead.
+ ⚠ Port 3000 is in use by process 38840, using available port 3004 instead.
    ▲ Next.js 15.5.14
-   - Local:        http://localhost:3002
-   - Network:      http://172.31.10.211:3002
+   - Local:        http://localhost:3004
+   - Network:      http://172.31.10.211:3004
    - Environments: .env.local
 
  ✓ Starting...
- ✓ Ready in 3.2s
+ ✓ Ready in 3.5s
+ ○ Compiling / ...
+ ✓ Compiled / in 1691ms (551 modules)
+ GET / 200 in 3026ms
+ ⚠ Cross origin request detected from 127.0.0.1 to /_next/* resource. In a future major version of Next.js, you will need to explicitly configure "allowedDevOrigins" in next.config to allow this.
+Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
+ GET / 200 in 344ms
+ ○ Compiling /api/analyze ...
+ ✓ Compiled /api/analyze in 1877ms (969 modules)
+ POST /api/analyze 502 in 2891ms
+ GET / 200 in 618ms
+ GET / 200 in 196ms
+ GET / 200 in 138ms
+ GET / 200 in 54ms
+ GET / 200 in 133ms
+ GET / 200 in 96ms
+ GET / 200 in 125ms
+ GET / 200 in 100ms
+ GET / 200 in 87ms
+ ✓ Compiled in 2s (243 modules)
+ ✓ Compiled in 644ms (566 modules)
+ ✓ Compiled in 189ms (243 modules)
+ ✓ Compiled in 146ms (243 modules)
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Users\pcho\Documents\GitHub\ai_detector\.next\cache\webpack\server-development\4.pack.gz_' -> 'C:\Users\pcho\Documents\GitHub\ai_detector\.next\cache\webpack\server-development\4.pack.gz'
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Users\pcho\Documents\GitHub\ai_detector\.next\cache\webpack\client-development\1.pack.gz_' -> 'C:\Users\pcho\Documents\GitHub\ai_detector\.next\cache\webpack\client-development\1.pack.gz'

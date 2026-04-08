@@ -1,0 +1,20 @@
+T9-2: Request Header Injection Verification
+==========================================
+Date: 2026-04-08
+Test: POST /api/analyze with settings (llmProvider=anthropic, llmApiKey=sk-test-persist-123, detectionProvider=sapling, detectionApiKey=empty)
+
+Captured Request Headers:
+  accept: */*
+  content-type: multipart/form-data; boundary=----WebKitFormBoundaryhwTZRK3qSiLhjZRu
+  origin: http://localhost:3004
+  referer: http://localhost:3004/
+  user-agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
+  x-detection-provider: sapling        ✅ PRESENT (matches saved setting)
+  x-llm-api-key: sk-test-persist-123   ✅ PRESENT (matches saved setting)
+  x-llm-provider: anthropic             ✅ PRESENT (matches saved setting)
+  x-detection-api-key: (NOT PRESENT)   ✅ CORRECT - empty string is NOT sent (conditional in useSettings.ts:72-73)
+
+VERDICT: PASS
+- All non-empty settings injected as request headers correctly
+- Empty detectionApiKey omitted from headers (correct behavior per useSettings.ts line 72-73)
+- Server falls back to env var for detection API key when header is absent

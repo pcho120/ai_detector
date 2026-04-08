@@ -1,0 +1,12 @@
+- generic [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e5]:
+        - generic [ref=e6]
+        - button "Open settings" [active] [ref=e9] [cursor=pointer]
+      - generic [ref=e15]:
+        - generic [ref=e16]
+        - button "Submit for Review" [ref=e18] [cursor=pointer]
+  - button "Open Next.js Dev Tools" [ref=e24] [cursor=pointer]:
+    - img [ref=e25]
+  - alert [ref=e28]

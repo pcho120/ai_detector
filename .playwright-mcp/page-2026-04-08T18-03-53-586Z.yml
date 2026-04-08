@@ -1,0 +1,52 @@
+- generic [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e5]:
+        - generic [ref=e6]:
+          - heading "AI Detect Essay Review" [level=1] [ref=e7]
+          - paragraph [ref=e8]: Upload your essay to analyze it for AI-generated phrasing.
+        - button "Open settings" [active] [ref=e9] [cursor=pointer]:
+          - img [ref=e10]
+      - generic [ref=e15]:
+        - generic [ref=e16]:
+          - text: Upload essay file (.doc or .docx)
+          - button "Upload essay file (.doc or .docx)" [ref=e17]
+        - button "Submit for Review" [ref=e18] [cursor=pointer]
+    - dialog "Settings" [ref=e60]:
+      - generic [ref=e61]:
+        - heading "Settings" [level=2] [ref=e62]
+        - button "Close settings" [ref=e63] [cursor=pointer]:
+          - img [ref=e64]
+      - generic [ref=e66]:
+        - generic [ref=e67]:
+          - heading "AI Detection" [level=3] [ref=e68]
+          - generic [ref=e69]:
+            - generic [ref=e70]: Provider
+            - combobox "Provider" [ref=e71]:
+              - option "Sapling" [selected]
+              - option "GPTZero (Coming Soon)"
+              - option "Originality.ai (Coming Soon)"
+              - option "Winston AI (Coming Soon)"
+          - generic [ref=e72]:
+            - generic [ref=e73]: API Key
+            - textbox "API Key" [ref=e74]:
+              - /placeholder: Optional (uses server key if empty)
+        - generic [ref=e76]:
+          - heading "Coaching LLM" [level=3] [ref=e77]
+          - generic [ref=e78]:
+            - generic [ref=e79]: Provider
+            - combobox "Provider" [ref=e80]:
+              - option "OpenAI" [selected]
+              - option "Anthropic (Claude)"
+          - generic [ref=e81]:
+            - generic [ref=e82]: API Key
+            - textbox "API Key" [ref=e83]:
+              - /placeholder: Optional (uses server key if empty)
+      - generic [ref=e84]:
+        - paragraph [ref=e85]: Keys are stored locally in your browser's localStorage and are not retained by our servers.
+        - generic [ref=e86]:
+          - button "Cancel" [ref=e87] [cursor=pointer]
+          - button "Save Settings" [ref=e88] [cursor=pointer]
+  - button "Open Next.js Dev Tools" [ref=e24] [cursor=pointer]:
+    - img [ref=e25]
+  - alert [ref=e28]

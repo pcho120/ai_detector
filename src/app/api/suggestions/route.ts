@@ -3,7 +3,6 @@ import { generateAlternativeSuggestions } from '@/lib/suggestions/llm';
 import type { SuggestionAlternative } from '@/lib/suggestions/llm';
 import { sanitizeVoiceProfile } from '@/lib/suggestions/voiceProfile';
 import { createAnalysisDetectionAdapter } from '@/lib/analysis/analyzeText';
-import { createLlmAdapter } from '@/lib/suggestions/llm-adapter';
 import { findSentenceInText } from '@/lib/highlights/spans';
 import { getRequestSettings } from '@/lib/api/requestSettings';
 

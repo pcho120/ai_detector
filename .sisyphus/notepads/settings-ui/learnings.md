@@ -532,3 +532,67 @@ try {
 - Provider errors should be 501 (Not Implemented / Service Unavailable per provider status)
 - Generic operational errors remain 500 (Internal Server Error)
 - Allows client to distinguish between "feature not ready" (501) vs "service failure" (500)
+
+# F4 Scope Fidelity Audit Findings (2026-04-08)
+
+## Scope Compliance Summary
+- Plan-to-implementation mapping was verified across Tasks 1–9 with focused re-check on Tasks 7, 8, and 9.
+- `page.tsx` remains the single owner of settings state (`useSettings()` only used in `page.tsx`; child modules receive settings via props/params).
+- No cross-task feature creep detected in settings-ui scope (no import/export settings, no cross-tab sync, no modal dependency additions).
+
+## Critical Constraint Checks
+- `getRequestSettings` usage is route-only in source code (`/api/analyze`, `/api/analyze/revised`, `/api/suggestions`, `/api/voice-profile/generate`, `/api/bulk-rewrite`); no non-route imports found.
+- `getRequestSettings` implementation uses `req.headers.get()` and does not import `next/headers`.
+- Required sentinel string `'Detection service is not configured.'` remains preserved in detection adapter and route status-mapping logic.
+
+## Task-Specific Corrections Verified
+- Task 7: LLM provider/key overrides wired through suggestions + voice-profile routes, including 501 handling for unimplemented provider paths.
+- Task 8: Bulk rewrite now honors provider override via internal helper (`generateSingleSuggestionWithProvider`) while preserving public API compatibility for `generateSingleSuggestion`.
+- Task 9: UI wiring confirms settings modal trigger, settings persistence path, and settings-header injection behavior through page-owned state flow.
+
+## Audit Caveat (Evidence Integrity)
+- Current working tree `git diff --stat` indicates active changes only in:
+  - `.sisyphus/evidence/settings-ui-dev-server.log`
+  - `.sisyphus/plans/settings-ui.md`
+  - `tsconfig.tsbuildinfo`
+- This suggests implemented settings-ui source changes are not currently represented as unstaged/staged diffs in the present workspace snapshot; findings above reflect direct code inspection state.
+
+# Final Verification Wave Blocker Fixes
+
+## Summary
+Fixed three compliance blockers discovered during final verification phase without changing application behavior or test coverage.
+
+## Blocker 1: Unused Import in /api/suggestions Route
+- **Issue**: `createLlmAdapter` import from `@/lib/suggestions/llm-adapter` was unused (line 6)
+- **Fix**: Removed the unused import line
+- **Reason**: ESLint flagged unused imports; this import was leftover from earlier refactoring and never used by the route
+
+## Blocker 2: Missing 'use client' Directive in SettingsModal
+- **Issue**: Component uses React hooks (useState, useEffect, useRef) but lacked explicit `'use client';` directive
+- **Fix**: Added `'use client';` directive at the top of `src/components/SettingsModal.tsx`
+- **Reason**: Server Components in Next.js App Router require explicit client-side marker when using hooks; this was missing due to oversight in component conversion
+
+## Blocker 3: ESLint require() Violation in bulkRewrite.test.ts
+- **Issue**: Mock setup on line 15 used `require()` within a nested function, triggering ESLint's no-require rule
+- **Problem Code**: 
+  ```typescript
+  generateSingleSuggestionWithProvider: vi.fn(async (...) => {
+    return vi.mocked(require('@/lib/suggestions/llm').generateSingleSuggestion)(...);
+  }),
+  ```
+- **Fix**: Removed the vi.fn() wrapper and made delegation setup happen in `beforeEach()` hook instead:
+  1. Simplified mock factory to just define both functions without implementation
+  2. Moved delegation logic to `beforeEach()` where it can safely access the imported mocks
+  3. Added `async` to `beforeEach()` mock implementation to match function signature
+- **Reason**: `require()` is forbidden at module/nested function scope per ESLint config; delegation can be set up safely during test setup without runtime require()
+
+## Test Coverage Preserved
+- All 514 tests pass without modification to test logic
+- Mock delegation behavior unchanged: `generateSingleSuggestionWithProvider` still delegates to `generateSingleSuggestion` by default
+- No test semantics changed; only the infrastructure to set up mocks changed
+
+## Verification Results
+- `npm run lint`: ✅ No errors
+- `npm run typecheck`: ✅ No errors
+- `npm run test`: ✅ 514 tests pass
+

@@ -1,0 +1,52 @@
+- generic [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e5]:
+        - generic [ref=e6]:
+          - heading "AI Detect Essay Review" [level=1] [ref=e7]
+          - paragraph [ref=e8]: Upload your essay to analyze it for AI-generated phrasing.
+        - button "Open settings" [active] [ref=e9] [cursor=pointer]:
+          - img [ref=e10]
+      - generic [ref=e15]:
+        - generic [ref=e16]:
+          - text: Upload essay file (.doc or .docx)
+          - button "Upload essay file (.doc or .docx)" [ref=e17]
+        - button "Submit for Review" [ref=e18] [cursor=pointer]
+    - dialog "Settings" [ref=e90]:
+      - generic [ref=e91]:
+        - heading "Settings" [level=2] [ref=e92]
+        - button "Close settings" [ref=e93] [cursor=pointer]:
+          - img [ref=e94]
+      - generic [ref=e96]:
+        - generic [ref=e97]:
+          - heading "AI Detection" [level=3] [ref=e98]
+          - generic [ref=e99]:
+            - generic [ref=e100]: Provider
+            - combobox "Provider" [ref=e101]:
+              - option "Sapling" [selected]
+              - option "GPTZero (Coming Soon)"
+              - option "Originality.ai (Coming Soon)"
+              - option "Winston AI (Coming Soon)"
+          - generic [ref=e102]:
+            - generic [ref=e103]: API Key
+            - textbox "API Key" [ref=e104]:
+              - /placeholder: Optional (uses server key if empty)
+        - generic [ref=e106]:
+          - heading "Coaching LLM" [level=3] [ref=e107]
+          - generic [ref=e108]:
+            - generic [ref=e109]: Provider
+            - combobox "Provider" [ref=e110]:
+              - option "OpenAI" [selected]
+              - option "Anthropic (Claude)"
+          - generic [ref=e111]:
+            - generic [ref=e112]: API Key
+            - textbox "API Key" [ref=e113]:
+              - /placeholder: Optional (uses server key if empty)
+      - generic [ref=e114]:
+        - paragraph [ref=e115]: Keys are stored locally in your browser's localStorage and are not retained by our servers.
+        - generic [ref=e116]:
+          - button "Cancel" [ref=e117] [cursor=pointer]
+          - button "Save Settings" [ref=e118] [cursor=pointer]
+  - button "Open Next.js Dev Tools" [ref=e24] [cursor=pointer]:
+    - img [ref=e25]
+  - alert [ref=e28]
