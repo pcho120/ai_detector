@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { ReviewPanel } from '@/components/ReviewPanel';
 import { RevisedReviewPanel } from '@/components/RevisedReviewPanel';
 import { VoiceProfilePanel } from '@/components/VoiceProfilePanel';
+import { TargetScorePanel } from '@/components/TargetScorePanel';
 import { useRevisedAnalysisState, deriveRevisedText } from '@/app/useRevisedAnalysisState';
 
 export default function HomePage() {
@@ -19,6 +20,11 @@ export default function HomePage() {
   const [vpError, setVpError] = useState<string | null>(null);
   const [vpCopied, setVpCopied] = useState(false);
 
+  const [targetScore, setTargetScore] = useState('');
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState<{ current: number; total: number; phase: string } | null>(null);
+  const [bulkResult, setBulkResult] = useState<{ achievedScore: number; targetMet: boolean; targetScore: number } | null>(null);
+
   const result = revisedState.originalResult;
 
   const handleRevert = (sentenceIndex: number) => {
@@ -30,6 +36,84 @@ export default function HomePage() {
     if (Object.keys(nextReplacements).length > 0 && result) {
       const revisedText = deriveRevisedText(result, nextReplacements);
       void revisedAnalysis.triggerRevisedAnalysis(revisedText);
+    }
+  };
+
+  const handleBulkRewrite = async (parsedTargetScore: number) => {
+    if (!result) return;
+
+    setBulkLoading(true);
+    setBulkProgress(null);
+    setBulkResult(null);
+
+    const sentences = result.sentences.map((s, idx) => ({
+      sentence: s.sentence,
+      score: s.score,
+      sentenceIndex: idx,
+    }));
+
+    const total = sentences.length;
+    setBulkProgress({ current: 0, total, phase: 'rewriting' });
+
+    try {
+      const response = await fetch('/api/bulk-rewrite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sentences,
+          targetScore: parsedTargetScore,
+          voiceProfile: voiceProfile || undefined,
+          text: result.text,
+          manualReplacements: Object.keys(revisedState.appliedReplacements).length > 0
+            ? revisedState.appliedReplacements
+            : undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        setBulkResult({ achievedScore: result.score * 100, targetMet: false, targetScore: parsedTargetScore });
+        return;
+      }
+
+      const data = (await response.json()) as {
+        rewrites: Record<string, string>;
+        achievedScore: number;
+        targetMet: boolean;
+        iterations: number;
+        totalRewritten: number;
+      };
+
+      setBulkProgress({ current: total, total, phase: 'analyzing' });
+
+      // Apply bulk rewrites into the reducer, preserving existing manual replacements
+      const existingReplacements = revisedState.appliedReplacements;
+      const mergedReplacements: Record<number, string> = { ...existingReplacements };
+
+      for (const [keyStr, rewrite] of Object.entries(data.rewrites)) {
+        const idx = Number(keyStr);
+        // Only apply bulk rewrite if no manual replacement already exists for this index
+        if (!(idx in existingReplacements)) {
+          revisedAnalysis.applySentenceReplacement(idx, rewrite);
+          mergedReplacements[idx] = rewrite;
+        }
+      }
+
+      setBulkResult({
+        achievedScore: data.achievedScore,
+        targetMet: data.targetMet,
+        targetScore: parsedTargetScore,
+      });
+
+      // Trigger revised analysis on the merged text so the right panel updates
+      if (Object.keys(mergedReplacements).length > 0) {
+        const revisedText = deriveRevisedText(result, mergedReplacements);
+        void revisedAnalysis.triggerRevisedAnalysis(revisedText);
+      }
+    } catch {
+      setBulkResult({ achievedScore: result.score * 100, targetMet: false, targetScore: parsedTargetScore });
+    } finally {
+      setBulkLoading(false);
+      setBulkProgress(null);
     }
   };
 
@@ -140,6 +224,17 @@ export default function HomePage() {
                 setVpError={setVpError}
                 vpCopied={vpCopied}
                 setVpCopied={setVpCopied}
+              />
+            </section>
+            <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
+              <TargetScorePanel
+                targetScore={targetScore}
+                onTargetScoreChange={setTargetScore}
+                onRewrite={handleBulkRewrite}
+                isLoading={bulkLoading}
+                disabled={isSubmitting}
+                progress={bulkProgress}
+                result={bulkResult}
               />
             </section>
             <div className={`flex gap-6 ${revisedState.revisedResult || revisedState.revisedLoading || revisedState.revisedError ? 'flex-col lg:flex-row' : 'flex-col'}`}>

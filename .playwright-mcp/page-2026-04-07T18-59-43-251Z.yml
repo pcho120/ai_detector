@@ -1,0 +1,14 @@
+- generic [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]:
+        - heading "AI Detect Essay Review" [level=1] [ref=e5]
+        - paragraph [ref=e6]: Upload your essay to analyze it for AI-generated phrasing.
+      - generic [ref=e8]:
+        - generic [ref=e9]:
+          - text: Upload essay file (.doc or .docx)
+          - button "Upload essay file (.doc or .docx)" [active] [ref=e10]
+        - button "Submit for Review" [ref=e11] [cursor=pointer]
+  - button "Open Next.js Dev Tools" [ref=e17] [cursor=pointer]:
+    - img [ref=e18]
+  - alert [ref=e21]

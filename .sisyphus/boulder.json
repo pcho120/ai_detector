@@ -1,6 +1,6 @@
 {
-  "active_plan": "/home/kuncho/projects/ai_detector/.sisyphus/plans/preview-score-fix.md",
-  "started_at": "2026-04-04T18:21:01.936Z",
+  "active_plan": "C:\\Users\\pcho\\Documents\\GitHub\\ai_detector\\.sisyphus\\plans\\target-score-rewrite.md",
+  "started_at": "2026-04-07T17:38:52.202Z",
   "session_ids": [
     "ses_2a6aa0555ffeWNsn7xR7ZUDl2P",
     "ses_2a64543afffe0vbMLu1ZvbDdxV",
@@ -9,37 +9,70 @@
     "ses_2a640e12affenu32NviyV28PBH",
     "ses_2a63ecdf8ffe5EjtGsk8zdd5Dv",
     "ses_2a626970affeYWa8Zwtwr7pa3l",
-    "ses_2a623932effebePyE7FZsg2nen"
+    "ses_2a623932effebePyE7FZsg2nen",
+    "ses_297204bc3ffenCHRiUCCgFntEh",
+    "ses_296b0c7d9ffeuB40EpJE8rga1K",
+    "ses_296b0c7d8ffefaiD9GGet5UDvG",
+    "ses_296b0c628ffeSSFJQ8TnBLv5sj",
+    "ses_296b0c625ffevZ7gqerR09ieMm",
+    "ses_2969f6e5bffeYOi336uuC4xvol",
+    "ses_2969f6d42ffevj5U32dVFo7ppa"
   ],
-  "plan_name": "preview-score-fix",
+  "plan_name": "target-score-rewrite",
   "agent": "atlas",
   "task_sessions": {
     "todo:1": {
       "task_key": "todo:1",
       "task_label": "1",
-      "task_title": "Export `findSentenceInText` from `spans.ts`",
-      "session_id": "ses_2a6428fd8ffef0eCPDTzwHTP3j",
+      "task_title": "Bulk Rewrite 타입 정의",
+      "session_id": "ses_296f5645effeFK7DEsWlwZffyU",
       "agent": "Sisyphus-Junior",
-      "category": "quick",
-      "updated_at": "2026-04-04T18:25:31.656Z"
+      "category": "visual-engineering",
+      "updated_at": "2026-04-07T17:48:25.877Z"
     },
-    "todo:2": {
-      "task_key": "todo:2",
-      "task_label": "2",
-      "task_title": "Fix `route.ts` — use `findSentenceInText` instead of `String.replace()`",
-      "session_id": "ses_2a640e12affenu32NviyV28PBH",
+    "todo:4": {
+      "task_key": "todo:4",
+      "task_label": "4",
+      "task_title": "/api/bulk-rewrite API 엔드포인트",
+      "session_id": "ses_296e71227ffer1B03qW5YgLkCq",
       "agent": "Sisyphus-Junior",
-      "category": "quick",
-      "updated_at": "2026-04-04T18:27:12.567Z"
+      "category": "unspecified-high",
+      "updated_at": "2026-04-07T18:01:15.412Z"
     },
-    "todo:3": {
-      "task_key": "todo:3",
-      "task_label": "3",
-      "task_title": "Add regression test: whitespace-mismatch sentence still changes `revisedText`",
-      "session_id": "ses_2a63ecdf8ffe5EjtGsk8zdd5Dv",
+    "todo:5": {
+      "task_key": "todo:5",
+      "task_label": "5",
+      "task_title": "page.tsx 통합 — TargetScorePanel 배치 + 상태 연결",
+      "session_id": "ses_296e17d19ffevBOO6ynLzPmlxC",
       "agent": "Sisyphus-Junior",
-      "category": "quick",
-      "updated_at": "2026-04-04T18:30:31.627Z"
+      "category": "unspecified-high",
+      "updated_at": "2026-04-07T18:07:01.242Z"
+    },
+    "todo:6": {
+      "task_key": "todo:6",
+      "task_label": "6",
+      "task_title": "유닛 및 통합 테스트",
+      "session_id": "ses_296dac365ffebd3oDWHA98ao0x",
+      "agent": "Sisyphus-Junior",
+      "category": "unspecified-high",
+      "updated_at": "2026-04-07T18:17:00.175Z"
+    },
+    "final-wave:f1": {
+      "task_key": "final-wave:f1",
+      "task_label": "F1",
+      "task_title": "**Plan Compliance Audit** — `oracle`",
+      "session_id": "ses_2969f6d42ffevj5U32dVFo7ppa",
+      "agent": "Sisyphus-Junior",
+      "category": "deep",
+      "updated_at": "2026-04-07T19:18:18.058Z"
     }
+  },
+  "session_origins": {
+    "ses_296b0c7d9ffeuB40EpJE8rga1K": "appended",
+    "ses_296b0c7d8ffefaiD9GGet5UDvG": "appended",
+    "ses_296b0c628ffeSSFJQ8TnBLv5sj": "appended",
+    "ses_296b0c625ffevZ7gqerR09ieMm": "appended",
+    "ses_2969f6e5bffeYOi336uuC4xvol": "appended",
+    "ses_2969f6d42ffevj5U32dVFo7ppa": "appended"
   }
 }

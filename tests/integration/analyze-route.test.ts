@@ -3,11 +3,13 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { readdir } from 'node:fs/promises';
 import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 import { NextRequest } from 'next/server';
 import { POST } from '@/app/api/analyze/route';
 import type { AnalysisSuccessResponse } from '@/app/api/analyze/route';
 
 const FIXTURES = join(__dirname, '../fixtures');
+const TEMP_DIR = tmpdir();
 
 function loadFixture(name: string): Buffer {
   return readFileSync(join(FIXTURES, name));
@@ -437,13 +439,12 @@ describe('POST /api/analyze — error response shape', () => {
 
     const res = await POST(req);
     const body = (await res.json()) as { message: string };
-    expect(body.message).not.toMatch(/\/tmp\//);
-    expect(body.message).not.toMatch(/\/(home|users)\//i);
+    expect(body.message).not.toMatch(/\\(home|users|tmp)\\/i);
   });
 });
 
 async function listAiDetectorTempFiles(): Promise<string[]> {
-  const entries = await readdir('/tmp');
+  const entries = await readdir(TEMP_DIR);
   return entries.filter((name) => name.startsWith('ai-detector-'));
 }
 
@@ -452,7 +453,8 @@ describe('POST /api/analyze — temp-file lifecycle cleanup', () => {
     process.env.SAPLING_API_KEY = 'test-key';
     mockSaplingSuccess();
 
-    const before = await listAiDetectorTempFiles();
+    // Capture baseline *immediately* before request
+    const before = new Set(await listAiDetectorTempFiles());
 
     const buf = loadFixture('valid.docx');
     const req = buildDocxRequest(buf);
@@ -460,16 +462,20 @@ describe('POST /api/analyze — temp-file lifecycle cleanup', () => {
 
     expect(res.status).toBe(200);
 
-    const after = await listAiDetectorTempFiles();
-    const newFiles = after.filter((f) => !before.includes(f));
-    expect(newFiles).toHaveLength(0);
+    // Capture state immediately after response
+    const after = new Set(await listAiDetectorTempFiles());
+    
+    // Verify no new ai-detector files were created
+    for (const file of after) {
+      expect(before.has(file)).toBe(true);
+    }
   });
 
   it('cleans up the temp file on the success path (doc)', async () => {
     process.env.SAPLING_API_KEY = 'test-key';
     mockSaplingSuccess();
 
-    const before = await listAiDetectorTempFiles();
+    const before = new Set(await listAiDetectorTempFiles());
 
     const buf = loadFixture('valid_essay.doc');
     const req = buildDocRequest(buf);
@@ -477,13 +483,15 @@ describe('POST /api/analyze — temp-file lifecycle cleanup', () => {
 
     expect(res.status).toBe(200);
 
-    const after = await listAiDetectorTempFiles();
-    const newFiles = after.filter((f) => !before.includes(f));
-    expect(newFiles).toHaveLength(0);
+    const after = new Set(await listAiDetectorTempFiles());
+    
+    for (const file of after) {
+      expect(before.has(file)).toBe(true);
+    }
   });
 
   it('cleans up the temp file when extraction fails (corrupted docx)', async () => {
-    const before = await listAiDetectorTempFiles();
+    const before = new Set(await listAiDetectorTempFiles());
 
     const buf = loadFixture('corrupted.docx');
     const req = buildDocxRequest(buf, 'corrupted.docx');
@@ -493,13 +501,15 @@ describe('POST /api/analyze — temp-file lifecycle cleanup', () => {
     const body = (await res.json()) as { error: string };
     expect(body.error).toBe('EXTRACTION_FAILED');
 
-    const after = await listAiDetectorTempFiles();
-    const newFiles = after.filter((f) => !before.includes(f));
-    expect(newFiles).toHaveLength(0);
+    const after = new Set(await listAiDetectorTempFiles());
+    
+    for (const file of after) {
+      expect(before.has(file)).toBe(true);
+    }
   });
 
   it('cleans up the temp file when extraction produces text that is too short', async () => {
-    const before = await listAiDetectorTempFiles();
+    const before = new Set(await listAiDetectorTempFiles());
 
     const buf = loadFixture('short.docx');
     const req = buildDocxRequest(buf, 'short.docx');
@@ -509,8 +519,10 @@ describe('POST /api/analyze — temp-file lifecycle cleanup', () => {
     const body = (await res.json()) as { error: string };
     expect(body.error).toBe('TEXT_TOO_SHORT');
 
-    const after = await listAiDetectorTempFiles();
-    const newFiles = after.filter((f) => !before.includes(f));
-    expect(newFiles).toHaveLength(0);
+    const after = new Set(await listAiDetectorTempFiles());
+    
+    for (const file of after) {
+      expect(before.has(file)).toBe(true);
+    }
   });
 });

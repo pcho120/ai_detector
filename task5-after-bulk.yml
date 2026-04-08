@@ -1,0 +1,39 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e4]:
+        - heading "AI Detect Essay Review" [level=1] [ref=e5]
+        - paragraph [ref=e6]: Upload your essay to analyze it for AI-generated phrasing.
+      - generic [ref=e8]:
+        - generic [ref=e9]:
+          - text: Upload essay file (.doc or .docx)
+          - button "Upload essay file (.doc or .docx)" [ref=e10]
+        - button "Submit for Review" [ref=e11] [cursor=pointer]
+      - generic [ref=e22]:
+        - generic [ref=e24]:
+          - generic [ref=e25]:
+            - heading "Voice Profile Setup" [level=2] [ref=e26]
+            - paragraph [ref=e27]: Define a writing style to use for rewrites. Select up to 2 presets, provide a writing sample, or both.
+          - generic [ref=e28]:
+            - generic [ref=e29]
+            - generic [ref=e37]
+            - button "Generate Profile" [disabled] [ref=e40]
+            - button "I already have a profile!" [ref=e42] [cursor=pointer]
+        - generic [ref=e44]:
+          - generic [ref=e45]:
+            - heading "Bulk Rewrite to Target Score" [level=2] [ref=e46]
+            - paragraph [ref=e47]: Automatically rewrite high-risk sentences to achieve your desired AI detection score (10-100%).
+          - generic [ref=e48]:
+            - generic [ref=e49]
+            - button "Rewrite to Target" [ref=e86] [cursor=pointer]
+            - generic [ref=e87]: "Best achieved: 99% (target: 40%). Try editing individual sentences."
+        - generic [ref=e53]:
+          - generic [ref=e55]:
+            - generic [ref=e56]
+            - generic [ref=e61]
+          - generic [ref=e89]:
+            - generic [ref=e90]
+            - generic [ref=e95]
+  - button "Open Next.js Dev Tools" [ref=e17] [cursor=pointer]:
+    - img [ref=e18]
+  - alert [ref=e21]

@@ -1,9 +1,10 @@
-import { randomUUID } from 'node:crypto';
-import { writeFile, unlink, access } from 'node:fs/promises';
-import { join } from 'node:path';
-import type { SupportedExtension } from './validate';
+import { randomUUID } from "node:crypto";
+import { writeFile, unlink, access } from "node:fs/promises";
+import { join } from "node:path";
+import type { SupportedExtension } from "./validate";
 
-const TEMP_DIR = '/tmp';
+import { tmpdir } from "node:os";
+const TEMP_DIR = tmpdir();
 
 export interface TempFileHandle {
   path: string;
@@ -24,7 +25,7 @@ export async function deleteTempFile(handle: TempFileHandle): Promise<void> {
   try {
     await unlink(handle.path);
   } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
       throw err;
     }
     // Silently ignore ENOENT — file already gone is acceptable
