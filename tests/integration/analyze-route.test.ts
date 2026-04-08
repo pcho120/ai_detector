@@ -1,15 +1,14 @@
 // @vitest-environment node
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { readdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import { tmpdir } from 'node:os';
 import { NextRequest } from 'next/server';
 import { POST } from '@/app/api/analyze/route';
 import type { AnalysisSuccessResponse } from '@/app/api/analyze/route';
+import * as tempModule from '@/lib/files/temp';
+import type { TempFileHandle } from '@/lib/files/temp';
 
 const FIXTURES = join(__dirname, '../fixtures');
-const TEMP_DIR = tmpdir();
 
 function loadFixture(name: string): Buffer {
   return readFileSync(join(FIXTURES, name));
@@ -443,9 +442,35 @@ describe('POST /api/analyze — error response shape', () => {
   });
 });
 
-async function listAiDetectorTempFiles(): Promise<string[]> {
-  const entries = await readdir(TEMP_DIR);
-  return entries.filter((name) => name.startsWith('ai-detector-'));
+/**
+ * Spy on withTempFile to capture the TempFileHandle created during a request,
+ * then verify that specific file is gone after the response.
+ * This is deterministic: we only check the one file created by the request
+ * under test, not a whole-directory snapshot that could be polluted by other
+ * processes or concurrent tests.
+ */
+async function captureAndAssertCleanup(
+  action: () => Promise<void>,
+): Promise<void> {
+  let capturedHandle: TempFileHandle | undefined;
+
+  const realWithTempFile = tempModule.withTempFile;
+  vi.spyOn(tempModule, 'withTempFile').mockImplementation(async (buf, extension, fn) => {
+    return realWithTempFile(buf, extension, async (handle) => {
+      capturedHandle = handle;
+      return fn(handle);
+    });
+  });
+
+  try {
+    await action();
+  } finally {
+    vi.restoreAllMocks();
+  }
+
+  expect(capturedHandle, 'withTempFile was never called — the route must create a temp file').toBeDefined();
+  const stillExists = await tempModule.tempFileExists(capturedHandle!);
+  expect(stillExists).toBe(false);
 }
 
 describe('POST /api/analyze — temp-file lifecycle cleanup', () => {
@@ -453,76 +478,45 @@ describe('POST /api/analyze — temp-file lifecycle cleanup', () => {
     process.env.SAPLING_API_KEY = 'test-key';
     mockSaplingSuccess();
 
-    // Capture baseline *immediately* before request
-    const before = new Set(await listAiDetectorTempFiles());
-
-    const buf = loadFixture('valid.docx');
-    const req = buildDocxRequest(buf);
-    const res = await POST(req);
-
-    expect(res.status).toBe(200);
-
-    // Capture state immediately after response
-    const after = new Set(await listAiDetectorTempFiles());
-    
-    // Verify no new ai-detector files were created
-    for (const file of after) {
-      expect(before.has(file)).toBe(true);
-    }
+    await captureAndAssertCleanup(async () => {
+      const buf = loadFixture('valid.docx');
+      const req = buildDocxRequest(buf);
+      const res = await POST(req);
+      expect(res.status).toBe(200);
+    });
   });
 
   it('cleans up the temp file on the success path (doc)', async () => {
     process.env.SAPLING_API_KEY = 'test-key';
     mockSaplingSuccess();
 
-    const before = new Set(await listAiDetectorTempFiles());
-
-    const buf = loadFixture('valid_essay.doc');
-    const req = buildDocRequest(buf);
-    const res = await POST(req);
-
-    expect(res.status).toBe(200);
-
-    const after = new Set(await listAiDetectorTempFiles());
-    
-    for (const file of after) {
-      expect(before.has(file)).toBe(true);
-    }
+    await captureAndAssertCleanup(async () => {
+      const buf = loadFixture('valid_essay.doc');
+      const req = buildDocRequest(buf);
+      const res = await POST(req);
+      expect(res.status).toBe(200);
+    });
   });
 
   it('cleans up the temp file when extraction fails (corrupted docx)', async () => {
-    const before = new Set(await listAiDetectorTempFiles());
-
-    const buf = loadFixture('corrupted.docx');
-    const req = buildDocxRequest(buf, 'corrupted.docx');
-    const res = await POST(req);
-
-    expect(res.status).toBe(422);
-    const body = (await res.json()) as { error: string };
-    expect(body.error).toBe('EXTRACTION_FAILED');
-
-    const after = new Set(await listAiDetectorTempFiles());
-    
-    for (const file of after) {
-      expect(before.has(file)).toBe(true);
-    }
+    await captureAndAssertCleanup(async () => {
+      const buf = loadFixture('corrupted.docx');
+      const req = buildDocxRequest(buf, 'corrupted.docx');
+      const res = await POST(req);
+      expect(res.status).toBe(422);
+      const body = (await res.json()) as { error: string };
+      expect(body.error).toBe('EXTRACTION_FAILED');
+    });
   });
 
   it('cleans up the temp file when extraction produces text that is too short', async () => {
-    const before = new Set(await listAiDetectorTempFiles());
-
-    const buf = loadFixture('short.docx');
-    const req = buildDocxRequest(buf, 'short.docx');
-    const res = await POST(req);
-
-    expect(res.status).toBe(422);
-    const body = (await res.json()) as { error: string };
-    expect(body.error).toBe('TEXT_TOO_SHORT');
-
-    const after = new Set(await listAiDetectorTempFiles());
-    
-    for (const file of after) {
-      expect(before.has(file)).toBe(true);
-    }
+    await captureAndAssertCleanup(async () => {
+      const buf = loadFixture('short.docx');
+      const req = buildDocxRequest(buf, 'short.docx');
+      const res = await POST(req);
+      expect(res.status).toBe(422);
+      const body = (await res.json()) as { error: string };
+      expect(body.error).toBe('TEXT_TOO_SHORT');
+    });
   });
 });

@@ -10,6 +10,10 @@ vi.mock('@/lib/analysis/analyzeText', () => ({
 
 vi.mock('@/lib/suggestions/llm', () => ({
   generateSingleSuggestion: vi.fn(),
+  generateSingleSuggestionWithProvider: vi.fn(async (apiKey, sentence, sentenceIndex, score, provider) => {
+    // Delegate to the generateSingleSuggestion mock for test compatibility
+    return vi.mocked(require('@/lib/suggestions/llm').generateSingleSuggestion)(apiKey, sentence, sentenceIndex, score);
+  }),
 }));
 
 vi.mock('@/lib/suggestions/guardrails', () => ({
@@ -17,12 +21,22 @@ vi.mock('@/lib/suggestions/guardrails', () => ({
 }));
 
 import { analyzeText } from '@/lib/analysis/analyzeText';
-import { generateSingleSuggestion } from '@/lib/suggestions/llm';
+import { generateSingleSuggestion, generateSingleSuggestionWithProvider } from '@/lib/suggestions/llm';
 import { applyGuardrails } from '@/lib/suggestions/guardrails';
 
 const mockAnalyzeText = vi.mocked(analyzeText);
 const mockGenerateSingleSuggestion = vi.mocked(generateSingleSuggestion);
+const mockGenerateSingleSuggestionWithProvider = vi.mocked(generateSingleSuggestionWithProvider);
 const mockApplyGuardrails = vi.mocked(applyGuardrails);
+
+// For test compatibility, both functions should share behavior
+beforeEach(() => {
+  // Default behavior: delegate provider variant to the standard function
+  // This allows tests to mock generateSingleSuggestion and have it work for both
+  mockGenerateSingleSuggestionWithProvider.mockImplementation((apiKey, sentence, sentenceIndex, score) =>
+    mockGenerateSingleSuggestion(apiKey, sentence, sentenceIndex, score)
+  );
+});
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 

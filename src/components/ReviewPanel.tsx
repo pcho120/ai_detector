@@ -3,6 +3,8 @@ import type { AnalysisSuccessResponse } from '@/app/api/analyze/route';
 import type { UseRevisedAnalysisStateReturn } from '@/app/useRevisedAnalysisState';
 import { deriveRevisedText } from '@/app/useRevisedAnalysisState';
 import type { SuggestionCacheEntry } from '@/lib/review/revisedAnalysisReducer';
+import type { AppSettings } from '@/lib/settings/types';
+import { buildRequestHeaders } from '@/hooks/useSettings';
 
 export function shouldSkipSuggestionFetch(cached: SuggestionCacheEntry | undefined): boolean {
   if (!cached) return false;
@@ -15,9 +17,10 @@ interface ReviewPanelProps {
   result: AnalysisSuccessResponse;
   revisedState?: UseRevisedAnalysisStateReturn;
   voiceProfile?: string;
+  settings: AppSettings;
 }
 
-export function ReviewPanel({ result, revisedState, voiceProfile }: ReviewPanelProps) {
+export function ReviewPanel({ result, revisedState, voiceProfile, settings }: ReviewPanelProps) {
   const { text, highlights, score } = result;
   
   const containerRef = useRef<HTMLDivElement>(null);
@@ -90,7 +93,7 @@ export function ReviewPanel({ result, revisedState, voiceProfile }: ReviewPanelP
       
       const res = await fetch('/api/suggestions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...buildRequestHeaders(settings) },
         body: JSON.stringify(payload)
       });
 

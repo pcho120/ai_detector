@@ -1,0 +1,11 @@
+LLM_PROVIDER=openai
+COACHING_LLM_API_KEY=your_llm_api_key_here
+DETECTION_PROVIDER=sapling
+# Only the key for the selected DETECTION_PROVIDER is required.
+SAPLING_API_KEY=your_sapling_api_key_here
+
+VERIFICATION: All four required environment variables are present in .env.example:
+- LLM_PROVIDER ✓
+- DETECTION_PROVIDER ✓
+- COACHING_LLM_API_KEY ✓
+- SAPLING_API_KEY ✓

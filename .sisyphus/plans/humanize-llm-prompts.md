@@ -82,7 +82,7 @@ Single task, no waves needed.
 
 ## TODOs
 
-- [ ] 1. Update `SYSTEM_PROMPT` and `MULTI_SYSTEM_PROMPT` in `llm.ts`
+- [x] 1. Update `SYSTEM_PROMPT` and `MULTI_SYSTEM_PROMPT` in `llm.ts`
 
   **What to do**:
   - Open `src/lib/suggestions/llm.ts`
@@ -197,7 +197,7 @@ Single task, no waves needed.
 
 ## Final Verification Wave
 
-- [ ] F1. **Plan Compliance Audit** — `oracle`
+- [x] F1. **Plan Compliance Audit** — `oracle`
   Verify `SYSTEM_PROMPT` and `MULTI_SYSTEM_PROMPT` in `src/lib/suggestions/llm.ts` contain instructions for contractions, sentence length variation, concrete details, and distinctly different alternatives. Verify neither contains banned guardrail phrases. Run `npm run typecheck` and `npm run test`. Check evidence files exist.
   Output: `Must Have [N/N] | Must NOT Have [N/N] | VERDICT: APPROVE/REJECT`
 

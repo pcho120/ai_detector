@@ -1,6 +1,6 @@
 import { analyzeText, createAnalysisDetectionAdapter } from '@/lib/analysis/analyzeText';
 import { applyGuardrails } from '@/lib/suggestions/guardrails';
-import { generateSingleSuggestion } from '@/lib/suggestions/llm';
+import { generateSingleSuggestionWithProvider } from '@/lib/suggestions/llm';
 import type { BulkRewriteRequest, BulkRewriteResult, BulkRewriteProgress } from './types';
 
 const MAX_ROUNDS = 3;
@@ -46,6 +46,12 @@ async function runWithConcurrency<T>(
 export async function executeBulkRewrite(
   request: BulkRewriteRequest,
   onProgress?: BulkRewriteProgress,
+  config?: {
+    llmApiKey?: string;
+    llmProvider?: string;
+    detectionApiKey?: string;
+    detectionProvider?: string;
+  },
 ): Promise<BulkRewriteResult> {
   const targetScore = normalizeTargetScorePercent(request.targetScore);
   const preserveReplacements = request.manualReplacements ?? {};
@@ -58,7 +64,10 @@ export async function executeBulkRewrite(
     onProgress?.(current, total, phase);
   };
 
-  const detectionAdapter = createAnalysisDetectionAdapter();
+  const detectionAdapter = createAnalysisDetectionAdapter({
+    provider: config?.detectionProvider,
+    apiKey: config?.detectionApiKey,
+  });
   let achievedScore = (await analyzeText(request.text, detectionAdapter)).score;
 
   if (achievedScore <= targetScore) {
@@ -76,7 +85,8 @@ export async function executeBulkRewrite(
     .sort((a, b) => a.sentenceIndex - b.sentenceIndex)
     .map((entry) => ({ sentence: entry.sentence }));
 
-  const apiKey = process.env.COACHING_LLM_API_KEY;
+  const apiKey = config?.llmApiKey ?? process.env.COACHING_LLM_API_KEY;
+  const llmProvider = config?.llmProvider;
   let workingSentences = request.sentences.slice();
   let iterations = 0;
 
@@ -95,11 +105,12 @@ export async function executeBulkRewrite(
     let rewrittenInRound = 0;
 
     await runWithConcurrency(candidates, CONCURRENCY, async (candidate) => {
-      const suggestion = await generateSingleSuggestion(
+      const suggestion = await generateSingleSuggestionWithProvider(
         apiKey,
         candidate.sentence,
         candidate.sentenceIndex,
         candidate.score,
+        llmProvider,
       );
 
       if (suggestion) {

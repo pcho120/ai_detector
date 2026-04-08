@@ -9,6 +9,8 @@ import {
   getPresetDescriptor,
   buildProfileGenerationPrompt,
 } from '@/lib/suggestions/voiceProfile';
+import { createLlmAdapter } from '@/lib/suggestions/llm-adapter';
+import { getRequestSettings } from '@/lib/api/requestSettings';
 
 export const runtime = 'nodejs';
 
@@ -24,13 +26,6 @@ export interface VoiceProfileRequest {
 export interface VoiceProfileResponse {
   profile: string;
   language: 'en' | 'ko';
-}
-
-interface ChatChoice {
-  message: { content: string | null };
-}
-interface ChatCompletionResponse {
-  choices: ChatChoice[];
 }
 
 function isValidPresetKey(key: unknown): key is VoicePresetKey {
@@ -95,50 +90,6 @@ function resolveLanguage(
   return 'en';
 }
 
-async function callProfileGeneration(
-  apiKey: string,
-  systemPrompt: string,
-  userContent: string,
-): Promise<string | null> {
-  let response: Response;
-  try {
-    response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        temperature: 0.4,
-        max_tokens: 512,
-        messages: [
-          { role: 'system', content: systemPrompt },
-          { role: 'user', content: userContent },
-        ],
-      }),
-    });
-  } catch {
-    return null;
-  }
-
-  if (!response.ok) {
-    return null;
-  }
-
-  let data: ChatCompletionResponse;
-  try {
-    data = (await response.json()) as ChatCompletionResponse;
-  } catch {
-    return null;
-  }
-
-  const content = data.choices?.[0]?.message?.content;
-  if (!content) return null;
-
-  return content;
-}
-
 export async function POST(request: NextRequest): Promise<NextResponse> {
   let body: unknown;
   try {
@@ -176,16 +127,51 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const systemPrompt = buildProfileGenerationPrompt(lang);
   const userContent = buildUserContent(presets, writingSample);
 
-  const apiKey = process.env.COACHING_LLM_API_KEY;
+  const settings = getRequestSettings(request);
+  const llmApiKey = settings.llmApiKey;
+  const llmProvider = settings.llmProvider;
 
-  if (!apiKey) {
+  if (!llmApiKey) {
     return NextResponse.json(
       { error: 'SERVICE_UNAVAILABLE', message: 'Voice profile generation is not available.' },
       { status: 503 },
     );
   }
 
-  const rawProfile = await callProfileGeneration(apiKey, systemPrompt, userContent);
+  let adapter: ReturnType<typeof createLlmAdapter>;
+  try {
+    adapter = createLlmAdapter(llmApiKey, llmProvider);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    if (message.includes('not yet implemented')) {
+      return NextResponse.json(
+        { error: 'SERVICE_UNAVAILABLE', message: `${llmProvider} is not yet implemented` },
+        { status: 501 },
+      );
+    }
+    throw err;
+  }
+
+  let response: Awaited<ReturnType<typeof adapter.complete>>;
+  try {
+    response = await adapter.complete({
+      systemPrompt,
+      userPrompt: userContent,
+      temperature: 0.4,
+      maxTokens: 512,
+    });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    if (message.includes('not yet implemented')) {
+      return NextResponse.json(
+        { error: 'SERVICE_UNAVAILABLE', message: `${llmProvider} is not yet implemented` },
+        { status: 501 },
+      );
+    }
+    throw err;
+  }
+
+  const rawProfile = response?.content ?? null;
 
   if (!rawProfile) {
     return NextResponse.json(
@@ -203,6 +189,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 
-  const response: VoiceProfileResponse = { profile, language: lang };
-  return NextResponse.json(response, { status: 200 });
+  const voiceProfileResponse: VoiceProfileResponse = { profile, language: lang };
+  return NextResponse.json(voiceProfileResponse, { status: 200 });
 }

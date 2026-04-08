@@ -1,0 +1,32 @@
+
+> ai-detector@0.1.0 test
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv3.2.4 [39m[90mC:/Users/pcho/Documents/GitHub/ai_detector[39m
+
+ [32m✓[39m tests/integration/voice-profile-route.test.ts [2m([22m[2m27 tests[22m[2m)[22m[32m 109[2mms[22m[39m
+ [32m✓[39m tests/integration/analyze-revised-route.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 71[2mms[22m[39m
+ [32m✓[39m tests/integration/suggestions-route.test.ts [2m([22m[2m41 tests[22m[2m)[22m[32m 198[2mms[22m[39m
+ [32m✓[39m tests/integration/analyze-route.test.ts [2m([22m[2m24 tests[22m[2m)[22m[33m 1933[2mms[22m[39m
+ [32m✓[39m tests/unit/temp.test.ts [2m([22m[2m9 tests[22m[2m)[22m[32m 170[2mms[22m[39m
+ [32m✓[39m tests/unit/highlights.test.ts [2m([22m[2m38 tests[22m[2m)[22m[32m 77[2mms[22m[39m
+ [32m✓[39m src/lib/bulk-rewrite/__tests__/bulkRewrite.test.ts [2m([22m[2m20 tests[22m[2m)[22m[32m 48[2mms[22m[39m
+ [32m✓[39m tests/unit/revisedAnalysisReducer.test.ts [2m([22m[2m50 tests[22m[2m)[22m[32m 42[2mms[22m[39m
+ [32m✓[39m tests/unit/doc-mocked.test.ts [2m([22m[2m8 tests[22m[2m)[22m[33m 572[2mms[22m[39m
+   [33m[2m✓[22m[39m extractDoc - mocked word-extractor behavior[2m > [22mthrows TEXT_TOO_SHORT for text below 300 characters [33m 552[2mms[22m[39m
+ [32m✓[39m tests/unit/detection.test.ts [2m([22m[2m20 tests[22m[2m)[22m[32m 70[2mms[22m[39m
+ [32m✓[39m tests/unit/doc.test.ts [2m([22m[2m20 tests[22m[2m)[22m[32m 212[2mms[22m[39m
+ [32m✓[39m tests/unit/suggestions.test.ts [2m([22m[2m106 tests[22m[2m)[22m[32m 208[2mms[22m[39m
+ [32m✓[39m tests/unit/homepage.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[33m 558[2mms[22m[39m
+ [32m✓[39m src/components/__tests__/TargetScorePanel.test.tsx [2m([22m[2m34 tests[22m[2m)[22m[33m 591[2mms[22m[39m
+ [32m✓[39m tests/unit/docx.test.ts [2m([22m[2m17 tests[22m[2m)[22m[32m 224[2mms[22m[39m
+ [32m✓[39m src/lib/suggestions/__tests__/llm-adapter.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+ [32m✓[39m src/lib/detection/__tests__/detection-factory.test.ts [2m([22m[2m18 tests[22m[2m)[22m[32m 22[2mms[22m[39m
+ [32m✓[39m tests/unit/validate.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 18[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m18 passed[39m[22m[90m (18)[39m
+[2m      Tests [22m [1m[32m478 passed[39m[22m[90m (478)[39m
+[2m   Start at [22m 11:25:39
+[2m   Duration [22m 7.80s[2m (transform 6.57s, setup 9.27s, collect 12.76s, tests 5.14s, environment 38.33s, prepare 17.52s)[22m
+

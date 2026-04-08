@@ -13,6 +13,8 @@ import type {
   SuggestionCacheEntry,
 } from '@/lib/review/revisedAnalysisReducer';
 import type { AnalysisSuccessResponse } from '@/app/api/analyze/route';
+import type { AppSettings } from '@/lib/settings/types';
+import { buildRequestHeaders } from '@/hooks/useSettings';
 
 export type { RevisedAnalysisState, RevisedAnalysisAction, SuggestionCacheEntry };
 export { deriveRevisedText, hasAppliedReplacements };
@@ -32,7 +34,7 @@ export interface UseRevisedAnalysisStateReturn {
   triggerRevisedAnalysis: (revisedText: string) => Promise<void>;
 }
 
-export function useRevisedAnalysisState(): UseRevisedAnalysisStateReturn {
+export function useRevisedAnalysisState(settings: AppSettings): UseRevisedAnalysisStateReturn {
   const [state, dispatch] = useReducer(revisedAnalysisReducer, initialRevisedAnalysisState);
 
   const derivedRevisedText =
@@ -75,7 +77,7 @@ export function useRevisedAnalysisState(): UseRevisedAnalysisStateReturn {
     try {
       const res = await fetch('/api/analyze/revised', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...buildRequestHeaders(settings) },
         body: JSON.stringify({ text: revisedText }),
       });
       if (!res.ok) {
@@ -89,7 +91,7 @@ export function useRevisedAnalysisState(): UseRevisedAnalysisStateReturn {
     } catch {
       dispatch({ type: 'REVISED_ANALYSIS_ERROR', payload: { message: 'A network error occurred during revised analysis.' } });
     }
-  }, []);
+  }, [settings]);
 
   return {
     state,

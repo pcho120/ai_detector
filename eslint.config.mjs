@@ -6,9 +6,11 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const compat = new FlatCompat({ baseDirectory: __dirname });
 
-export default [
+const eslintConfig = [
   {
     ignores: ['.next/**', 'coverage/**', 'playwright-report/**', 'test-results/**', 'next-env.d.ts']
   },
   ...compat.extends('next/core-web-vitals', 'next/typescript')
 ];
+
+export default eslintConfig;

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { executeBulkRewrite } from '@/lib/bulk-rewrite/bulkRewrite';
 import { sanitizeVoiceProfile } from '@/lib/suggestions/voiceProfile';
+import { getRequestSettings } from '@/lib/api/requestSettings';
 import type { BulkRewriteRequest } from '@/lib/bulk-rewrite/types';
 
 export const runtime = 'nodejs';
@@ -77,7 +78,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     );
   }
 
-  const apiKey = process.env.COACHING_LLM_API_KEY;
+  const settings = getRequestSettings(request);
+
+  const apiKey = settings.llmApiKey ?? process.env.COACHING_LLM_API_KEY;
   if (!apiKey) {
     return NextResponse.json(
       {
@@ -118,7 +121,12 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   };
 
   try {
-    const result = await executeBulkRewrite(rewriteRequest);
+    const result = await executeBulkRewrite(rewriteRequest, undefined, {
+      llmApiKey: settings.llmApiKey,
+      llmProvider: settings.llmProvider,
+      detectionApiKey: settings.detectionApiKey,
+      detectionProvider: settings.detectionProvider,
+    });
     return NextResponse.json(result, { status: 200 });
   } catch {
     return NextResponse.json(

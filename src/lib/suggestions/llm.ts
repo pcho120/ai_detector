@@ -1,13 +1,7 @@
 import type { Suggestion, SentenceEntry, SuggestionService } from './types';
 import { applyGuardrails } from './guardrails';
 import { sanitizeVoiceProfile, detectProfileLanguage, buildRewriteContextBlock } from './voiceProfile';
-
-interface ChatChoice {
-  message: { content: string | null };
-}
-interface ChatCompletionResponse {
-  choices: ChatChoice[];
-}
+import { createLlmAdapter } from './llm-adapter';
 
 interface LlmRewritePayload {
   rewrite: string;
@@ -120,95 +114,6 @@ function parseMultiAlternativesPayload(raw: string): LlmRewritePayload[] | null 
   return null;
 }
 
-async function callChatCompletions(
-  apiKey: string,
-  sentence: string,
-  score: number,
-): Promise<LlmRewritePayload | null> {
-  let response: Response;
-  try {
-    response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        temperature: 0.4,
-        max_tokens: 256,
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          { role: 'user', content: buildUserPrompt(sentence, score) },
-        ],
-      }),
-    });
-  } catch {
-    return null;
-  }
-
-  if (!response.ok) {
-    return null;
-  }
-
-  let data: ChatCompletionResponse;
-  try {
-    data = (await response.json()) as ChatCompletionResponse;
-  } catch {
-    return null;
-  }
-
-  const content = data.choices?.[0]?.message?.content;
-  if (!content) return null;
-
-  return parseRewritePayload(content);
-}
-
-async function callChatCompletionsMulti(
-  apiKey: string,
-  sentence: string,
-  score: number,
-  voiceProfile?: string,
-): Promise<LlmRewritePayload[] | null> {
-  let response: Response;
-  try {
-    response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        temperature: 0.7,
-        max_tokens: 768,
-        messages: [
-          { role: 'system', content: MULTI_SYSTEM_PROMPT },
-          { role: 'user', content: buildMultiUserPrompt(sentence, score, voiceProfile) },
-        ],
-      }),
-    });
-  } catch {
-    return null;
-  }
-
-  if (!response.ok) {
-    return null;
-  }
-
-  let data: ChatCompletionResponse;
-  try {
-    data = (await response.json()) as ChatCompletionResponse;
-  } catch {
-    return null;
-  }
-
-  const content = data.choices?.[0]?.message?.content;
-  if (!content) return null;
-
-  return parseMultiAlternativesPayload(content);
-}
-
 export class LlmSuggestionService implements SuggestionService {
   private readonly apiKey: string | undefined;
 
@@ -221,17 +126,26 @@ export class LlmSuggestionService implements SuggestionService {
       return [];
     }
 
+    const adapter = createLlmAdapter(this.apiKey);
     const raw: Suggestion[] = [];
 
     for (const entry of sentences) {
-      const payload = await callChatCompletions(this.apiKey, entry.sentence, 0.5);
-      if (payload) {
-        raw.push({
-          sentence: entry.sentence,
-          rewrite: payload.rewrite,
-          explanation: payload.explanation,
-          sentenceIndex: entry.index,
-        });
+      const result = await adapter.complete({
+        systemPrompt: SYSTEM_PROMPT,
+        userPrompt: buildUserPrompt(entry.sentence, 0.5),
+        temperature: 0.4,
+        maxTokens: 256,
+      });
+      if (result) {
+        const payload = parseRewritePayload(result.content);
+        if (payload) {
+          raw.push({
+            sentence: entry.sentence,
+            rewrite: payload.rewrite,
+            explanation: payload.explanation,
+            sentenceIndex: entry.index,
+          });
+        }
       }
     }
 
@@ -239,15 +153,30 @@ export class LlmSuggestionService implements SuggestionService {
   }
 }
 
-export async function generateSingleSuggestion(
+/**
+ * Internal helper for generating a single suggestion with optional LLM provider override.
+ * Used by bulk rewrite to honor provider preferences without changing the public API.
+ * @internal
+ */
+export async function generateSingleSuggestionWithProvider(
   apiKey: string | undefined,
   sentence: string,
   sentenceIndex: number,
   score: number,
+  provider?: string,
 ): Promise<Suggestion | null> {
   if (!apiKey) return null;
 
-  const payload = await callChatCompletions(apiKey, sentence, score);
+  const adapter = createLlmAdapter(apiKey, provider);
+  const result = await adapter.complete({
+    systemPrompt: SYSTEM_PROMPT,
+    userPrompt: buildUserPrompt(sentence, score),
+    temperature: 0.4,
+    maxTokens: 256,
+  });
+  if (!result) return null;
+
+  const payload = parseRewritePayload(result.content);
   if (!payload) return null;
 
   const [filtered] = applyGuardrails([
@@ -260,6 +189,15 @@ export async function generateSingleSuggestion(
   ]);
 
   return filtered ?? null;
+}
+
+export async function generateSingleSuggestion(
+  apiKey: string | undefined,
+  sentence: string,
+  sentenceIndex: number,
+  score: number,
+): Promise<Suggestion | null> {
+  return generateSingleSuggestionWithProvider(apiKey, sentence, sentenceIndex, score);
 }
 
 function deduplicateAlternativesByRewrite(alts: LlmRewritePayload[]): LlmRewritePayload[] {
@@ -278,10 +216,21 @@ export async function generateAlternativeSuggestions(
   sentenceIndex: number,
   score: number,
   voiceProfile?: string,
+  provider?: string,
 ): Promise<SuggestionAlternative[] | null> {
   if (!apiKey) return null;
 
-  const payloads = await callChatCompletionsMulti(apiKey, sentence, score, voiceProfile);
+  const adapter = createLlmAdapter(apiKey, provider);
+
+  const result = await adapter.completeMulti({
+    systemPrompt: MULTI_SYSTEM_PROMPT,
+    userPrompt: buildMultiUserPrompt(sentence, score, voiceProfile),
+    temperature: 0.7,
+    maxTokens: 768,
+  });
+  if (!result) return null;
+
+  const payloads = parseMultiAlternativesPayload(result.content);
   if (!payloads || payloads.length === 0) return null;
 
   const asSuggestions = payloads.map((p) => ({
@@ -298,7 +247,15 @@ export async function generateAlternativeSuggestions(
     return trimmed.map((s) => ({ rewrite: s.rewrite, explanation: s.explanation }));
   }
 
-  const recoveryPayloads = await callChatCompletionsMulti(apiKey, sentence, score, voiceProfile);
+  const recoveryResult = await adapter.completeMulti({
+    systemPrompt: MULTI_SYSTEM_PROMPT,
+    userPrompt: buildMultiUserPrompt(sentence, score, voiceProfile),
+    temperature: 0.7,
+    maxTokens: 768,
+  });
+  if (!recoveryResult) return null;
+
+  const recoveryPayloads = parseMultiAlternativesPayload(recoveryResult.content);
   if (!recoveryPayloads || recoveryPayloads.length === 0) return null;
 
   const combined = deduplicateAlternativesByRewrite([...payloads, ...recoveryPayloads]);

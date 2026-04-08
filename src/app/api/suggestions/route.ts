@@ -3,7 +3,10 @@ import { generateAlternativeSuggestions } from '@/lib/suggestions/llm';
 import type { SuggestionAlternative } from '@/lib/suggestions/llm';
 import { sanitizeVoiceProfile } from '@/lib/suggestions/voiceProfile';
 import { createAnalysisDetectionAdapter } from '@/lib/analysis/analyzeText';
+import { createLlmAdapter } from '@/lib/suggestions/llm-adapter';
 import { findSentenceInText } from '@/lib/highlights/spans';
+import { getRequestSettings } from '@/lib/api/requestSettings';
+
 
 export const runtime = 'nodejs';
 
@@ -75,15 +78,30 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const voiceProfile =
     typeof rawVoiceProfile === 'string' ? sanitizeVoiceProfile(rawVoiceProfile) : undefined;
 
-  const apiKey = process.env.COACHING_LLM_API_KEY;
+  const settings = getRequestSettings(request);
+  const llmApiKey = settings.llmApiKey;
+  const llmProvider = settings.llmProvider;
 
-  const alternatives = await generateAlternativeSuggestions(
-    apiKey,
-    sentence,
-    sentenceIndex,
-    score,
-    voiceProfile || undefined,
-  );
+  let alternatives: Awaited<ReturnType<typeof generateAlternativeSuggestions>> | null = null;
+  try {
+    alternatives = await generateAlternativeSuggestions(
+      llmApiKey,
+      sentence,
+      sentenceIndex,
+      score,
+      voiceProfile || undefined,
+      llmProvider,
+    );
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    if (message.includes('not yet implemented')) {
+      return NextResponse.json(
+        { error: 'SERVICE_UNAVAILABLE', message: `${llmProvider} is not yet implemented` },
+        { status: 501 },
+      );
+    }
+    throw err;
+  }
 
   if (!alternatives) {
     const response: SuggestionUnavailableResponse = { available: false, sentenceIndex };
@@ -92,7 +110,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   let adapter: ReturnType<typeof createAnalysisDetectionAdapter> | null = null;
   try {
-    adapter = createAnalysisDetectionAdapter();
+    adapter = createAnalysisDetectionAdapter({
+      provider: settings.detectionProvider,
+      apiKey: settings.detectionApiKey,
+    });
   } catch {
     adapter = null;
   }

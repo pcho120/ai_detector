@@ -1,0 +1,1 @@
+{"error":"INVALID_REQUEST","message":"Body may include presets (non-empty array of valid preset keys), writingSample (non-empty string), and languageHint (\"en\" | \"ko\"). At least one of presets or writingSample must be provided."}

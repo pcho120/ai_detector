@@ -5,12 +5,16 @@ import { ReviewPanel } from '@/components/ReviewPanel';
 import { RevisedReviewPanel } from '@/components/RevisedReviewPanel';
 import { VoiceProfilePanel } from '@/components/VoiceProfilePanel';
 import { TargetScorePanel } from '@/components/TargetScorePanel';
+import { SettingsModal } from '@/components/SettingsModal';
 import { useRevisedAnalysisState, deriveRevisedText } from '@/app/useRevisedAnalysisState';
+import { useSettings, buildRequestHeaders } from '@/hooks/useSettings';
 
 export default function HomePage() {
+  const { settings, saveSettings, isLoaded } = useSettings();
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const revisedAnalysis = useRevisedAnalysisState();
+  const revisedAnalysis = useRevisedAnalysisState(settings);
   const { state: revisedState, setOriginalResult, reset: resetRevised } = revisedAnalysis;
 
   const [vpSelectedPresets, setVpSelectedPresets] = useState<string[]>([]);
@@ -58,7 +62,7 @@ export default function HomePage() {
     try {
       const response = await fetch('/api/bulk-rewrite', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...buildRequestHeaders(settings) },
         body: JSON.stringify({
           sentences,
           targetScore: parsedTargetScore,
@@ -138,6 +142,7 @@ export default function HomePage() {
     try {
       const response = await fetch('/api/analyze', {
         method: 'POST',
+        headers: buildRequestHeaders(settings),
         body: apiFormData,
       });
 
@@ -169,8 +174,27 @@ export default function HomePage() {
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-8">
         <span data-testid="voice-profile-state" data-value={voiceProfile} style={{ display: 'none' }} aria-hidden="true" />
         <header className="flex flex-col gap-2">
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">AI Detect Essay Review</h1>
-          <p className="text-slate-500">Upload your essay to analyze it for AI-generated phrasing.</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold tracking-tight text-slate-900">AI Detect Essay Review</h1>
+              <p className="text-slate-500">Upload your essay to analyze it for AI-generated phrasing.</p>
+            </div>
+            <button
+              onClick={() => setIsSettingsOpen(true)}
+              className="flex items-center justify-center w-10 h-10 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200 transition-colors relative"
+              data-testid="settings-trigger"
+              title="Settings"
+              aria-label="Open settings"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              {!settings.llmApiKey && !settings.detectionApiKey && (
+                <span className="absolute top-1 right-1 w-2 h-2 bg-yellow-400 rounded-full" aria-hidden="true" />
+              )}
+            </button>
+          </div>
         </header>
 
         <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -224,6 +248,7 @@ export default function HomePage() {
                 setVpError={setVpError}
                 vpCopied={vpCopied}
                 setVpCopied={setVpCopied}
+                settings={settings}
               />
             </section>
             <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -239,7 +264,7 @@ export default function HomePage() {
             </section>
             <div className={`flex gap-6 ${revisedState.revisedResult || revisedState.revisedLoading || revisedState.revisedError ? 'flex-col lg:flex-row' : 'flex-col'}`}>
               <section className="flex-1 rounded-xl border border-slate-200 bg-white p-6 shadow-sm min-w-0">
-                <ReviewPanel result={result} revisedState={revisedAnalysis} voiceProfile={voiceProfile || undefined} />
+                <ReviewPanel result={result} revisedState={revisedAnalysis} voiceProfile={voiceProfile || undefined} settings={settings} />
               </section>
               {(revisedState.revisedResult || revisedState.revisedLoading || revisedState.revisedError) && (
                 <section className="flex-1 rounded-xl border border-slate-200 bg-white p-6 shadow-sm min-w-0" data-testid="revised-panel-section">
@@ -256,6 +281,14 @@ export default function HomePage() {
           </div>
         )}
       </div>
+      {isLoaded && (
+        <SettingsModal
+          isOpen={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+          settings={settings}
+          saveSettings={saveSettings}
+        />
+      )}
     </main>
   );
 }

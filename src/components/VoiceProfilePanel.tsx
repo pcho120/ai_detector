@@ -4,6 +4,8 @@ import {
   VoicePresetKey,
   detectProfileLanguage,
 } from '@/lib/suggestions/voiceProfile';
+import type { AppSettings } from '@/lib/settings/types';
+import { buildRequestHeaders } from '@/hooks/useSettings';
 
 interface VoiceProfilePanelProps {
   vpSelectedPresets: string[];
@@ -18,6 +20,7 @@ interface VoiceProfilePanelProps {
   setVpError: (error: string | null) => void;
   vpCopied: boolean;
   setVpCopied: (copied: boolean) => void;
+  settings: AppSettings;
 }
 
 export function VoiceProfilePanel({
@@ -33,6 +36,7 @@ export function VoiceProfilePanel({
   setVpError,
   vpCopied,
   setVpCopied,
+  settings,
 }: VoiceProfilePanelProps) {
   const [isProfileRevealed, setIsProfileRevealed] = useState(false);
 
@@ -60,7 +64,7 @@ export function VoiceProfilePanel({
     try {
       const response = await fetch('/api/voice-profile/generate', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...buildRequestHeaders(settings) },
         body: JSON.stringify({
           presets: vpSelectedPresets.length > 0 ? vpSelectedPresets : undefined,
           writingSample: vpWritingSampleDraft.trim() || undefined,
