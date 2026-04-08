@@ -43,8 +43,14 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     return NextResponse.json(result, { status: 200 });
   } catch (err) {
     if (err instanceof FileProcessingError) {
+      const isNotImplemented = err.message.includes('is not yet implemented');
       const isUnconfigured = err.message === 'Detection service is not configured.';
-      const status = isUnconfigured ? 503 : 502;
+      let status = 502;
+      if (isNotImplemented) {
+        status = 501;
+      } else if (isUnconfigured) {
+        status = 503;
+      }
       return NextResponse.json(toErrorResponse(err), { status });
     }
     throw err;

@@ -167,3 +167,36 @@
 - Task 6 blocks Task 9 (page.tsx integration) which adds the actual header-building logic for fetch calls
 - Routes are now ready to accept overridden provider/key combinations from client headers
 
+
+## Form Control Compatibility
+- Explicit `name` attributes were required on form fields (`select` and `input`) to ensure compatibility with testing tools/QA selectors that rely on form names, beyond just `id` and `data-testid`.
+
+# Task 6 Verification Fix: Error Mapping Refinement
+
+## 501 Status Code for Stub Providers
+- Routes now explicitly check for "is not yet implemented" substring in error messages
+- Stub provider errors (gptzero, originality, winston) return HTTP 501 (Not Implemented)
+- Check uses `.includes('is not yet implemented')` to catch any message containing this phrase
+
+## Error Status Mapping Strategy
+```
+- 501: message.includes('is not yet implemented')
+- 503: message === 'Detection service is not configured.' (exact match)
+- 502: all other FileProcessingError cases
+```
+This three-tier mapping covers:
+1. User explicitly selected a stub provider (501 - feature not ready)
+2. No API key configured for a supported provider (503 - configuration issue)
+3. Service failure or network error (502 - bad gateway)
+
+## Implementation Pattern
+- Both routes use identical error handling logic
+- Default status is 502, then conditionals override
+- Order matters: check 501 first, then 503, else default to 502
+- Preserves exact string `'Detection service is not configured.'` for backward compatibility
+
+## Verification Results
+- All 514 tests pass (including 37 analyze route tests)
+- TypeScript typecheck passes with no errors
+- No LSP diagnostics on either route file
+- Backward compatibility maintained: existing tests confirm 503 and 502 behavior unchanged
