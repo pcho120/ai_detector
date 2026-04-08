@@ -676,7 +676,7 @@ Critical Path: T1 → T2 → T5 → T6 → T7 → T8 → T9 → F1-F4
   - Files: `src/app/api/suggestions/route.ts`, `src/app/api/voice-profile/generate/route.ts`
   - Pre-commit: `npm run test`
 
-- [ ] 8. Update `/api/bulk-rewrite` route and `bulkRewrite.ts`
+- [x] 7. Update `/api/suggestions` and `/api/voice-profile/generate` routes (COMPLETED)
 
   **What to do**:
   - Modify `src/app/api/bulk-rewrite/route.ts`
@@ -727,12 +727,12 @@ Critical Path: T1 → T2 → T5 → T6 → T7 → T8 → T9 → F1-F4
     Evidence: .sisyphus/evidence/task-8-header-override.txt
   ```
 
-  **Commit**: YES
-  - Message: `feat(settings): wire header overrides into bulk-rewrite route and bulkRewrite module`
-  - Files: `src/app/api/bulk-rewrite/route.ts`, `src/lib/bulk-rewrite/bulkRewrite.ts`
-  - Pre-commit: `npm run test`
+   **Commit**: YES
+   - Message: `feat(settings): wire header overrides into bulk-rewrite route and bulkRewrite module`
+   - Files: `src/app/api/bulk-rewrite/route.ts`, `src/lib/bulk-rewrite/bulkRewrite.ts`
+   - Pre-commit: `npm run test`
 
-- [ ] 9. Integrate `SettingsModal` into `page.tsx`
+- [x] 9. Integrate `SettingsModal` into `page.tsx` (COMPLETED)
 
   **What to do**:
   - Modify `src/app/page.tsx`
@@ -821,10 +821,10 @@ Critical Path: T1 → T2 → T5 → T6 → T7 → T8 → T9 → F1-F4
     Evidence: .sisyphus/evidence/task-9-no-settings-fallback.png
   ```
 
-  **Commit**: YES
-  - Message: `feat(settings): integrate SettingsModal into main page with fetch header injection`
-  - Files: `src/app/page.tsx`, `src/components/SettingsModal.tsx`
-  - Pre-commit: `npm run test`
+   **Commit**: YES
+   - Message: `feat(settings): integrate SettingsModal into main page with fetch header injection`
+   - Files: `src/app/page.tsx`, `src/components/SettingsModal.tsx`, `src/app/useRevisedAnalysisState.ts`, `src/components/ReviewPanel.tsx`, `src/components/VoiceProfilePanel.tsx`
+   - Pre-commit: `npm run test`
 
 - [ ] F1. **Plan Compliance Audit** — `oracle`
   Read plan end-to-end. For each "Must Have": verify implementation exists. For each "Must NOT Have": search codebase for forbidden patterns. Check evidence files exist in `.sisyphus/evidence/`.
