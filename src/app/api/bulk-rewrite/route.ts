@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { executeBulkRewrite } from '@/lib/bulk-rewrite/bulkRewrite';
 import { sanitizeVoiceProfile } from '@/lib/suggestions/voiceProfile';
 import { getRequestSettings } from '@/lib/api/requestSettings';
+import { FileProcessingError } from '@/lib/files/errors';
 import type { BulkRewriteRequest } from '@/lib/bulk-rewrite/types';
 
 export const runtime = 'nodejs';
@@ -128,7 +129,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       detectionProvider: settings.detectionProvider,
     });
     return NextResponse.json(result, { status: 200 });
-  } catch {
+  } catch (err) {
+    // Handle provider-specific errors (e.g., unsupported LLM provider)
+    if (err instanceof FileProcessingError) {
+      return NextResponse.json(
+        { error: err.code, message: err.message },
+        { status: 501 },
+      );
+    }
+    // Generic fallback for unexpected errors
     return NextResponse.json(
       { error: 'BULK_REWRITE_FAILED', message: 'Bulk rewrite encountered an unexpected error.' },
       { status: 500 },
