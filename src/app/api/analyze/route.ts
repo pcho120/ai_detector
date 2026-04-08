@@ -4,6 +4,7 @@ import { extractDocx } from '@/lib/files/docx';
 import { extractDoc } from '@/lib/files/doc';
 import { withTempFile } from '@/lib/files/temp';
 import { FileProcessingError, toErrorResponse } from '@/lib/files/errors';
+import { getRequestSettings } from '@/lib/api/requestSettings';
 import { analyzeText, createAnalysisDetectionAdapter } from '@/lib/analysis/analyzeText';
 
 export const runtime = 'nodejs';
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     extractedText = await withTempFile(
       validated.buffer,
       validated.extension,
-      async (_handle) => {
+      async () => {
         if (validated.extension === '.docx') {
           const result = await extractDocx(validated.buffer);
           return result.text;
@@ -90,7 +91,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   try {
-    const detectionAdapter = createAnalysisDetectionAdapter();
+    const settings = getRequestSettings(request);
+    const detectionAdapter = createAnalysisDetectionAdapter({
+      provider: settings.detectionProvider,
+      apiKey: settings.detectionApiKey,
+    });
     const body = await analyzeText(extractedText, detectionAdapter);
     return NextResponse.json(body, { status: 200 });
   } catch (err) {

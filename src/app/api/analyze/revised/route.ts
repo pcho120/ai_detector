@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { FileProcessingError, toErrorResponse } from '@/lib/files/errors';
+import { getRequestSettings } from '@/lib/api/requestSettings';
 import { analyzeText, createAnalysisDetectionAdapter } from '@/lib/analysis/analyzeText';
 
 export const runtime = 'nodejs';
@@ -33,7 +34,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   }
 
   try {
-    const detectionAdapter = createAnalysisDetectionAdapter();
+    const settings = getRequestSettings(request);
+    const detectionAdapter = createAnalysisDetectionAdapter({
+      provider: settings.detectionProvider,
+      apiKey: settings.detectionApiKey,
+    });
     const result = await analyzeText(body.text, detectionAdapter);
     return NextResponse.json(result, { status: 200 });
   } catch (err) {

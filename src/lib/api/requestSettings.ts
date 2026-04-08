@@ -1,7 +1,5 @@
 // TODO(security): encrypt API keys before storing
 
-import type { AppSettings } from '@/lib/settings/types';
-
 /**
  * Settings extracted from request headers with fallback to environment variables.
  * Priority: non-empty header string → env var → default value
