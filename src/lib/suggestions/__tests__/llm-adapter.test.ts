@@ -1,8 +1,19 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { createLlmAdapter } from '../llm-adapter';
 import { FileProcessingError } from '@/lib/files/errors';
 import { OpenAiLlmAdapter } from '../adapters/openai';
 import { ClaudeLlmAdapter } from '../adapters/anthropic';
+import Anthropic from '@anthropic-ai/sdk';
+
+const mockCreate = vi.fn();
+
+vi.mock('@anthropic-ai/sdk', () => ({
+  default: vi.fn(() => ({
+    messages: {
+      create: mockCreate,
+    },
+  })),
+}));
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -103,62 +114,101 @@ describe('createLlmAdapter – factory branch selection', () => {
   });
 });
 
-// ── ClaudeLlmAdapter stub behavior ────────────────────────────────────────────
+// ── ClaudeLlmAdapter behavior with mocked SDK ─────────────────────────────────
 
-describe('ClaudeLlmAdapter – stub throws FileProcessingError', () => {
-  const stubRequest = {
+describe('ClaudeLlmAdapter – with mocked Anthropic SDK', () => {
+  const testRequest = {
     systemPrompt: 'You are a helpful assistant.',
     userPrompt: 'Rewrite this sentence.',
     temperature: 0.4,
     maxTokens: 256,
   };
 
-  it('complete() throws FileProcessingError (not a generic Error)', async () => {
-    const adapter = new ClaudeLlmAdapter('any-key');
-
-    await expect(adapter.complete(stubRequest)).rejects.toBeInstanceOf(FileProcessingError);
+  beforeEach(() => {
+    vi.clearAllMocks();
   });
 
-  it('complete() throws with code DETECTION_FAILED', async () => {
-    const adapter = new ClaudeLlmAdapter('any-key');
+  it('complete() returns { content } for a text block', async () => {
+    mockCreate.mockResolvedValue({
+      content: [{ type: 'text', text: 'Rewritten text.' }],
+    });
 
-    try {
-      await adapter.complete(stubRequest);
-    } catch (err) {
-      expect(err).toBeInstanceOf(FileProcessingError);
-      expect((err as FileProcessingError).code).toBe('DETECTION_FAILED');
-    }
+    const adapter = new ClaudeLlmAdapter('test-api-key');
+    const result = await adapter.complete(testRequest);
+
+    expect(result).toEqual({ content: 'Rewritten text.' });
   });
 
-  it('completeMulti() throws FileProcessingError (not a generic Error)', async () => {
-    const adapter = new ClaudeLlmAdapter('any-key');
+  it('complete() returns null for empty content array', async () => {
+    mockCreate.mockResolvedValue({
+      content: [],
+    });
 
-    await expect(adapter.completeMulti(stubRequest)).rejects.toBeInstanceOf(FileProcessingError);
+    const adapter = new ClaudeLlmAdapter('test-api-key');
+    const result = await adapter.complete(testRequest);
+
+    expect(result).toBeNull();
   });
 
-  it('completeMulti() throws with code DETECTION_FAILED', async () => {
-    const adapter = new ClaudeLlmAdapter('any-key');
+  it('complete() returns null for non-text first block', async () => {
+    mockCreate.mockResolvedValue({
+      content: [{ type: 'image', url: 'https://example.com/image.jpg' }],
+    });
 
-    try {
-      await adapter.completeMulti(stubRequest);
-    } catch (err) {
-      expect(err).toBeInstanceOf(FileProcessingError);
-      expect((err as FileProcessingError).code).toBe('DETECTION_FAILED');
-    }
+    const adapter = new ClaudeLlmAdapter('test-api-key');
+    const result = await adapter.complete(testRequest);
+
+    expect(result).toBeNull();
   });
 
-  it('thrown error is NOT a plain Error instance (it is FileProcessingError)', async () => {
-    const adapter = new ClaudeLlmAdapter('any-key');
+  it('complete() returns null when SDK throws', async () => {
+    mockCreate.mockRejectedValue(new Error('API error'));
 
-    let thrown: unknown;
-    try {
-      await adapter.complete(stubRequest);
-    } catch (err) {
-      thrown = err;
-    }
+    const adapter = new ClaudeLlmAdapter('test-api-key');
+    const result = await adapter.complete(testRequest);
 
-    // FileProcessingError extends Error, but we explicitly verify it's a FileProcessingError
-    expect(thrown).toBeInstanceOf(FileProcessingError);
-    expect((thrown as FileProcessingError).name).toBe('FileProcessingError');
+    expect(result).toBeNull();
+  });
+
+  it('completeMulti() delegates through messages.create and results in exactly one SDK call', async () => {
+    mockCreate.mockResolvedValue({
+      content: [{ type: 'text', text: 'Multi result.' }],
+    });
+
+    const adapter = new ClaudeLlmAdapter('test-api-key');
+    const result = await adapter.completeMulti(testRequest);
+
+    expect(result).toEqual({ content: 'Multi result.' });
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+  });
+
+  it('complete() clamps temperature: 1.5 to 1.0 in SDK call arguments', async () => {
+    mockCreate.mockResolvedValue({
+      content: [{ type: 'text', text: 'Clamped response.' }],
+    });
+
+    const adapter = new ClaudeLlmAdapter('test-api-key');
+    await adapter.complete({
+      systemPrompt: 'Test system',
+      userPrompt: 'Test user',
+      temperature: 1.5,
+      maxTokens: 100,
+    });
+
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        temperature: 1.0,
+      })
+    );
+  });
+
+  it('constructor passes the apiKey to the Anthropic SDK', () => {
+    new ClaudeLlmAdapter('test-api-key');
+
+    expect(vi.mocked(Anthropic)).toHaveBeenCalledWith(
+      expect.objectContaining({
+        apiKey: 'test-api-key',
+      })
+    );
   });
 });

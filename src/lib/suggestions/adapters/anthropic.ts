@@ -1,31 +1,53 @@
-import { FileProcessingError } from '../../files/errors';
+import Anthropic from '@anthropic-ai/sdk';
 import type { LlmAdapter, LlmCompletionRequest, LlmCompletionResponse } from '../llm-adapter';
 
-// NOTE: Anthropic response shape differs from OpenAI.
-// Anthropic uses `content[0].text` whereas OpenAI uses `choices[0].message.content`.
-// This distinction must be handled when this stub is implemented.
-
 /**
- * Anthropic Claude LLM adapter stub.
+ * Anthropic Claude LLM adapter implementation.
  *
- * Not yet implemented. Both methods throw `FileProcessingError('DETECTION_FAILED')`.
+ * Handles communication with Anthropic's messages API (claude-3-5-haiku-20241022).
+ * All network/API failures and missing content are surfaced as `null` — callers decide
+ * how to handle them.
  */
 export class ClaudeLlmAdapter implements LlmAdapter {
   private readonly apiKey: string | undefined;
+  private readonly client: Anthropic;
 
   constructor(apiKey?: string) {
     this.apiKey = apiKey;
+    this.client = new Anthropic({ apiKey: this.apiKey });
   }
 
   async complete(request: LlmCompletionRequest): Promise<LlmCompletionResponse | null> {
-    // Reference parameter to prevent lint warnings in stub
-    void request;
-    throw new FileProcessingError('DETECTION_FAILED', 'Anthropic Claude adapter is not yet implemented.');
+    try {
+      const response = await this.client.messages.create({
+        model: 'claude-3-5-haiku-20241022',
+        max_tokens: request.maxTokens,
+        temperature: Math.min(request.temperature, 1.0),
+        system: request.systemPrompt,
+        messages: [
+          {
+            role: 'user',
+            content: request.userPrompt,
+          },
+        ],
+      });
+
+      if (!response.content || response.content.length === 0) {
+        return null;
+      }
+
+      const firstBlock = response.content[0];
+      if (firstBlock.type !== 'text') {
+        return null;
+      }
+
+      return { content: firstBlock.text };
+    } catch {
+      return null;
+    }
   }
 
   async completeMulti(request: LlmCompletionRequest): Promise<LlmCompletionResponse | null> {
-    // Reference parameter to prevent lint warnings in stub
-    void request;
-    throw new FileProcessingError('DETECTION_FAILED', 'Anthropic Claude adapter is not yet implemented.');
+    return this.complete(request);
   }
 }
