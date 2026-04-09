@@ -95,6 +95,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const detectionAdapter = createAnalysisDetectionAdapter({
       provider: settings.detectionProvider,
       apiKey: settings.detectionApiKey,
+      copyleaksEmail: settings.copyleaksEmail,
+      copyleaksApiKey: settings.copyleaksApiKey,
     });
     const body = await analyzeText(extractedText, detectionAdapter);
     return NextResponse.json(body, { status: 200 });

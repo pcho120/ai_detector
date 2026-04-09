@@ -1,0 +1,63 @@
+- generic [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e5]:
+        - generic [ref=e6]:
+          - heading "AI Detect Essay Review" [level=1] [ref=e7]
+          - paragraph [ref=e8]: Upload your essay to analyze it for AI-generated phrasing.
+        - button "Open settings" [active] [ref=e9] [cursor=pointer]:
+          - img [ref=e10]
+      - generic [ref=e15]:
+        - generic [ref=e16]:
+          - text: Upload essay file (.doc or .docx)
+          - button "Upload essay file (.doc or .docx)" [ref=e17]
+        - button "Submit for Review" [ref=e18] [cursor=pointer]
+    - dialog "Settings" [ref=e30]:
+      - generic [ref=e31]:
+        - heading "Settings" [level=2] [ref=e32]
+        - button "Close settings" [ref=e33] [cursor=pointer]:
+          - img [ref=e34]
+      - generic [ref=e36]:
+        - generic [ref=e37]:
+          - heading "AI Detection" [level=3] [ref=e38]
+          - generic [ref=e39]:
+            - generic [ref=e40]: Provider
+            - combobox "Provider" [ref=e41]:
+              - option "Sapling" [selected]
+              - option "GPTZero (Coming Soon)"
+              - option "Originality.ai (Coming Soon)"
+              - option "Winston AI (Coming Soon)"
+          - generic [ref=e42]:
+            - generic [ref=e43]: API Key
+            - textbox "API Key" [ref=e44]:
+              - /placeholder: Optional (uses server key if empty)
+        - generic [ref=e46]:
+          - heading "Copyleaks (Document Detection)" [level=3] [ref=e47]
+          - paragraph [ref=e48]: Provide both email and API key to enable document-level detection. If provided alongside Sapling, Copyleaks handles the overall score and Sapling handles sentence analysis.
+          - generic [ref=e49]:
+            - generic [ref=e50]: Email
+            - textbox "Email" [ref=e51]:
+              - /placeholder: your@email.com
+          - generic [ref=e52]:
+            - generic [ref=e53]: API Key
+            - textbox "API Key" [ref=e54]:
+              - /placeholder: Copyleaks API Key
+        - generic [ref=e56]:
+          - heading "Coaching LLM" [level=3] [ref=e57]
+          - generic [ref=e58]:
+            - generic [ref=e59]: Provider
+            - combobox "Provider" [ref=e60]:
+              - option "OpenAI" [selected]
+              - option "Anthropic (Claude)"
+          - generic [ref=e61]:
+            - generic [ref=e62]: API Key
+            - textbox "API Key" [ref=e63]:
+              - /placeholder: Optional (uses server key if empty)
+      - generic [ref=e64]:
+        - paragraph [ref=e65]: Keys are stored locally in your browser's localStorage and are not retained by our servers.
+        - generic [ref=e66]:
+          - button "Cancel" [ref=e67] [cursor=pointer]
+          - button "Save Settings" [ref=e68] [cursor=pointer]
+  - button "Open Next.js Dev Tools" [ref=e24] [cursor=pointer]:
+    - img [ref=e25]
+  - alert [ref=e28]

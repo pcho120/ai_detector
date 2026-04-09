@@ -1,0 +1,37 @@
+
+> ai-detector@0.1.0 dev
+> next dev
+
+ ⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of C:\Users\pcho\package-lock.json as the root directory.
+ To silence this warning, set `outputFileTracingRoot` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/output#caveats for more information.
+ Detected additional lockfiles: 
+   * C:\Users\pcho\Documents\GitHub\ai_detector\package-lock.json
+
+ ⚠ Port 3000 is in use by process 38840, using available port 3006 instead.
+   ▲ Next.js 15.5.14
+   - Local:        http://localhost:3006
+   - Network:      http://172.31.10.211:3006
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 2.4s
+ ○ Compiling / ...
+ ✓ Compiled / in 5s (565 modules)
+ GET / 200 in 5535ms
+ ✓ Compiled in 312ms (242 modules)
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Users\pcho\Documents\GitHub\ai_detector\.next\cache\webpack\client-development\2.pack.gz_' -> 'C:\Users\pcho\Documents\GitHub\ai_detector\.next\cache\webpack\client-development\2.pack.gz'
+ ✓ Compiled in 186ms (242 modules)
+ ✓ Compiled in 149ms (242 modules)
+ ✓ Compiled in 165ms (242 modules)
+ ✓ Compiled in 230ms (242 modules)
+ ✓ Compiled in 152ms (242 modules)
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Users\pcho\Documents\GitHub\ai_detector\.next\cache\webpack\client-development\0.pack.gz_' -> 'C:\Users\pcho\Documents\GitHub\ai_detector\.next\cache\webpack\client-development\0.pack.gz'
+ ✓ Compiled in 203ms (242 modules)
+ ✓ Compiled in 138ms (242 modules)
+ ✓ Compiled in 143ms (242 modules)
+ ✓ Compiled in 143ms (242 modules)
+ ✓ Compiled in 143ms (242 modules)
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Users\pcho\Documents\GitHub\ai_detector\.next\cache\webpack\client-development\0.pack.gz_' -> 'C:\Users\pcho\Documents\GitHub\ai_detector\.next\cache\webpack\client-development\0.pack.gz'
+ ✓ Compiled in 212ms (242 modules)

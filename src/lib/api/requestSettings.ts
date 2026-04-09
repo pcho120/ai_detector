@@ -9,6 +9,8 @@ export interface RequestSettings {
   llmApiKey: string | undefined;
   detectionProvider: string;
   detectionApiKey: string | undefined;
+  copyleaksEmail: string | undefined;
+  copyleaksApiKey: string | undefined;
 }
 
 /**
@@ -25,6 +27,8 @@ export function getRequestSettings(req: Request): RequestSettings {
   const headerLlmApiKey = req.headers.get('x-llm-api-key')?.trim() || '';
   const headerDetectionProvider = req.headers.get('x-detection-provider')?.trim() || '';
   const headerDetectionApiKey = req.headers.get('x-detection-api-key')?.trim() || '';
+  const headerCopyleaksEmail = req.headers.get('x-copyleaks-email')?.trim() || '';
+  const headerCopyleaksApiKey = req.headers.get('x-copyleaks-api-key')?.trim() || '';
 
   // Resolve LLM provider: header → env var → default
   const llmProvider = headerLlmProvider || process.env.LLM_PROVIDER || 'openai';
@@ -56,10 +60,18 @@ export function getRequestSettings(req: Request): RequestSettings {
     }
   }
 
+  // Resolve Copyleaks email: non-empty header → env var → undefined
+  const copyleaksEmail = headerCopyleaksEmail || process.env.COPYLEAKS_EMAIL;
+
+  // Resolve Copyleaks API key: non-empty header → env var → undefined
+  const copyleaksApiKey = headerCopyleaksApiKey || process.env.COPYLEAKS_API_KEY;
+
   return {
     llmProvider,
     llmApiKey,
     detectionProvider,
     detectionApiKey,
+    copyleaksEmail,
+    copyleaksApiKey,
   };
 }

@@ -5,6 +5,7 @@ import { SaplingDetectionAdapter } from '@/lib/detection/sapling';
 import { WinstonDetectionAdapter } from '@/lib/detection/adapters/winston';
 import { OriginalityDetectionAdapter } from '@/lib/detection/adapters/originality';
 import { GPTZeroDetectionAdapter } from '@/lib/detection/adapters/gptzero';
+import { CompositeDetectionAdapter } from '@/lib/detection/composite';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -32,6 +33,8 @@ const ENV_KEYS = [
   'WINSTON_API_KEY',
   'ORIGINALITY_API_KEY',
   'GPTZERO_API_KEY',
+  'COPYLEAKS_EMAIL',
+  'COPYLEAKS_API_KEY',
 ];
 
 // ── Factory branch selection ──────────────────────────────────────────────────
@@ -235,5 +238,97 @@ describe('GPTZeroDetectionAdapter – stub throws FileProcessingError', () => {
       expect(err).toBeInstanceOf(FileProcessingError);
       expect((err as FileProcessingError).code).toBe('DETECTION_FAILED');
     }
+  });
+});
+
+// ── Factory: Copyleaks composite selection ────────────────────────────────────
+
+describe('createAnalysisDetectionAdapter – composite adapter selection with Copyleaks', () => {
+  let saved: Record<string, string | undefined>;
+
+  beforeEach(() => {
+    saved = saveEnv(ENV_KEYS);
+    for (const k of ENV_KEYS) {
+      delete process.env[k];
+    }
+  });
+
+  afterEach(() => {
+    restoreEnv(saved);
+  });
+
+  it('returns CompositeDetectionAdapter when sapling + copyleaks credentials are present', () => {
+    process.env.SAPLING_API_KEY = 'sapling-key';
+    process.env.COPYLEAKS_EMAIL = 'user@example.com';
+    process.env.COPYLEAKS_API_KEY = 'copyleaks-key';
+
+    const adapter = createAnalysisDetectionAdapter();
+
+    expect(adapter).toBeInstanceOf(CompositeDetectionAdapter);
+  });
+
+  it('returns SaplingDetectionAdapter (not composite) when sapling key present but no copyleaks', () => {
+    process.env.SAPLING_API_KEY = 'sapling-key';
+
+    const adapter = createAnalysisDetectionAdapter();
+
+    expect(adapter).toBeInstanceOf(SaplingDetectionAdapter);
+  });
+
+  it('passes copyleaksEmail and copyleaksApiKey from config to build composite', () => {
+    const adapter = createAnalysisDetectionAdapter({
+      provider: 'sapling',
+      apiKey: 'sapling-key',
+      copyleaksEmail: 'user@example.com',
+      copyleaksApiKey: 'copyleaks-key',
+    });
+
+    expect(adapter).toBeInstanceOf(CompositeDetectionAdapter);
+  });
+
+  it('returns SaplingDetectionAdapter when only copyleaksEmail provided (no apiKey)', () => {
+    process.env.SAPLING_API_KEY = 'sapling-key';
+    process.env.COPYLEAKS_EMAIL = 'user@example.com';
+    // COPYLEAKS_API_KEY intentionally absent
+
+    const adapter = createAnalysisDetectionAdapter();
+
+    expect(adapter).toBeInstanceOf(SaplingDetectionAdapter);
+  });
+
+  it('returns SaplingDetectionAdapter when only copyleaksApiKey provided (no email)', () => {
+    process.env.SAPLING_API_KEY = 'sapling-key';
+    process.env.COPYLEAKS_API_KEY = 'copyleaks-key';
+    // COPYLEAKS_EMAIL intentionally absent
+
+    const adapter = createAnalysisDetectionAdapter();
+
+    expect(adapter).toBeInstanceOf(SaplingDetectionAdapter);
+  });
+
+  it('returns CompositeDetectionAdapter when only copyleaks credentials present (no sapling key)', () => {
+    // SAPLING_API_KEY intentionally absent
+    process.env.COPYLEAKS_EMAIL = 'user@example.com';
+    process.env.COPYLEAKS_API_KEY = 'copyleaks-key';
+
+    const adapter = createAnalysisDetectionAdapter();
+
+    expect(adapter).toBeInstanceOf(CompositeDetectionAdapter);
+  });
+
+  it('copyleaks-only: returns adapter via config without any env vars', () => {
+    const adapter = createAnalysisDetectionAdapter({
+      provider: 'sapling',
+      copyleaksEmail: 'user@example.com',
+      copyleaksApiKey: 'copyleaks-key',
+    });
+
+    expect(adapter).toBeInstanceOf(CompositeDetectionAdapter);
+  });
+
+  it('throws when neither sapling nor copyleaks credentials are present', () => {
+    // All env keys deleted in beforeEach
+
+    expect(() => createAnalysisDetectionAdapter()).toThrow(FileProcessingError);
   });
 });

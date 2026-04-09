@@ -37,8 +37,10 @@ export function useSettings() {
     // Trim whitespace from API key values before saving
     const trimmed = {
       ...next,
-      llmApiKey: next.llmApiKey.trim(),
-      detectionApiKey: next.detectionApiKey.trim(),
+      llmApiKey: (next.llmApiKey ?? '').trim(),
+      detectionApiKey: (next.detectionApiKey ?? '').trim(),
+      copyleaksEmail: (next.copyleaksEmail ?? '').trim(),
+      copyleaksApiKey: (next.copyleaksApiKey ?? '').trim(),
     };
     // TODO(security): encrypt API keys before storing
     localStorage.setItem(LOCALSTORAGE_KEY, JSON.stringify(trimmed));
@@ -71,6 +73,12 @@ export function buildRequestHeaders(settings: AppSettings): HeadersInit {
   }
   if (settings.detectionApiKey) {
     headers['x-detection-api-key'] = settings.detectionApiKey;
+  }
+  if (settings.copyleaksEmail) {
+    headers['x-copyleaks-email'] = settings.copyleaksEmail;
+  }
+  if (settings.copyleaksApiKey) {
+    headers['x-copyleaks-api-key'] = settings.copyleaksApiKey;
   }
 
   return headers;

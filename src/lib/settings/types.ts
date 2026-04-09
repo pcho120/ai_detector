@@ -10,6 +10,8 @@ export interface AppSettings {
   llmApiKey: string;
   detectionProvider: 'sapling' | 'gptzero' | 'originality' | 'winston';
   detectionApiKey: string;
+  copyleaksEmail: string;
+  copyleaksApiKey: string;
 }
 
 export const DEFAULT_SETTINGS: AppSettings = {
@@ -17,6 +19,8 @@ export const DEFAULT_SETTINGS: AppSettings = {
   llmApiKey: '',
   detectionProvider: 'sapling',
   detectionApiKey: '',
+  copyleaksEmail: '',
+  copyleaksApiKey: '',
 };
 
 export const LOCALSTORAGE_KEY = 'ai_detector_settings';

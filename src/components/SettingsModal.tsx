@@ -125,6 +125,44 @@ export function SettingsModal({ isOpen, onClose, settings, saveSettings }: Setti
 
           <div className="border-t border-slate-100 my-6"></div>
 
+           {/* Copyleaks (Document Detection) */}
+           <div className="space-y-4">
+             <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500">Copyleaks (Document Detection)</h3>
+             <p className="text-xs text-slate-500">
+               Provide both email and API key to enable document-level detection. If provided alongside Sapling, Copyleaks handles the overall score and Sapling handles sentence analysis.
+             </p>
+            
+            <div className="space-y-2">
+              <label htmlFor="copyleaks-email" className="block text-sm font-medium text-slate-700">Email</label>
+               <input
+                 id="copyleaks-email"
+                 name="copyleaksEmail"
+                 type="email"
+                 placeholder="your@email.com"
+                 className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                 value={localSettings.copyleaksEmail}
+                 onChange={(e) => setLocalSettings(prev => ({ ...prev, copyleaksEmail: e.target.value }))}
+                 data-testid="copyleaks-email-input"
+               />
+            </div>
+
+            <div className="space-y-2">
+              <label htmlFor="copyleaks-key" className="block text-sm font-medium text-slate-700">API Key</label>
+               <input
+                 id="copyleaks-key"
+                 name="copyleaksApiKey"
+                 type="password"
+                 placeholder="Copyleaks API Key"
+                 className="w-full rounded-md border border-slate-300 px-3 py-2 text-sm placeholder:text-slate-400 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                 value={localSettings.copyleaksApiKey}
+                 onChange={(e) => setLocalSettings(prev => ({ ...prev, copyleaksApiKey: e.target.value }))}
+                 data-testid="copyleaks-api-key-input"
+               />
+            </div>
+          </div>
+
+          <div className="border-t border-slate-100 my-6"></div>
+
           {/* Coaching LLM */}
           <div className="space-y-4">
             <h3 className="text-sm font-semibold uppercase tracking-wider text-slate-500">Coaching LLM</h3>

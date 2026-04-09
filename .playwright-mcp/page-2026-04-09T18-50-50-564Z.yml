@@ -1,0 +1,107 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e5]:
+        - generic [ref=e6]:
+          - heading "AI Detect Essay Review" [level=1] [ref=e7]
+          - paragraph [ref=e8]: Upload your essay to analyze it for AI-generated phrasing.
+        - button "Open settings" [ref=e9] [cursor=pointer]:
+          - img [ref=e10]
+      - generic [ref=e15]:
+        - generic [ref=e16]:
+          - text: Upload essay file (.doc or .docx)
+          - button "Upload essay file (.doc or .docx)" [ref=e17]
+        - button "Submit for Review" [ref=e18] [cursor=pointer]
+      - generic [ref=e69]:
+        - generic [ref=e71]:
+          - generic [ref=e72]:
+            - heading "Voice Profile Setup" [level=2] [ref=e73]
+            - paragraph [ref=e74]: Define a writing style to use for rewrites. Select up to 2 presets, provide a writing sample, or both.
+          - generic [ref=e75]:
+            - generic [ref=e76]:
+              - generic [ref=e77]: Style Presets (max 2)
+              - generic [ref=e78]:
+                - button "academic" [ref=e79] [cursor=pointer]
+                - button "conversational" [ref=e80] [cursor=pointer]
+                - button "formal" [ref=e81] [cursor=pointer]
+                - button "narrative" [ref=e82] [cursor=pointer]
+                - button "technical" [ref=e83] [cursor=pointer]
+            - generic [ref=e84]:
+              - generic [ref=e85]: Writing Sample (Optional)
+              - textbox "Writing Sample (Optional)" [ref=e86]:
+                - /placeholder: Paste a sample of your writing here...
+            - button "Generate Profile" [ref=e87] [cursor=pointer]
+            - generic [ref=e88]:
+              - generic [ref=e141]: Your Voice Profile
+              - textbox "Your Voice Profile" [ref=e142]:
+                - /placeholder: Paste a previously copied profile here, or generate one above.
+                - text: The author's distinctive voice is characterized by a formal and academic tone that prioritizes clarity and precision. Their writing exhibits a strong reliance on evidence, employing data and citations to support claims, which enhances the credibility of the arguments presented. The sentence structure is typically complex yet well-organized, allowing for the development of nuanced ideas without sacrificing coherence. Vocabulary choice is sophisticated but accessible, striking a balance between technical terminology relevant to the subject matter and language that remains understandable to a broader audience. The author's style is marked by minimal hedging, reflecting confidence in their assertions and a commitment to presenting information in a straightforward manner. Overall, the voice is authoritative and analytical, aimed at fostering informed discourse.
+              - button "Copy for AI Tools" [ref=e144] [cursor=pointer]
+              - paragraph [ref=e145]: You can edit this profile directly or copy it to use in other AI tools. It will be automatically used when applying rewrite suggestions on this page.
+        - generic [ref=e91]:
+          - generic [ref=e92]:
+            - heading "Bulk Rewrite to Target Score" [level=2] [ref=e93]
+            - paragraph [ref=e94]: Automatically rewrite high-risk sentences to achieve your desired AI detection score (10-100%).
+          - generic [ref=e95]:
+            - generic [ref=e96]:
+              - generic [ref=e97]: Target Score (%)
+              - spinbutton "Target Score (%)" [ref=e98]
+            - button "Rewrite to Target" [disabled] [ref=e99]
+        - generic [ref=e102]:
+          - generic [ref=e103]:
+            - heading "Analysis Results" [level=2] [ref=e104]
+            - generic [ref=e105]:
+              - generic [ref=e106]: "Overall Score:"
+              - generic [ref=e107]: 100.0% AI
+          - generic [ref=e108]:
+            - generic "Low risk" [ref=e109] [cursor=pointer]:
+              - text: During this evaluation period, I continued working as a Data Analyst in the Quality Department at NOX US, with an expanded focus on data engineering, system optimization, and backend-oriented development in addition to data analysis.
+              - generic [ref=e110]: Low Risk
+            - generic "Low risk" [ref=e111] [cursor=pointer]:
+              - text: While my official role remains Data Analyst, my responsibilities have expanded to include system-level contributions such as backend support, database optimization, and data infrastructure improvements.
+              - generic [ref=e112]: Low Risk
+            - generic "Low risk" [ref=e113] [cursor=pointer]:
+              - text: My core responsibility remained analyzing product defect data to identify root causes and recommend corrective actions based on internal data patterns.
+              - generic [ref=e114]: Low Risk
+            - 'generic "High AI-like phrasing risk (Score: 88.9%)" [ref=e115] [cursor=pointer]':
+              - text: During this period, I improved my ability to work with larger and more complex datasets by developing more efficient data processing workflows using Python and database-integrated tools.
+              - generic [ref=e116]: High Risk
+            - generic "Low risk" [ref=e117] [cursor=pointer]:
+              - text: Compared to the previous evaluation period, I strengthened my technical proficiency in Python, SQL, Power BI, TypeScript, HTML, and CSS.
+              - generic [ref=e118]: Low Risk
+            - generic "Low risk" [ref=e119] [cursor=pointer]:
+              - text: I became more involved in writing queries, improving database structures, and enhancing data flow between systems, which allowed me to contribute beyond analysis into system-level improvements.
+              - generic [ref=e120]: Low Risk
+            - generic "Low risk" [ref=e121] [cursor=pointer]:
+              - text: I contributed to enhancing internal web-based applications that store, visualize, and export operational data.
+              - generic [ref=e122]: Low Risk
+            - generic "Low risk" [ref=e123] [cursor=pointer]:
+              - text: This included improving performance, data accessibility, and usability for both technical and non-technical users.
+              - generic [ref=e124]: Low Risk
+            - generic "Low risk" [ref=e125] [cursor=pointer]:
+              - text: I also worked on converting unstructured historical Excel data into a structured database, improving data consistency and long-term maintainability.
+              - generic [ref=e126]: Low Risk
+            - generic "Low risk" [ref=e127] [cursor=pointer]:
+              - text: Additionally, I supported IT-related functions such as equipment management, testing new systems, and troubleshooting technical issues.
+              - generic [ref=e128]: Low Risk
+            - generic "Low risk" [ref=e129] [cursor=pointer]:
+              - text: I participated in efforts to modernize equipment systems, including supporting IoT-related upgrades, which helped me better understand real-time data integration and system interactions.
+              - generic [ref=e130]: Low Risk
+            - generic "Low risk" [ref=e131] [cursor=pointer]:
+              - text: Throughout this period, I focused on improving scalability, efficiency, and usability of data systems.
+              - generic [ref=e132]: Low Risk
+            - generic "Low risk" [ref=e133] [cursor=pointer]:
+              - text: I developed a stronger understanding of backend infrastructure and system design, enabling me to contribute to data architecture and system integration efforts.
+              - generic [ref=e134]: Low Risk
+            - generic "Low risk" [ref=e135] [cursor=pointer]:
+              - text: There have been no major changes to the original objectives outlined in the training plan.
+              - generic [ref=e136]: Low Risk
+            - generic "Low risk" [ref=e137] [cursor=pointer]:
+              - text: However, my responsibilities have expanded in scope and technical depth, particularly in areas related to backend systems, data engineering, and system design.
+              - generic [ref=e138]: Low Risk
+            - generic "Low risk" [ref=e139] [cursor=pointer]:
+              - text: Overall, this evaluation period reflects significant growth in both technical capability and the ability to contribute to scalable, data-driven solutions that support organizational decision-making.
+              - generic [ref=e140]: Low Risk
+  - button "Open Next.js Dev Tools" [ref=e24] [cursor=pointer]:
+    - img [ref=e25]
+  - alert [ref=e28]

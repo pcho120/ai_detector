@@ -1,4 +1,6 @@
 import { SaplingDetectionAdapter } from '@/lib/detection/sapling';
+import { CopyleaksDetectionAdapter } from '@/lib/detection/copyleaks';
+import { CompositeDetectionAdapter } from '@/lib/detection/composite';
 import { WinstonDetectionAdapter } from '@/lib/detection/adapters/winston';
 import { OriginalityDetectionAdapter } from '@/lib/detection/adapters/originality';
 import { GPTZeroDetectionAdapter } from '@/lib/detection/adapters/gptzero';
@@ -13,6 +15,8 @@ import type { SentenceEntry } from '@/lib/suggestions/types';
 export function createAnalysisDetectionAdapter(config?: {
   provider?: string;
   apiKey?: string;
+  copyleaksEmail?: string;
+  copyleaksApiKey?: string;
 }): DetectionAdapter {
   const provider = (config?.provider ?? process.env.DETECTION_PROVIDER ?? 'sapling').toLowerCase();
 
@@ -30,16 +34,37 @@ export function createAnalysisDetectionAdapter(config?: {
     }
   }
 
+  // Resolve Copyleaks credentials (header/config → env var → undefined)
+  const copyleaksEmail = config?.copyleaksEmail || process.env.COPYLEAKS_EMAIL;
+  const copyleaksApiKey = config?.copyleaksApiKey || process.env.COPYLEAKS_API_KEY;
+  const hasCopyleaks = Boolean(copyleaksEmail && copyleaksApiKey);
+
   switch (provider) {
     case 'sapling': {
-      const apiKey = config?.apiKey ?? process.env.SAPLING_API_KEY;
-      if (!apiKey) {
+      const saplingApiKey = config?.apiKey ?? process.env.SAPLING_API_KEY;
+      const hasSapling = Boolean(saplingApiKey);
+
+      // Build whichever adapters are available and delegate to CompositeDetectionAdapter.
+      // It handles all four cases: both, sapling-only, copyleaks-only, none (throws).
+      const saplingAdapter = hasSapling
+        ? new SaplingDetectionAdapter(saplingApiKey!)
+        : undefined;
+      const copyleaksAdapter = hasCopyleaks
+        ? new CopyleaksDetectionAdapter({ email: copyleaksEmail!, apiKey: copyleaksApiKey! })
+        : undefined;
+
+      if (!hasSapling && !hasCopyleaks) {
         throw new FileProcessingError(
           'DETECTION_FAILED',
           'Detection service is not configured.',
         );
       }
-      return new SaplingDetectionAdapter(apiKey);
+
+      if (saplingAdapter && !copyleaksAdapter) {
+        return saplingAdapter;
+      }
+
+      return new CompositeDetectionAdapter({ sapling: saplingAdapter, copyleaks: copyleaksAdapter });
     }
 
     case 'winston': {

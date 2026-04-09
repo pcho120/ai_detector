@@ -46,6 +46,8 @@ describe('useSettings', () => {
       llmApiKey: 'sk-test-123',
       detectionProvider: 'sapling',
       detectionApiKey: 'sapling-key-456',
+      copyleaksEmail: '',
+      copyleaksApiKey: '',
     };
 
     act(() => {
@@ -64,6 +66,8 @@ describe('useSettings', () => {
       llmApiKey: 'sk-saved-789',
       detectionProvider: 'sapling',
       detectionApiKey: 'sapling-saved-key',
+      copyleaksEmail: '',
+      copyleaksApiKey: '',
     };
 
     localStorage.setItem(LOCALSTORAGE_KEY, JSON.stringify(savedSettings));
@@ -89,6 +93,8 @@ describe('useSettings', () => {
       llmApiKey: '  sk-with-spaces  ',
       detectionProvider: 'sapling',
       detectionApiKey: '  sapling-with-spaces  ',
+      copyleaksEmail: '',
+      copyleaksApiKey: '',
     };
 
     act(() => {
@@ -116,6 +122,8 @@ describe('useSettings', () => {
       llmApiKey: 'sk-updated',
       detectionProvider: 'sapling',
       detectionApiKey: 'sapling-updated',
+      copyleaksEmail: '',
+      copyleaksApiKey: '',
     };
 
     act(() => {
@@ -146,6 +154,8 @@ describe('buildRequestHeaders', () => {
       llmApiKey: 'sk-test-key',
       detectionProvider: 'sapling',
       detectionApiKey: 'sapling-test-key',
+      copyleaksEmail: '',
+      copyleaksApiKey: '',
     };
 
     const headers = buildRequestHeaders(settings) as Record<string, string>;
@@ -162,6 +172,8 @@ describe('buildRequestHeaders', () => {
       llmApiKey: '',
       detectionProvider: 'sapling',
       detectionApiKey: 'sapling-key',
+      copyleaksEmail: '',
+      copyleaksApiKey: '',
     };
 
     const headers = buildRequestHeaders(settings) as Record<string, string>;
@@ -187,6 +199,8 @@ describe('buildRequestHeaders', () => {
       llmApiKey: 'sk-anthropic',
       detectionProvider: 'gptzero',
       detectionApiKey: 'gptzero-key',
+      copyleaksEmail: '',
+      copyleaksApiKey: '',
     };
 
     const headers = buildRequestHeaders(settings);
