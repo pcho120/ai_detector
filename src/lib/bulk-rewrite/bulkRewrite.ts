@@ -5,7 +5,8 @@ import type { BulkRewriteRequest, BulkRewriteResult, BulkRewriteProgress } from 
 
 const MAX_ROUNDS = 3;
 const CONCURRENCY = 5;
-const ELIGIBLE_SCORE_FLOOR = 0.4;
+// Lowered to let more low/medium-score sentences participate in rewrite rounds.
+const ELIGIBLE_SCORE_FLOOR = 0.05;
 
 function normalizeTargetScorePercent(percent: number): number {
   if (!Number.isFinite(percent)) return 1;

@@ -14,35 +14,44 @@ export interface SuggestionAlternative {
   previewScore?: number;
 }
 
-const SYSTEM_PROMPT = `You are an academic writing coach helping students write more authentically.
-When given an AI-sounding sentence, respond with ONLY valid JSON in this exact shape:
+const SYSTEM_PROMPT = `You are a writing assistant that rewrites sentences to sound like they were written by a real person, not an AI.
+
+Respond with ONLY valid JSON in this exact shape:
 {"rewrite":"<full replacement sentence>","explanation":"<one concise sentence explaining the change>"}
+
 Rules:
-- rewrite must be a complete, grammatically correct replacement sentence, not a coaching hint.
+- rewrite must be a complete, grammatically correct replacement sentence.
+- Make the tone slightly informal but still appropriate for academic context.
+- Break any repetitive or predictable patterns from the original.
+- Avoid generic or vague wording — prefer specific, concrete language.
+- Add subtle variation in sentence length and flow.
+- Keep the core meaning intact.
 - Do NOT mention AI detection, evasion, or scores.
-- Keep the core meaning of the original sentence.
-- Write like a thoughtful undergraduate: use contractions when they fit, mix short and longer sentences, add concrete details instead of abstract filler, and keep the tone lightly informal with a bit of personality.
 - explanation must be one sentence, <= 120 characters.`;
 
-const MULTI_SYSTEM_PROMPT = `You are an academic writing coach helping students write more authentically.
-When given an AI-sounding sentence, respond with ONLY valid JSON in this exact shape:
+const MULTI_SYSTEM_PROMPT = `You are a writing assistant that rewrites sentences to sound like they were written by a real person, not an AI.
+
+Respond with ONLY valid JSON in this exact shape:
 {"alternatives":[{"rewrite":"<full replacement sentence>","explanation":"<one concise sentence>"},{"rewrite":"<full replacement sentence>","explanation":"<one concise sentence>"},{"rewrite":"<full replacement sentence>","explanation":"<one concise sentence>"}]}
+
 Rules:
-- Each rewrite must be a complete, grammatically correct replacement sentence, not a coaching hint.
-- Produce exactly 3 distinct alternatives with noticeably different phrasing approaches and sentence shapes.
+- Each rewrite must be a complete, grammatically correct replacement sentence.
+- Produce exactly 3 alternatives, each with noticeably different phrasing and sentence shape.
+- Make the tone slightly informal but still appropriate for academic context.
+- Break repetitive or predictable patterns — vary structure across all 3 alternatives.
+- Avoid generic or vague wording — use specific, concrete language.
+- Add subtle variation in sentence length and flow within each rewrite.
+- Use a slightly conversational style — not stiff or overly formal.
+- Keep the meaning but make it feel less "perfect" and more human.
 - Do NOT mention AI detection, evasion, or scores.
-- Keep the core meaning of the original sentence.
-- Write like a thoughtful undergraduate: use contractions when they fit, vary sentence length, favor concrete details over abstract language, and keep the tone lightly informal with a bit of personality.
 - Each explanation must be one sentence, <= 120 characters.`;
 
-function buildUserPrompt(sentence: string, score: number): string {
-  const riskLevel = score >= 0.85 ? 'high' : score >= 0.7 ? 'medium' : 'low';
-  return `Rewrite this ${riskLevel}-risk AI-sounding sentence:\n"${sentence}"`;
+function buildUserPrompt(sentence: string): string {
+  return `Rewrite the following sentence to sound like natural human writing:\n\n"${sentence}"`;
 }
 
-function buildMultiUserPrompt(sentence: string, score: number, voiceProfile?: string): string {
-  const riskLevel = score >= 0.85 ? 'high' : score >= 0.7 ? 'medium' : 'low';
-  const base = `Rewrite this ${riskLevel}-risk AI-sounding sentence with 3 distinct alternatives:\n"${sentence}"`;
+function buildMultiUserPrompt(sentence: string, voiceProfile?: string): string {
+  const base = `Rewrite the following sentence so it sounds like it was written by a real person, not an AI. Provide 3 distinct alternatives:\n\n"${sentence}"`;
 
   if (!voiceProfile) return base;
 
@@ -114,6 +123,38 @@ function parseMultiAlternativesPayload(raw: string): LlmRewritePayload[] | null 
   return null;
 }
 
+async function twoPassRewrite(
+  adapter: ReturnType<typeof createLlmAdapter>,
+  sentence: string,
+): Promise<LlmRewritePayload | null> {
+  const pass1Result = await adapter.complete({
+    systemPrompt: SYSTEM_PROMPT,
+    userPrompt: buildUserPrompt(sentence),
+    temperature: 0.7,
+    maxTokens: 256,
+  });
+  if (!pass1Result) return null;
+
+  const pass1Payload = parseRewritePayload(pass1Result.content);
+  if (!pass1Payload) return null;
+
+  const pass2Result = await adapter.complete({
+    systemPrompt: SYSTEM_PROMPT,
+    userPrompt: buildUserPrompt(pass1Payload.rewrite),
+    temperature: 0.85,
+    maxTokens: 256,
+  });
+
+  if (pass2Result) {
+    const pass2Payload = parseRewritePayload(pass2Result.content);
+    if (pass2Payload) {
+      return { rewrite: pass2Payload.rewrite, explanation: pass1Payload.explanation };
+    }
+  }
+
+  return pass1Payload;
+}
+
 export class LlmSuggestionService implements SuggestionService {
   private readonly apiKey: string | undefined;
 
@@ -130,22 +171,14 @@ export class LlmSuggestionService implements SuggestionService {
     const raw: Suggestion[] = [];
 
     for (const entry of sentences) {
-      const result = await adapter.complete({
-        systemPrompt: SYSTEM_PROMPT,
-        userPrompt: buildUserPrompt(entry.sentence, 0.5),
-        temperature: 0.4,
-        maxTokens: 256,
-      });
-      if (result) {
-        const payload = parseRewritePayload(result.content);
-        if (payload) {
-          raw.push({
-            sentence: entry.sentence,
-            rewrite: payload.rewrite,
-            explanation: payload.explanation,
-            sentenceIndex: entry.index,
-          });
-        }
+      const payload = await twoPassRewrite(adapter, entry.sentence);
+      if (payload) {
+        raw.push({
+          sentence: entry.sentence,
+          rewrite: payload.rewrite,
+          explanation: payload.explanation,
+          sentenceIndex: entry.index,
+        });
       }
     }
 
@@ -162,21 +195,13 @@ export async function generateSingleSuggestionWithProvider(
   apiKey: string | undefined,
   sentence: string,
   sentenceIndex: number,
-  score: number,
+  _score: number,
   provider?: string,
 ): Promise<Suggestion | null> {
   if (!apiKey) return null;
 
   const adapter = createLlmAdapter(apiKey, provider);
-  const result = await adapter.complete({
-    systemPrompt: SYSTEM_PROMPT,
-    userPrompt: buildUserPrompt(sentence, score),
-    temperature: 0.4,
-    maxTokens: 256,
-  });
-  if (!result) return null;
-
-  const payload = parseRewritePayload(result.content);
+  const payload = await twoPassRewrite(adapter, sentence);
   if (!payload) return null;
 
   const [filtered] = applyGuardrails([
@@ -214,7 +239,7 @@ export async function generateAlternativeSuggestions(
   apiKey: string | undefined,
   sentence: string,
   sentenceIndex: number,
-  score: number,
+  _score: number,
   voiceProfile?: string,
   provider?: string,
 ): Promise<SuggestionAlternative[] | null> {
@@ -224,7 +249,7 @@ export async function generateAlternativeSuggestions(
 
   const result = await adapter.completeMulti({
     systemPrompt: MULTI_SYSTEM_PROMPT,
-    userPrompt: buildMultiUserPrompt(sentence, score, voiceProfile),
+    userPrompt: buildMultiUserPrompt(sentence, voiceProfile),
     temperature: 0.7,
     maxTokens: 768,
   });
@@ -242,33 +267,53 @@ export async function generateAlternativeSuggestions(
 
   const safe = applyGuardrails(asSuggestions);
 
+  let finalSafe: typeof safe;
+
   if (safe.length >= 2) {
-    const trimmed = safe.slice(0, 3);
-    return trimmed.map((s) => ({ rewrite: s.rewrite, explanation: s.explanation }));
+    finalSafe = safe.slice(0, 3);
+  } else {
+    const recoveryResult = await adapter.completeMulti({
+      systemPrompt: MULTI_SYSTEM_PROMPT,
+      userPrompt: buildMultiUserPrompt(sentence, voiceProfile),
+      temperature: 0.7,
+      maxTokens: 768,
+    });
+    if (!recoveryResult) return null;
+
+    const recoveryPayloads = parseMultiAlternativesPayload(recoveryResult.content);
+    if (!recoveryPayloads || recoveryPayloads.length === 0) return null;
+
+    const combined = deduplicateAlternativesByRewrite([...payloads, ...recoveryPayloads]);
+    const combinedSuggestions = combined.map((p) => ({
+      sentence,
+      rewrite: p.rewrite,
+      explanation: p.explanation,
+      sentenceIndex,
+    }));
+
+    const combinedSafe = applyGuardrails(combinedSuggestions);
+    if (combinedSafe.length < 2) return null;
+
+    finalSafe = combinedSafe.slice(0, 3);
   }
 
-  const recoveryResult = await adapter.completeMulti({
-    systemPrompt: MULTI_SYSTEM_PROMPT,
-    userPrompt: buildMultiUserPrompt(sentence, score, voiceProfile),
-    temperature: 0.7,
-    maxTokens: 768,
-  });
-  if (!recoveryResult) return null;
+  const refined = await Promise.all(
+    finalSafe.map(async (s) => {
+      const pass2Result = await adapter.complete({
+        systemPrompt: SYSTEM_PROMPT,
+        userPrompt: buildUserPrompt(s.rewrite),
+        temperature: 0.85,
+        maxTokens: 256,
+      });
+      if (pass2Result) {
+        const pass2Payload = parseRewritePayload(pass2Result.content);
+        if (pass2Payload) {
+          return { rewrite: pass2Payload.rewrite, explanation: s.explanation };
+        }
+      }
+      return { rewrite: s.rewrite, explanation: s.explanation };
+    }),
+  );
 
-  const recoveryPayloads = parseMultiAlternativesPayload(recoveryResult.content);
-  if (!recoveryPayloads || recoveryPayloads.length === 0) return null;
-
-  const combined = deduplicateAlternativesByRewrite([...payloads, ...recoveryPayloads]);
-  const combinedSuggestions = combined.map((p) => ({
-    sentence,
-    rewrite: p.rewrite,
-    explanation: p.explanation,
-    sentenceIndex,
-  }));
-
-  const combinedSafe = applyGuardrails(combinedSuggestions);
-  if (combinedSafe.length < 2) return null;
-
-  const trimmed = combinedSafe.slice(0, 3);
-  return trimmed.map((s) => ({ rewrite: s.rewrite, explanation: s.explanation }));
+  return refined;
 }

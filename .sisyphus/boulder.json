@@ -1,31 +1,37 @@
 {
-  "active_plan": "C:\\Users\\pcho\\Documents\\GitHub\\ai_detector\\.sisyphus\\plans\\score-display-fix.md",
-  "started_at": "2026-04-10T12:34:35.376Z",
+  "active_plan": "/home/paul/dev/personal/projects/ai_detector/.sisyphus/plans/bulk-rewrite-score-reduction.md",
+  "started_at": "2026-04-10T17:08:40.916Z",
   "session_ids": [
-    "ses_288e5d930ffeEDtJ6iljZUVMCy"
+    "ses_287fe17a5ffeIon02hzYMLl2s6",
+    "ses_28796d8f7ffet9Jki0mbgEfpQj",
+    "ses_28796d6f5ffe9FZ95f7LwAyTbd",
+    "ses_28796d6f0ffeINkZHGgvLCP4Az"
   ],
   "session_origins": {
-    "ses_288e5d930ffeEDtJ6iljZUVMCy": "direct"
+    "ses_287fe17a5ffeIon02hzYMLl2s6": "direct",
+    "ses_28796d8f7ffet9Jki0mbgEfpQj": "appended",
+    "ses_28796d6f5ffe9FZ95f7LwAyTbd": "appended",
+    "ses_28796d6f0ffeINkZHGgvLCP4Az": "appended"
   },
-  "plan_name": "score-display-fix",
+  "plan_name": "bulk-rewrite-score-reduction",
   "agent": "atlas",
   "task_sessions": {
     "todo:1": {
       "task_key": "todo:1",
       "task_label": "1",
-      "task_title": "Update ReviewPanel score badge to show revised score in-place",
-      "session_id": "ses_2889b178effeYD2GDLyUUAN5uc",
+      "task_title": "Lower `ELIGIBLE_SCORE_FLOOR` and update the related test",
+      "session_id": "ses_287a11437ffeaxwn8H5ahS40qV",
       "agent": "Sisyphus-Junior",
       "category": "quick",
-      "updated_at": "2026-04-10T12:37:26.933Z"
+      "updated_at": "2026-04-10T17:11:49.645Z"
     },
     "final-wave:f1": {
       "task_key": "final-wave:f1",
       "task_label": "F1",
       "task_title": "**Plan Compliance Audit** — `oracle`",
-      "session_id": "ses_2888c90e1ffeu21mr6yH0ysObB",
+      "session_id": "ses_2879bf87effe1pFggubPKSIQ5V",
       "agent": "oracle",
-      "updated_at": "2026-04-10T12:56:35.751Z"
+      "updated_at": "2026-04-10T17:16:41.383Z"
     }
   }
 }

@@ -349,16 +349,16 @@ describe('executeBulkRewrite – prioritization', () => {
     expect(callOrder.indexOf(1)).toBeLessThan(callOrder.indexOf(2));
   });
 
-  it('excludes sentences with score below ELIGIBLE_SCORE_FLOOR (0.4)', async () => {
+  it('excludes sentences with score below ELIGIBLE_SCORE_FLOOR (0.05)', async () => {
     mockAnalyzeText
       .mockResolvedValueOnce(
         makeAnalysisResult(0.9, [
-          { sentence: 'Below floor.', score: 0.3 },
-          { sentence: 'Above floor.', score: 0.8 },
+          { sentence: 'Below floor.', score: 0.03 },
+          { sentence: 'At floor.', score: 0.05 },
         ]),
       )
       .mockResolvedValueOnce(makeAnalysisResult(0.2, [
-        { sentence: 'Below floor.', score: 0.3 },
+        { sentence: 'Below floor.', score: 0.03 },
         { sentence: 'Rewritten.', score: 0.1 },
       ]));
 
@@ -367,12 +367,11 @@ describe('executeBulkRewrite – prioritization', () => {
     await executeBulkRewrite(makeRequest({
       targetScore: 30,
       sentences: [
-        makeSentence('Below floor.', 0.3, 0),
-        makeSentence('Above floor.', 0.8, 1),
+        makeSentence('Below floor.', 0.03, 0),
+        makeSentence('At floor.', 0.05, 1),
       ],
     }));
 
-    // Only the above-floor sentence should have been passed to generateSingleSuggestion
     const calledIndices = mockGenerateSingleSuggestion.mock.calls.map((c) => c[2]);
     expect(calledIndices).not.toContain(0);
     expect(calledIndices).toContain(1);
@@ -461,13 +460,13 @@ describe('executeBulkRewrite – no candidates break', () => {
   it('exits the loop early if no candidates are eligible (all below floor)', async () => {
     mockAnalyzeText.mockResolvedValueOnce(
       makeAnalysisResult(0.9, [
-        { sentence: 'Low score sentence.', score: 0.2 },
+        { sentence: 'Low score sentence.', score: 0.03 },
       ]),
     );
 
     const result = await executeBulkRewrite(makeRequest({
       targetScore: 10,
-      sentences: [makeSentence('Low score sentence.', 0.2, 0)],
+      sentences: [makeSentence('Low score sentence.', 0.03, 0)],
     }));
 
     expect(result.iterations).toBe(0);
