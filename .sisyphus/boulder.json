@@ -1,64 +1,31 @@
 {
-  "active_plan": "C:\\Users\\pcho\\Documents\\GitHub\\ai_detector\\.sisyphus\\plans\\claude-adapter.md",
-  "started_at": "2026-04-09T11:51:09.473Z",
+  "active_plan": "C:\\Users\\pcho\\Documents\\GitHub\\ai_detector\\.sisyphus\\plans\\score-display-fix.md",
+  "started_at": "2026-04-10T12:34:35.376Z",
   "session_ids": [
-    "ses_29136f8c1ffelWRmZm6FqUHc2h",
-    "ses_28dea4eceffeiZ763IDHIZqYqY",
-    "ses_28dea4f16ffefMtzNGL0HZvPPo",
-    "ses_28dea4efeffe7R1nOAEqToLh5j",
-    "ses_28dde735dffePnS6n1CzKeGIbu",
-    "ses_28dde7359ffeaSX4AXp6CbxXsh",
-    "ses_28dde733dffeEyO4eqWlxdGBfi",
-    "ses_28dde733cffeidibSSAs6My8aP",
-    "ses_28cceb4f0ffe7UjtpJm3ym2QB9",
-    "ses_28cceb094ffeRQkfe3EhpjPwye",
-    "ses_28cceb084ffecIUC5ky8DldA12",
-    "ses_28cceb083ffeun16hliYjFrsXi",
-    "ses_28c94fb38ffeAicBmRzI8OVfPB"
+    "ses_288e5d930ffeEDtJ6iljZUVMCy"
   ],
   "session_origins": {
-    "ses_29136f8c1ffelWRmZm6FqUHc2h": "direct",
-    "ses_28dea4eceffeiZ763IDHIZqYqY": "appended",
-    "ses_28dea4f16ffefMtzNGL0HZvPPo": "appended",
-    "ses_28dea4efeffe7R1nOAEqToLh5j": "appended",
-    "ses_28dde735dffePnS6n1CzKeGIbu": "appended",
-    "ses_28dde7359ffeaSX4AXp6CbxXsh": "appended",
-    "ses_28dde733dffeEyO4eqWlxdGBfi": "appended",
-    "ses_28dde733cffeidibSSAs6My8aP": "appended",
-    "ses_28cceb4f0ffe7UjtpJm3ym2QB9": "appended",
-    "ses_28cceb094ffeRQkfe3EhpjPwye": "appended",
-    "ses_28cceb084ffecIUC5ky8DldA12": "appended",
-    "ses_28cceb083ffeun16hliYjFrsXi": "appended",
-    "ses_28c94fb38ffeAicBmRzI8OVfPB": "direct"
+    "ses_288e5d930ffeEDtJ6iljZUVMCy": "direct"
   },
-  "plan_name": "claude-adapter",
+  "plan_name": "score-display-fix",
   "agent": "atlas",
   "task_sessions": {
     "todo:1": {
       "task_key": "todo:1",
       "task_label": "1",
-      "task_title": "Implement `ClaudeLlmAdapter` with real Anthropic SDK calls",
-      "session_id": "ses_28de77e51ffeJZgl40rUK91B5I",
+      "task_title": "Update ReviewPanel score badge to show revised score in-place",
+      "session_id": "ses_2889b178effeYD2GDLyUUAN5uc",
       "agent": "Sisyphus-Junior",
       "category": "quick",
-      "updated_at": "2026-04-09T11:55:45.939Z"
-    },
-    "todo:2": {
-      "task_key": "todo:2",
-      "task_label": "2",
-      "task_title": "Replace stub test block with real behavior tests",
-      "session_id": "ses_28de5a5b0ffe0H2T9ZCTZOhz2C",
-      "agent": "Sisyphus-Junior",
-      "category": "quick",
-      "updated_at": "2026-04-09T11:59:07.895Z"
+      "updated_at": "2026-04-10T12:37:26.933Z"
     },
     "final-wave:f1": {
       "task_key": "final-wave:f1",
       "task_label": "F1",
       "task_title": "**Plan Compliance Audit** — `oracle`",
-      "session_id": "ses_28cceb4f0ffe7UjtpJm3ym2QB9",
+      "session_id": "ses_2888c90e1ffeu21mr6yH0ysObB",
       "agent": "oracle",
-      "updated_at": "2026-04-09T17:01:44.920Z"
+      "updated_at": "2026-04-10T12:56:35.751Z"
     }
   }
 }

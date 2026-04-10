@@ -1,0 +1,141 @@
+
+> ai-detector@0.1.0 dev
+> next dev --port 3105
+
+ ⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of C:\Users\pcho\package-lock.json as the root directory.
+ To silence this warning, set `outputFileTracingRoot` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/output#caveats for more information.
+ Detected additional lockfiles: 
+   * C:\Users\pcho\Documents\GitHub\ai_detector\package-lock.json
+
+   ▲ Next.js 15.5.14
+   - Local:        http://localhost:3105
+   - Network:      http://172.31.10.143:3105
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 2.3s
+ ○ Compiling / ...
+ ✓ Compiled / in 1221ms (551 modules)
+ HEAD / 200 in 1813ms
+ GET / 200 in 140ms
+ ⚠ Cross origin request detected from 127.0.0.1 to /_next/* resource. In a future major version of Next.js, you will need to explicitly configure "allowedDevOrigins" in next.config to allow this.
+Read more: https://nextjs.org/docs/app/api-reference/config/next-config-js/allowedDevOrigins
+ ○ Compiling /api/analyze ...
+ ✓ Compiled /api/analyze in 1252ms (972 modules)
+ POST /api/analyze 200 in 2135ms
+ ○ Compiling /api/suggestions ...
+ ✓ Compiled /api/suggestions in 665ms (1040 modules)
+ POST /api/suggestions 200 in 12606ms
+ ✓ Compiled /api/analyze/revised in 326ms (1042 modules)
+ POST /api/analyze/revised 200 in 692ms
+ ✓ Compiled in 1742ms (600 modules)
+ GET / 200 in 228ms
+ ✓ Compiled in 449ms (600 modules)
+ GET / 200 in 179ms
+ ✓ Compiled in 338ms (600 modules)
+ GET / 200 in 141ms
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename 'C:\Users\pcho\Documents\GitHub\ai_detector\.next\cache\webpack\client-development\12.pack.gz_' -> 'C:\Users\pcho\Documents\GitHub\ai_detector\.next\cache\webpack\client-development\12.pack.gz'
+ GET / 200 in 266ms
+ ✓ Compiled /api/analyze in 174ms (743 modules)
+ POST /api/analyze 200 in 922ms
+ ○ Compiling /api/suggestions ...
+ ✓ Compiled /api/suggestions in 707ms (811 modules)
+ POST /api/suggestions 200 in 3726ms
+ ✓ Compiled /api/analyze/revised in 171ms (813 modules)
+ POST /api/analyze/revised 200 in 406ms
+ ⨯ Error: Cannot find module './331.js'
+Require stack:
+- C:\Users\pcho\Documents\GitHub\ai_detector\.next\server\webpack-runtime.js
+- C:\Users\pcho\Documents\GitHub\ai_detector\.next\server\app\api\analyze\revised\route.js
+- C:\Users\pcho\Documents\GitHub\ai_detector\node_modules\next\dist\server\require.js
+- C:\Users\pcho\Documents\GitHub\ai_detector\node_modules\next\dist\server\load-components.js
+- C:\Users\pcho\Documents\GitHub\ai_detector\node_modules\next\dist\build\utils.js
+- C:\Users\pcho\Documents\GitHub\ai_detector\node_modules\next\dist\build\swc\options.js
+- C:\Users\pcho\Documents\GitHub\ai_detector\node_modules\next\dist\build\swc\index.js
+- C:\Users\pcho\Documents\GitHub\ai_detector\node_modules\next\dist\build\analysis\parse-module.js
+- C:\Users\pcho\Documents\GitHub\ai_detector\node_modules\next\dist\build\analysis\get-page-static-info.js
+- C:\Users\pcho\Documents\GitHub\ai_detector\node_modules\next\dist\server\lib\router-utils\setup-dev-bundler.js
+- C:\Users\pcho\Documents\GitHub\ai_detector\node_modules\next\dist\server\lib\router-server.js
+- C:\Users\pcho\Documents\GitHub\ai_detector\node_modules\next\dist\server\lib\start-server.js
+    at <unknown> (C:\Users\pcho\Documents\GitHub\ai_detector\.next\server\app\page.js:2:45677)
+    at Object.<anonymous> (C:\Users\pcho\Documents\GitHub\ai_detector\.next\server\app\page.js:2:45727) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array],
+  page: '/'
+}
+ ○ Compiling /_error ...
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ ✓ Compiled /_error in 2.9s (898 modules)
+ ⨯ Error: Cannot find module './331.js'
+Require stack:
+- C:\Users\pcho\Documents\GitHub\ai_detector\.next\server\webpack-runtime.js
+- C:\Users\pcho\Documents\GitHub\ai_detector\.next\server\pages\_document.js
+- C:\Users\pcho\Documents\GitHub\ai_detector\node_modules\next\dist\server\require.js
+- C:\Users\pcho\Documents\GitHub\ai_detector\node_modules\next\dist\server\load-components.js
+- C:\Users\pcho\Documents\GitHub\ai_detector\node_modules\next\dist\build\utils.js
+- C:\Users\pcho\Documents\GitHub\ai_detector\node_modules\next\dist\build\swc\options.js
+- C:\Users\pcho\Documents\GitHub\ai_detector\node_modules\next\dist\build\swc\index.js
+- C:\Users\pcho\Documents\GitHub\ai_detector\node_modules\next\dist\build\analysis\parse-module.js
+- C:\Users\pcho\Documents\GitHub\ai_detector\node_modules\next\dist\build\analysis\get-page-static-info.js
+- C:\Users\pcho\Documents\GitHub\ai_detector\node_modules\next\dist\server\lib\router-utils\setup-dev-bundler.js
+- C:\Users\pcho\Documents\GitHub\ai_detector\node_modules\next\dist\server\lib\router-server.js
+- C:\Users\pcho\Documents\GitHub\ai_detector\node_modules\next\dist\server\lib\start-server.js
+    at <unknown> (C:\Users\pcho\Documents\GitHub\ai_detector\.next\server\app\page.js:2:45677)
+    at Object.<anonymous> (C:\Users\pcho\Documents\GitHub\ai_detector\.next\server\app\page.js:2:45727) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array],
+  page: '/'
+}
+ ⨯ Error: Cannot find module './331.js'
+Require stack:
+- C:\Users\pcho\Documents\GitHub\ai_detector\.next\server\webpack-runtime.js
+- C:\Users\pcho\Documents\GitHub\ai_detector\.next\server\pages\_document.js
+- C:\Users\pcho\Documents\GitHub\ai_detector\node_modules\next\dist\server\require.js
+- C:\Users\pcho\Documents\GitHub\ai_detector\node_modules\next\dist\server\load-components.js
+- C:\Users\pcho\Documents\GitHub\ai_detector\node_modules\next\dist\build\utils.js
+- C:\Users\pcho\Documents\GitHub\ai_detector\node_modules\next\dist\build\swc\options.js
+- C:\Users\pcho\Documents\GitHub\ai_detector\node_modules\next\dist\build\swc\index.js
+- C:\Users\pcho\Documents\GitHub\ai_detector\node_modules\next\dist\build\analysis\parse-module.js
+- C:\Users\pcho\Documents\GitHub\ai_detector\node_modules\next\dist\build\analysis\get-page-static-info.js
+- C:\Users\pcho\Documents\GitHub\ai_detector\node_modules\next\dist\server\lib\router-utils\setup-dev-bundler.js
+- C:\Users\pcho\Documents\GitHub\ai_detector\node_modules\next\dist\server\lib\router-server.js
+- C:\Users\pcho\Documents\GitHub\ai_detector\node_modules\next\dist\server\lib\start-server.js
+    at <unknown> (C:\Users\pcho\Documents\GitHub\ai_detector\.next\server\app\page.js:2:45677)
+    at Object.<anonymous> (C:\Users\pcho\Documents\GitHub\ai_detector\.next\server\app\page.js:2:45727) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array],
+  page: '/'
+}
+ GET / 500 in 3821ms
+ GET / 500 in 1883ms
+ GET / 500 in 1943ms
+ ⨯ Error: Cannot find module './331.js'
+Require stack:
+- C:\Users\pcho\Documents\GitHub\ai_detector\.next\server\webpack-runtime.js
+- C:\Users\pcho\Documents\GitHub\ai_detector\.next\server\pages\_document.js
+- C:\Users\pcho\Documents\GitHub\ai_detector\node_modules\next\dist\server\require.js
+- C:\Users\pcho\Documents\GitHub\ai_detector\node_modules\next\dist\server\load-components.js
+- C:\Users\pcho\Documents\GitHub\ai_detector\node_modules\next\dist\build\utils.js
+- C:\Users\pcho\Documents\GitHub\ai_detector\node_modules\next\dist\build\swc\options.js
+- C:\Users\pcho\Documents\GitHub\ai_detector\node_modules\next\dist\build\swc\index.js
+- C:\Users\pcho\Documents\GitHub\ai_detector\node_modules\next\dist\build\analysis\parse-module.js
+- C:\Users\pcho\Documents\GitHub\ai_detector\node_modules\next\dist\build\analysis\get-page-static-info.js
+- C:\Users\pcho\Documents\GitHub\ai_detector\node_modules\next\dist\server\lib\router-utils\setup-dev-bundler.js
+- C:\Users\pcho\Documents\GitHub\ai_detector\node_modules\next\dist\server\lib\router-server.js
+- C:\Users\pcho\Documents\GitHub\ai_detector\node_modules\next\dist\server\lib\start-server.js
+    at <unknown> (C:\Users\pcho\Documents\GitHub\ai_detector\.next\server\app\page.js:2:45677)
+    at Object.<anonymous> (C:\Users\pcho\Documents\GitHub\ai_detector\.next\server\app\page.js:2:45727) {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array],
+  page: '/'
+}
+ GET / 500 in 265ms
+ GET / 200 in 429ms
+ ✓ Compiled /api/analyze in 339ms (937 modules)
+ POST /api/analyze 200 in 1195ms
+ ✓ Compiled /api/suggestions in 213ms (1005 modules)
+ POST /api/suggestions 200 in 10335ms
+ ✓ Compiled /api/analyze/revised in 344ms (1007 modules)
+ POST /api/analyze/revised 200 in 569ms

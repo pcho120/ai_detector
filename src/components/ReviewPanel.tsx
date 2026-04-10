@@ -298,15 +298,48 @@ export function ReviewPanel({ result, revisedState, voiceProfile, settings }: Re
     return elements;
   };
 
+  // Determine revised score display state
+  const revisedLoading = revisedState?.state.revisedLoading ?? false;
+  const revisedResult = revisedState?.state.revisedResult ?? null;
+  
+  // Compare displayed one-decimal percentage strings to prevent showing duplicate values
+  const originalDisplayed = (score * 100).toFixed(1);
+  const revisedDisplayed = revisedResult ? (revisedResult.score * 100).toFixed(1) : null;
+  const scoresDiffer = revisedResult !== null && revisedDisplayed !== originalDisplayed;
+
   return (
     <div className="flex flex-col gap-6" data-testid="review-panel">
       <div className="flex items-center justify-between border-b pb-4">
         <h2 className="text-xl font-semibold">Analysis Results</h2>
         <div className="flex items-center gap-2">
           <span className="text-sm font-medium text-slate-500">Overall Score:</span>
-          <span className={`text-lg font-bold ${score >= 0.7 ? 'text-red-600' : score >= 0.4 ? 'text-orange-500' : 'text-green-600'}`}>
-            {(score * 100).toFixed(1)}% AI
-          </span>
+          
+          {revisedLoading ? (
+            <span data-testid="score-loading-spinner" aria-label="Re-analyzing score…" className="animate-spin h-5 w-5 border-2 border-slate-300 border-t-slate-600 rounded-full inline-block" />
+          ) : scoresDiffer ? (
+            <div className="flex items-center gap-2">
+              <span 
+                className="text-lg font-bold line-through text-slate-400"
+                data-testid="original-overall-score"
+              >
+                {originalDisplayed}% AI
+              </span>
+              <span>→</span>
+              <span 
+                className={`text-lg font-bold ${revisedResult.score >= 0.7 ? 'text-red-600' : revisedResult.score >= 0.4 ? 'text-orange-500' : 'text-green-600'}`}
+                data-testid="revised-score-inline"
+              >
+                {revisedDisplayed}% AI
+              </span>
+            </div>
+          ) : (
+            <span 
+              className={`text-lg font-bold ${score >= 0.7 ? 'text-red-600' : score >= 0.4 ? 'text-orange-500' : 'text-green-600'}`}
+              data-testid="original-overall-score"
+            >
+              {originalDisplayed}% AI
+            </span>
+          )}
         </div>
       </div>
 

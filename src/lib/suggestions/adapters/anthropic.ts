@@ -4,7 +4,7 @@ import type { LlmAdapter, LlmCompletionRequest, LlmCompletionResponse } from '..
 /**
  * Anthropic Claude LLM adapter implementation.
  *
- * Handles communication with Anthropic's messages API (claude-3-5-haiku-20241022).
+ * Handles communication with Anthropic's messages API (claude-haiku-4-5-20251001).
  * All network/API failures and missing content are surfaced as `null` — callers decide
  * how to handle them.
  */
@@ -20,7 +20,7 @@ export class ClaudeLlmAdapter implements LlmAdapter {
   async complete(request: LlmCompletionRequest): Promise<LlmCompletionResponse | null> {
     try {
       const response = await this.client.messages.create({
-        model: 'claude-3-5-haiku-20241022',
+        model: 'claude-haiku-4-5-20251001',
         max_tokens: request.maxTokens,
         temperature: Math.min(request.temperature, 1.0),
         system: request.systemPrompt,

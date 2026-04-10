@@ -1,0 +1,119 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e5]:
+        - generic [ref=e6]:
+          - heading "AI Detect Essay Review" [level=1] [ref=e7]
+          - paragraph [ref=e8]: Upload your essay to analyze it for AI-generated phrasing.
+        - button "Open settings" [ref=e9] [cursor=pointer]:
+          - img [ref=e10]
+      - generic [ref=e15]:
+        - generic [ref=e16]:
+          - text: Upload essay file (.doc or .docx)
+          - button "Upload essay file (.doc or .docx)" [ref=e17]
+        - button "Submit for Review" [ref=e30] [cursor=pointer]
+      - generic [ref=e33]:
+        - generic [ref=e35]:
+          - generic [ref=e36]:
+            - heading "Voice Profile Setup" [level=2] [ref=e37]
+            - paragraph [ref=e38]: Define a writing style to use for rewrites. Select up to 2 presets, provide a writing sample, or both.
+          - generic [ref=e39]:
+            - generic [ref=e40]:
+              - generic [ref=e41]: Style Presets (max 2)
+              - generic [ref=e42]:
+                - button "academic" [ref=e43] [cursor=pointer]
+                - button "conversational" [ref=e44] [cursor=pointer]
+                - button "formal" [ref=e45] [cursor=pointer]
+                - button "narrative" [ref=e46] [cursor=pointer]
+                - button "technical" [ref=e47] [cursor=pointer]
+            - generic [ref=e48]:
+              - generic [ref=e49]: Writing Sample (Optional)
+              - textbox "Writing Sample (Optional)" [ref=e50]:
+                - /placeholder: Paste a sample of your writing here...
+            - button "Generate Profile" [disabled] [ref=e51]
+            - button "I already have a profile!" [ref=e53] [cursor=pointer]
+        - generic [ref=e55]:
+          - generic [ref=e56]:
+            - heading "Bulk Rewrite to Target Score" [level=2] [ref=e57]
+            - paragraph [ref=e58]: Automatically rewrite high-risk sentences to achieve your desired AI detection score (10-100%).
+          - generic [ref=e59]:
+            - generic [ref=e60]:
+              - generic [ref=e61]: Target Score (%)
+              - spinbutton "Target Score (%)" [ref=e62]
+            - button "Rewrite to Target" [disabled] [ref=e63]
+        - generic [ref=e66]:
+          - generic [ref=e67]:
+            - heading "Analysis Results" [level=2] [ref=e68]
+            - generic [ref=e69]:
+              - generic [ref=e70]: "Overall Score:"
+              - generic [ref=e71]: 1.1% AI
+          - generic [ref=e72]:
+            - generic "Low risk" [ref=e73] [cursor=pointer]:
+              - text: Several AI detector APIs are suitable for academic papers, research, and long-form content.
+              - generic [ref=e74]: Low Risk
+            - generic "Low risk" [ref=e75] [cursor=pointer]:
+              - text: These tools offer APIs for detecting content from ChatGPT, Claude, Gemini, and other large language models (LLMs).
+              - generic [ref=e76]: Low Risk
+            - 'generic "High AI-like phrasing risk (Score: 99.9%)" [ref=e77] [cursor=pointer]':
+              - text: "[1, 2"
+              - generic [ref=e78]: High Risk
+            - generic "Low risk" [ref=e79] [cursor=pointer]:
+              - text: "] Top AI Detector APIs for Papers"
+              - generic [ref=e80]: Low Risk
+            - generic "Low risk" [ref=e81] [cursor=pointer]:
+              - text: "GPTZero: It is accurate, especially for academics, with 99% accuracy in tests."
+              - generic [ref=e82]: Low Risk
+            - generic "Low risk" [ref=e83] [cursor=pointer]:
+              - text: It offers sentence-level highlighting and "mixed" content detection.
+              - generic [ref=e84]: Low Risk
+            - generic "Low risk" [ref=e85] [cursor=pointer]:
+              - text: "Copyleaks: It has 99% accuracy and focuses on academic integrity."
+              - generic [ref=e86]: Low Risk
+            - generic "Low risk" [ref=e87] [cursor=pointer]:
+              - text: It detects AI in over 30 languages.
+              - generic [ref=e88]: Low Risk
+            - generic "Low risk" [ref=e89] [cursor=pointer]:
+              - text: It provides insights such as AI phrases and source matches.
+              - generic [ref=e90]: Low Risk
+            - generic "Low risk" [ref=e91] [cursor=pointer]:
+              - text: "Winston AI: It detects AI-generated content (including OCR for scanned papers) with roughly 95% accuracy."
+              - generic [ref=e92]: Low Risk
+            - 'generic "High AI-like phrasing risk (Score: 98.4%)" [ref=e93] [cursor=pointer]':
+              - text: It offers an easy-to-use API.
+              - generic [ref=e94]: High Risk
+            - generic "Low risk" [ref=e95] [cursor=pointer]:
+              - text: "Originality.ai: It combines AI detection, plagiarism checking, and readability analysis."
+              - generic [ref=e96]: Low Risk
+            - generic "Low risk" [ref=e97] [cursor=pointer]:
+              - text: "Paperpal: It is built for academics, trained on scientific writing, and designed to detect AI in manuscripts, essays, and theses."
+              - generic [ref=e98]: Low Risk
+            - 'generic "High AI-like phrasing risk (Score: 100.0%)" [ref=e99] [cursor=pointer]':
+              - text: "[1, 2, 3, 4, 5, 6, 7]"
+              - generic [ref=e100]: High Risk
+            - generic "Low risk" [ref=e101] [cursor=pointer]:
+              - text: Key Features of Top APIs
+              - generic [ref=e102]: Low Risk
+            - generic "Low risk" [ref=e103] [cursor=pointer]:
+              - text: "Sentence-Level Detection: It shows which parts of the paper are likely generated by AI."
+              - generic [ref=e104]: Low Risk
+            - generic "Low risk" [ref=e105] [cursor=pointer]:
+              - text: "Multilingual Support: Copyleaks and others support detection in multiple languages."
+              - generic [ref=e106]: Low Risk
+            - generic "Low risk" [ref=e107] [cursor=pointer]:
+              - text: "Document Upload: It supports file formats like PDF and DOCX for entire papers."
+              - generic [ref=e108]: Low Risk
+            - generic "Low risk" [ref=e109] [cursor=pointer]:
+              - text: "Batch Scanning: It allows multiple files to be processed at once."
+              - generic [ref=e110]: Low Risk
+            - text: "[1, 2, 3, 4"
+            - generic "Low risk" [ref=e111] [cursor=pointer]:
+              - text: "] Integration and PricingMost of these services (Copyleaks, Winston AI, GPTZero) offer REST APIs with documentation and SDKs for programming languages"
+              - generic [ref=e112]: Low Risk
+            - text: .
+            - generic "Low risk" [ref=e113] [cursor=pointer]:
+              - text: Pricing is based on a credit system, where users pay per word or character scanned.
+              - generic [ref=e114]: Low Risk
+            - text: "[1]"
+  - button "Open Next.js Dev Tools" [ref=e24] [cursor=pointer]:
+    - img [ref=e25]
+  - alert [ref=e28]

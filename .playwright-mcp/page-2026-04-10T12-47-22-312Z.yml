@@ -1,0 +1,85 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e3]:
+      - generic [ref=e5]:
+        - generic [ref=e6]:
+          - heading "AI Detect Essay Review" [level=1] [ref=e7]
+          - paragraph [ref=e8]: Upload your essay to analyze it for AI-generated phrasing.
+        - button "Open settings" [ref=e9] [cursor=pointer]:
+          - img [ref=e10]
+      - generic [ref=e15]:
+        - generic [ref=e16]:
+          - text: Upload essay file (.doc or .docx)
+          - button "Upload essay file (.doc or .docx)" [ref=e17]
+        - button "Submit for Review" [ref=e18] [cursor=pointer]
+      - generic [ref=e29]:
+        - generic [ref=e31]:
+          - generic [ref=e32]:
+            - heading "Voice Profile Setup" [level=2] [ref=e33]
+            - paragraph [ref=e34]: Define a writing style to use for rewrites. Select up to 2 presets, provide a writing sample, or both.
+          - generic [ref=e35]:
+            - generic [ref=e36]:
+              - generic [ref=e37]: Style Presets (max 2)
+              - generic [ref=e38]:
+                - button "academic" [ref=e39] [cursor=pointer]
+                - button "conversational" [ref=e40] [cursor=pointer]
+                - button "formal" [ref=e41] [cursor=pointer]
+                - button "narrative" [ref=e42] [cursor=pointer]
+                - button "technical" [ref=e43] [cursor=pointer]
+            - generic [ref=e44]:
+              - generic [ref=e45]: Writing Sample (Optional)
+              - textbox "Writing Sample (Optional)" [ref=e46]:
+                - /placeholder: Paste a sample of your writing here...
+            - button "Generate Profile" [disabled] [ref=e47]
+            - button "I already have a profile!" [ref=e49] [cursor=pointer]
+        - generic [ref=e51]:
+          - generic [ref=e52]:
+            - heading "Bulk Rewrite to Target Score" [level=2] [ref=e53]
+            - paragraph [ref=e54]: Automatically rewrite high-risk sentences to achieve your desired AI detection score (10-100%).
+          - generic [ref=e55]:
+            - generic [ref=e56]:
+              - generic [ref=e57]: Target Score (%)
+              - spinbutton "Target Score (%)" [ref=e58]
+            - button "Rewrite to Target" [disabled] [ref=e59]
+        - generic [ref=e62]:
+          - generic [ref=e63]:
+            - heading "Analysis Results" [level=2] [ref=e64]
+            - generic [ref=e65]:
+              - generic [ref=e66]: "Overall Score:"
+              - generic [ref=e67]: 100.0% AI
+          - generic [ref=e68]:
+            - generic "Low risk" [ref=e69] [cursor=pointer]:
+              - text: This is a sample academic essay discussing the complexities of artificial intelligence in modern society.
+              - generic [ref=e70]: Low Risk
+            - 'generic "High AI-like phrasing risk (Score: 99.5%)" [ref=e71] [cursor=pointer]':
+              - text: The integration of AI systems into everyday life has raised important questions about ethics, privacy, and the future of human work.
+              - generic [ref=e72]: High Risk
+            - 'generic "High AI-like phrasing risk (Score: 99.9%)" [ref=e73] [cursor=pointer]':
+              - text: As machine learning algorithms become increasingly sophisticated, they are able to perform tasks that were once thought to be uniquely human.
+              - generic [ref=e74]: High Risk
+            - generic "Low risk" [ref=e75] [cursor=pointer]:
+              - text: This includes creative endeavors such as writing, music composition, and visual art generation.
+              - generic [ref=e76]: Low Risk
+            - 'generic "Medium AI-like phrasing risk (Score: 46.4%)" [ref=e77] [cursor=pointer]':
+              - text: However, the rise of AI also presents significant challenges.
+              - generic [ref=e78]: Medium Risk
+            - generic "Low risk" [ref=e79] [cursor=pointer]:
+              - text: Questions about accountability, bias in algorithmic decision-making, and the displacement of human workers deserve serious consideration.
+              - generic [ref=e80]: Low Risk
+            - generic "Low risk" [ref=e81] [cursor=pointer]:
+              - text: Researchers and policymakers must work together to develop frameworks that harness the benefits of AI while mitigating its risks.
+              - generic [ref=e82]: Low Risk
+            - generic "Low risk" [ref=e83] [cursor=pointer]:
+              - text: The development of explainable AI is particularly crucial, as it allows humans to understand and audit the decisions made by these systems.
+              - generic [ref=e84]: Low Risk
+            - generic "Low risk" [ref=e85] [cursor=pointer]:
+              - text: Moreover, the environmental impact of training large language models must not be overlooked, as these processes consume enormous amounts of computational resources and energy.
+              - generic [ref=e86]: Low Risk
+            - generic [ref=e87]:
+              - generic [ref=e88]:
+                - heading "Sentence Suggestion" [level=4] [ref=e89]
+                - button "Close suggestion" [ref=e90] [cursor=pointer]: ×
+              - generic [ref=e92]: Loading suggestion...
+  - button "Open Next.js Dev Tools" [ref=e24] [cursor=pointer]:
+    - img [ref=e25]
+  - alert [ref=e28]

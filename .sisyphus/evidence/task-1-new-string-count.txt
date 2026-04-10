@@ -1,0 +1,10 @@
+Verification: New model string "claude-haiku-4-5" appears exactly 2 times in src/lib/suggestions/adapters/anthropic.ts
+
+Command: grep -c "claude-haiku-4-5" src/lib/suggestions/adapters/anthropic.ts
+
+Result: 2
+
+Status: PASS
+- JSDoc comment contains: claude-haiku-4-5-20251001 (line 7)
+- Model literal contains: claude-haiku-4-5-20251001 (line 23)
+- Both references use the exact pinned version: claude-haiku-4-5-20251001

@@ -1,0 +1,9 @@
+Verification: Old model string "claude-3-5-haiku-20241022" absent from src/lib/suggestions/adapters/anthropic.ts
+
+Command: grep "claude-3-5-haiku-20241022" src/lib/suggestions/adapters/anthropic.ts
+
+Result: (no matches - old string successfully removed)
+
+Status: PASS
+- The old Haiku model ID has been completely replaced
+- No references to claude-3-5-haiku-20241022 remain in the adapter file
