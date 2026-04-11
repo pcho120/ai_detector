@@ -37,6 +37,7 @@ const WRAPPER_PATTERNS: RegExp[] = [
 const KOREAN_FULL_SENTENCE_WRAPPER = /^당신의\s*목소리는\s*'(.*)'\s*입니다\.\s*$/s;
 
 export const MAX_PROFILE_LENGTH = 2000;
+export const MAX_FEWSHOT_CONTEXT_LENGTH = 3000;
 
 export function sanitizeVoiceProfile(raw: string): string {
   if (!raw) return '';
@@ -114,4 +115,31 @@ export function buildRewriteContextBlock(
   }
 
   return `Author voice profile:\n${trimmed}`;
+}
+
+export function buildFewShotContextBlock(sentences: string[]): string {
+  if (!sentences || sentences.length === 0) return '';
+
+  const header = `The following sentences are examples of this author's writing. Match their:\n`
+    + `- sentence structure and length patterns\n`
+    + `- vocabulary level and word choices\n`
+    + `- tone (formal/informal, active/passive voice preference)\n`
+    + `- transition and linking patterns\n\n`
+    + `Author's example sentences:\n`;
+
+  const footer = `\nRewrite to sound like this specific author, not like generic AI text.`;
+
+  let body = '';
+  for (let i = 0; i < sentences.length; i++) {
+    const line = `${i + 1}. "${sentences[i]}"\n`;
+    const candidate = header + body + line + footer;
+    if (candidate.length > MAX_FEWSHOT_CONTEXT_LENGTH) {
+      if (body.length > 0) break;
+    }
+    body += line;
+  }
+
+  if (!body) return '';
+
+  return header + body + footer;
 }
