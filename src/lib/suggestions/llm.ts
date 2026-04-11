@@ -217,6 +217,7 @@ async function twoPassRewrite(
     userPrompt: buildUserPrompt(pass1Payload.rewrite, voiceProfile, fewShotExamples),
     temperature: 0.85,
     maxTokens: 256,
+    ...(fewShotExamples && fewShotExamples.length > 0 ? { topP: 0.9 } : {}),
   });
 
   if (pass2Result) {
@@ -382,6 +383,7 @@ export async function generateAlternativeSuggestions(
         userPrompt: buildUserPrompt(s.rewrite, voiceProfile, fewShotExamples),
         temperature: 0.85,
         maxTokens: 256,
+        ...(fewShotExamples && fewShotExamples.length > 0 ? { topP: 0.9 } : {}),
       });
       if (pass2Result) {
         const pass2Payload = parseRewritePayload(pass2Result.content);

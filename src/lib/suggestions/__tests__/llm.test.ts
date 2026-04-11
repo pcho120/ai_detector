@@ -167,6 +167,7 @@ describe('twoPassRewrite call count', () => {
 
     expect(mockComplete).toHaveBeenCalledTimes(2);
     expect(result?.rewrite).toBe('Pass two result.');
+    expect(mockComplete.mock.calls[1]?.[0].topP).toBe(0.9);
   });
 
   it('Pass2 uses style-aware system prompt when fewShotExamples are provided', async () => {
@@ -316,6 +317,7 @@ describe('generateAlternativeSuggestions system prompts', () => {
     expect(mockComplete).toHaveBeenCalledTimes(3);
     expect(mockComplete.mock.calls[0]?.[0].systemPrompt).toBe(getSystemPrompt(true));
     expect(mockComplete.mock.calls[0]?.[0].userPrompt).toContain('Example one.');
+    expect(mockComplete.mock.calls[0]?.[0].topP).toBe(0.9);
     expect(result?.map((entry) => entry.rewrite)).toEqual(['Refined one.', 'Refined two.', 'Refined three.']);
   });
 
