@@ -58,9 +58,6 @@ export async function executeBulkRewrite(
   const preserveReplacements = request.manualReplacements ?? {};
   const rewrites: Record<number, string> = {};
 
-  // Current primitive does not accept voice profile for single suggestion.
-  void request.voiceProfile;
-
   const emit = (current: number, total: number, phase: 'rewriting' | 'analyzing') => {
     onProgress?.(current, total, phase);
   };
@@ -86,7 +83,7 @@ export async function executeBulkRewrite(
     .sort((a, b) => a.sentenceIndex - b.sentenceIndex)
     .map((entry) => ({ sentence: entry.sentence }));
 
-  const apiKey = config?.llmApiKey ?? process.env.COACHING_LLM_API_KEY;
+  const apiKey = config?.llmApiKey;
   const llmProvider = config?.llmProvider;
   let workingSentences = request.sentences.slice();
   let iterations = 0;
@@ -112,6 +109,8 @@ export async function executeBulkRewrite(
         candidate.sentenceIndex,
         candidate.score,
         llmProvider,
+        request.voiceProfile,
+        request.fewShotExamples,
       );
 
       if (suggestion) {

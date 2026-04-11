@@ -128,14 +128,6 @@ describe('executeBulkRewrite – already-at-target short circuit', () => {
 describe('executeBulkRewrite – single round rewrite', () => {
   afterEach(() => vi.resetAllMocks());
 
-  beforeEach(() => {
-    process.env.COACHING_LLM_API_KEY = 'test-key';
-  });
-
-  afterEach(() => {
-    delete process.env.COACHING_LLM_API_KEY;
-  });
-
   it('rewrites eligible sentences and re-analyzes in one round when target is met', async () => {
     // Initial score above target
     mockAnalyzeText
@@ -157,7 +149,7 @@ describe('executeBulkRewrite – single round rewrite', () => {
       .mockResolvedValueOnce(makeSuggestion(0, 'Human sentence one.'))
       .mockResolvedValueOnce(makeSuggestion(1, 'Human sentence two.'));
 
-    const result = await executeBulkRewrite(makeRequest({ targetScore: 30 }));
+    const result = await executeBulkRewrite(makeRequest({ targetScore: 30 }), undefined, { llmApiKey: 'test-key' });
 
     expect(result.targetMet).toBe(true);
     expect(result.iterations).toBe(1);
@@ -181,7 +173,7 @@ describe('executeBulkRewrite – single round rewrite', () => {
     const result = await executeBulkRewrite(makeRequest({
       targetScore: 30,
       sentences: [makeSentence('First AI sentence.', 0.75, 0)],
-    }));
+    }), undefined, { llmApiKey: 'test-key' });
 
     expect(typeof result.rewrites).toBe('object');
     expect(Object.keys(result.rewrites).map(Number)).toEqual([0]);
@@ -191,8 +183,7 @@ describe('executeBulkRewrite – single round rewrite', () => {
 });
 
 describe('executeBulkRewrite – null suggestion skip', () => {
-  beforeEach(() => { process.env.COACHING_LLM_API_KEY = 'test-key'; });
-  afterEach(() => { delete process.env.COACHING_LLM_API_KEY; vi.resetAllMocks(); });
+  afterEach(() => { vi.resetAllMocks(); });
 
   it('skips sentences where generateSingleSuggestion returns null', async () => {
     mockAnalyzeText
@@ -214,7 +205,7 @@ describe('executeBulkRewrite – null suggestion skip', () => {
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce(makeSuggestion(1, 'Human sentence two.'));
 
-    const result = await executeBulkRewrite(makeRequest({ targetScore: 30 }));
+    const result = await executeBulkRewrite(makeRequest({ targetScore: 30 }), undefined, { llmApiKey: 'test-key' });
 
     expect(result.rewrites[0]).toBeUndefined();
     expect(result.rewrites[1]).toBe('Human sentence two.');
@@ -223,8 +214,7 @@ describe('executeBulkRewrite – null suggestion skip', () => {
 });
 
 describe('executeBulkRewrite – guardrails filtering', () => {
-  beforeEach(() => { process.env.COACHING_LLM_API_KEY = 'test-key'; });
-  afterEach(() => { delete process.env.COACHING_LLM_API_KEY; vi.resetAllMocks(); });
+  afterEach(() => { vi.resetAllMocks(); });
 
   it('does not store rewrite when applyGuardrails filters it out (returns empty array)', async () => {
     mockAnalyzeText
@@ -240,7 +230,7 @@ describe('executeBulkRewrite – guardrails filtering', () => {
     const result = await executeBulkRewrite(makeRequest({
       targetScore: 30,
       sentences: [makeSentence('AI text.', 0.9, 0)],
-    }));
+    }), undefined, { llmApiKey: 'test-key' });
 
     expect(result.rewrites[0]).toBeUndefined();
     expect(result.totalRewritten).toBe(0);
@@ -260,7 +250,7 @@ describe('executeBulkRewrite – guardrails filtering', () => {
     const result = await executeBulkRewrite(makeRequest({
       targetScore: 30,
       sentences: [makeSentence('AI text.', 0.9, 0)],
-    }));
+    }), undefined, { llmApiKey: 'test-key' });
 
     expect(result.rewrites[0]).toBe('Human text.');
     expect(result.totalRewritten).toBe(1);
@@ -268,8 +258,7 @@ describe('executeBulkRewrite – guardrails filtering', () => {
 });
 
 describe('executeBulkRewrite – max 3 rounds limit', () => {
-  beforeEach(() => { process.env.COACHING_LLM_API_KEY = 'test-key'; });
-  afterEach(() => { delete process.env.COACHING_LLM_API_KEY; vi.resetAllMocks(); });
+  afterEach(() => { vi.resetAllMocks(); });
 
   it('stops after 3 iterations even if target is never met', async () => {
     // Score stays high through all rounds
@@ -283,7 +272,7 @@ describe('executeBulkRewrite – max 3 rounds limit', () => {
     const result = await executeBulkRewrite(makeRequest({
       targetScore: 10, // very hard target: 10%
       sentences: [makeSentence('AI sentence.', 0.85, 0)],
-    }));
+    }), undefined, { llmApiKey: 'test-key' });
 
     expect(result.targetMet).toBe(false);
     expect(result.iterations).toBeLessThanOrEqual(3);
@@ -302,7 +291,7 @@ describe('executeBulkRewrite – max 3 rounds limit', () => {
     const result = await executeBulkRewrite(makeRequest({
       targetScore: 25, // 0.25 threshold
       sentences: [makeSentence('S1.', 0.85, 0)],
-    }));
+    }), undefined, { llmApiKey: 'test-key' });
 
     expect(result.iterations).toBeGreaterThanOrEqual(1);
     expect(result.iterations).toBeLessThanOrEqual(3);
@@ -310,8 +299,7 @@ describe('executeBulkRewrite – max 3 rounds limit', () => {
 });
 
 describe('executeBulkRewrite – prioritization', () => {
-  beforeEach(() => { process.env.COACHING_LLM_API_KEY = 'test-key'; });
-  afterEach(() => { delete process.env.COACHING_LLM_API_KEY; vi.resetAllMocks(); });
+  afterEach(() => { vi.resetAllMocks(); });
 
   it('processes higher-scored sentences first (highest AI score gets rewritten first)', async () => {
     const callOrder: number[] = [];
@@ -342,7 +330,7 @@ describe('executeBulkRewrite – prioritization', () => {
         makeSentence('High risk.', 0.95, 1),
         makeSentence('Medium risk.', 0.7, 2),
       ],
-    }));
+    }), undefined, { llmApiKey: 'test-key' });
 
     // Sentence with highest score (sentenceIndex=1, score=0.95) should be called before lower ones
     expect(callOrder.indexOf(1)).toBeLessThan(callOrder.indexOf(0));
@@ -370,7 +358,7 @@ describe('executeBulkRewrite – prioritization', () => {
         makeSentence('Below floor.', 0.03, 0),
         makeSentence('At floor.', 0.05, 1),
       ],
-    }));
+    }), undefined, { llmApiKey: 'test-key' });
 
     const calledIndices = mockGenerateSingleSuggestion.mock.calls.map((c) => c[2]);
     expect(calledIndices).not.toContain(0);
@@ -379,8 +367,7 @@ describe('executeBulkRewrite – prioritization', () => {
 });
 
 describe('executeBulkRewrite – manual replacements preservation', () => {
-  beforeEach(() => { process.env.COACHING_LLM_API_KEY = 'test-key'; });
-  afterEach(() => { delete process.env.COACHING_LLM_API_KEY; vi.resetAllMocks(); });
+  afterEach(() => { vi.resetAllMocks(); });
 
   it('does not rewrite sentences that have manual replacements', async () => {
     mockAnalyzeText
@@ -404,7 +391,7 @@ describe('executeBulkRewrite – manual replacements preservation', () => {
         makeSentence('To be rewritten.', 0.85, 1),
       ],
       manualReplacements: { 0: 'Manually replaced.' },
-    }));
+    }), undefined, { llmApiKey: 'test-key' });
 
     // generateSingleSuggestion should NOT have been called for sentenceIndex=0
     const calledIndices = mockGenerateSingleSuggestion.mock.calls.map((c) => c[2]);
@@ -415,8 +402,7 @@ describe('executeBulkRewrite – manual replacements preservation', () => {
 });
 
 describe('executeBulkRewrite – concurrency ceiling', () => {
-  beforeEach(() => { process.env.COACHING_LLM_API_KEY = 'test-key'; });
-  afterEach(() => { delete process.env.COACHING_LLM_API_KEY; vi.resetAllMocks(); });
+  afterEach(() => { vi.resetAllMocks(); });
 
   it('processes many candidates without error (respects concurrency ceiling = 5)', async () => {
     // 10 sentences all above floor; concurrency = 5 means they run in batches
@@ -446,7 +432,7 @@ describe('executeBulkRewrite – concurrency ceiling', () => {
       text: sentences.map((s) => s.sentence).join(' '),
       targetScore: 30,
       sentences,
-    });
+    }, undefined, { llmApiKey: 'test-key' });
 
     expect(result.totalRewritten).toBe(10);
     expect(Object.keys(result.rewrites).length).toBe(10);
@@ -454,8 +440,7 @@ describe('executeBulkRewrite – concurrency ceiling', () => {
 });
 
 describe('executeBulkRewrite – no candidates break', () => {
-  beforeEach(() => { process.env.COACHING_LLM_API_KEY = 'test-key'; });
-  afterEach(() => { delete process.env.COACHING_LLM_API_KEY; vi.resetAllMocks(); });
+  afterEach(() => { vi.resetAllMocks(); });
 
   it('exits the loop early if no candidates are eligible (all below floor)', async () => {
     mockAnalyzeText.mockResolvedValueOnce(
@@ -467,7 +452,7 @@ describe('executeBulkRewrite – no candidates break', () => {
     const result = await executeBulkRewrite(makeRequest({
       targetScore: 10,
       sentences: [makeSentence('Low score sentence.', 0.03, 0)],
-    }));
+    }), undefined, { llmApiKey: 'test-key' });
 
     expect(result.iterations).toBe(0);
     expect(mockGenerateSingleSuggestion).not.toHaveBeenCalled();
@@ -484,7 +469,7 @@ describe('executeBulkRewrite – no candidates break', () => {
     const result = await executeBulkRewrite(makeRequest({
       targetScore: 10,
       sentences: [makeSentence('High AI.', 0.85, 0)],
-    }));
+    }), undefined, { llmApiKey: 'test-key' });
 
     expect(result.iterations).toBe(0);
     expect(result.totalRewritten).toBe(0);
@@ -492,8 +477,7 @@ describe('executeBulkRewrite – no candidates break', () => {
 });
 
 describe('executeBulkRewrite – progress callback', () => {
-  beforeEach(() => { process.env.COACHING_LLM_API_KEY = 'test-key'; });
-  afterEach(() => { delete process.env.COACHING_LLM_API_KEY; vi.resetAllMocks(); });
+  afterEach(() => { vi.resetAllMocks(); });
 
   it('calls onProgress with rewriting phase during sentence rewrites', async () => {
     mockAnalyzeText
@@ -512,11 +496,46 @@ describe('executeBulkRewrite – progress callback', () => {
     await executeBulkRewrite(
       makeRequest({ targetScore: 30, sentences: [makeSentence('AI text.', 0.9, 0)] }),
       onProgress,
+      { llmApiKey: 'test-key' },
     );
 
     const rewritingCalls = calls.filter(([, , phase]) => phase === 'rewriting');
     const analyzingCalls = calls.filter(([, , phase]) => phase === 'analyzing');
     expect(rewritingCalls.length).toBeGreaterThan(0);
     expect(analyzingCalls.length).toBeGreaterThan(0);
+  });
+});
+
+describe('executeBulkRewrite – voice profile threading', () => {
+  afterEach(() => { vi.resetAllMocks(); });
+
+  it('passes request.voiceProfile into generateSingleSuggestionWithProvider', async () => {
+    mockAnalyzeText
+      .mockResolvedValueOnce(
+        makeAnalysisResult(0.8, [{ sentence: 'AI text.', score: 0.9 }]),
+      )
+      .mockResolvedValueOnce(makeAnalysisResult(0.2, [{ sentence: 'Human.', score: 0.1 }]));
+
+    mockGenerateSingleSuggestionWithProvider.mockResolvedValueOnce(makeSuggestion(0, 'Human.'));
+
+    await executeBulkRewrite(
+      makeRequest({
+        targetScore: 30,
+        sentences: [makeSentence('AI text.', 0.9, 0)],
+        voiceProfile: 'Author voice profile:\nDirect and conversational.',
+      }),
+      undefined,
+      { llmApiKey: 'test-key' },
+    );
+
+    expect(mockGenerateSingleSuggestionWithProvider).toHaveBeenCalledWith(
+      'test-key',
+      'AI text.',
+      0,
+      0.9,
+      undefined,
+      'Author voice profile:\nDirect and conversational.',
+      undefined,
+    );
   });
 });

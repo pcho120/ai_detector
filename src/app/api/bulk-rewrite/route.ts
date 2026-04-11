@@ -32,6 +32,7 @@ function isValidRequest(body: unknown): body is {
   targetScore: number;
   text: string;
   voiceProfile?: unknown;
+  fewShotExamples?: unknown;
   manualReplacements?: unknown;
 } {
   if (typeof body !== 'object' || body === null) return false;
@@ -81,7 +82,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
   const settings = getRequestSettings(request);
 
-  const apiKey = settings.llmApiKey ?? process.env.COACHING_LLM_API_KEY;
+  const apiKey = settings.llmApiKey;
   if (!apiKey) {
     return NextResponse.json(
       {
@@ -95,6 +96,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const rawVoiceProfile = (body as Record<string, unknown>).voiceProfile;
   const voiceProfile =
     typeof rawVoiceProfile === 'string' ? sanitizeVoiceProfile(rawVoiceProfile) : undefined;
+
+  const rawFewShotExamples = (body as Record<string, unknown>).fewShotExamples;
+  const fewShotExamples = Array.isArray(rawFewShotExamples) && rawFewShotExamples.every((s) => typeof s === 'string')
+    ? (rawFewShotExamples as string[])
+    : undefined;
 
   const rawManualReplacements = (body as Record<string, unknown>).manualReplacements;
   let manualReplacements: Record<number, string> | undefined;
@@ -118,6 +124,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     targetScore: body.targetScore,
     text: body.text,
     voiceProfile: voiceProfile ?? undefined,
+    fewShotExamples: fewShotExamples ?? undefined,
     manualReplacements,
   };
 
