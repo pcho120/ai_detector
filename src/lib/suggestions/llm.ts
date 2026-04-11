@@ -29,6 +29,20 @@ Rules:
 - Do NOT mention AI detection, evasion, or scores.
 - explanation must be one sentence, <= 120 characters.`;
 
+const STYLE_SYSTEM_PROMPT = `You are an expert writing coach specializing in individual authorship style adaptation.
+
+Respond with ONLY valid JSON in this exact shape:
+{"rewrite":"<full replacement sentence>","explanation":"<one concise sentence explaining the change>"}
+
+Rules:
+- rewrite must be a complete, grammatically correct replacement sentence.
+- Your PRIMARY goal is to make the rewrite sound like the specific author whose examples are provided.
+- Match the author's vocabulary level, sentence rhythm, and characteristic patterns — not generic informal writing.
+- When style examples are provided, prioritize style fidelity over generic humanization.
+- Preserve the core meaning while adopting the author's voice.
+- Do NOT mention AI detection, evasion, or scores.
+- explanation must be one sentence, <= 120 characters.`;
+
 const MULTI_SYSTEM_PROMPT = `You are a writing assistant that rewrites sentences to sound like they were written by a real person, not an AI.
 
 Respond with ONLY valid JSON in this exact shape:
@@ -45,6 +59,29 @@ Rules:
 - Keep the meaning but make it feel less "perfect" and more human.
 - Do NOT mention AI detection, evasion, or scores.
 - Each explanation must be one sentence, <= 120 characters.`;
+
+const STYLE_MULTI_SYSTEM_PROMPT = `You are an expert writing coach specializing in individual authorship style adaptation.
+
+Respond with ONLY valid JSON in this exact shape:
+{"alternatives":[{"rewrite":"<full replacement sentence>","explanation":"<one concise sentence>"},{"rewrite":"<full replacement sentence>","explanation":"<one concise sentence>"},{"rewrite":"<full replacement sentence>","explanation":"<one concise sentence>"}]}
+
+Rules:
+- Each rewrite must be a complete, grammatically correct replacement sentence.
+- Produce exactly 3 alternatives, each with noticeably different phrasing and sentence shape.
+- Your PRIMARY goal is to make each rewrite sound like the specific author whose examples are provided.
+- Match the author's vocabulary level, sentence rhythm, and characteristic patterns.
+- When style examples are provided, prioritize style fidelity over generic humanization.
+- Keep the meaning but make it feel like this specific person wrote it.
+- Do NOT mention AI detection, evasion, or scores.
+- Each explanation must be one sentence, <= 120 characters.`;
+
+export function getSystemPrompt(hasFewShot: boolean): string {
+  return hasFewShot ? STYLE_SYSTEM_PROMPT : SYSTEM_PROMPT;
+}
+
+export function getMultiSystemPrompt(hasFewShot: boolean): string {
+  return hasFewShot ? STYLE_MULTI_SYSTEM_PROMPT : MULTI_SYSTEM_PROMPT;
+}
 
 function buildUserPrompt(sentence: string, voiceProfile?: string, fewShotExamples?: string[]): string {
   const base = `Rewrite the following sentence to sound like natural human writing:\n\n"${sentence}"`;
@@ -87,22 +124,35 @@ function buildMultiUserPrompt(sentence: string, voiceProfile?: string, fewShotEx
 }
 
 function parseRewritePayload(raw: string): LlmRewritePayload | null {
-  try {
-    const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/m, '').trim();
-    const parsed = JSON.parse(cleaned) as unknown;
-    if (
-      typeof parsed === 'object' &&
-      parsed !== null &&
-      'rewrite' in parsed &&
-      'explanation' in parsed &&
-      typeof (parsed as Record<string, unknown>).rewrite === 'string' &&
-      typeof (parsed as Record<string, unknown>).explanation === 'string'
-    ) {
-      return parsed as LlmRewritePayload;
+  const tryParse = (value: string): LlmRewritePayload | null => {
+    try {
+      const parsed = JSON.parse(value) as unknown;
+      if (
+        typeof parsed === 'object' &&
+        parsed !== null &&
+        'rewrite' in parsed &&
+        'explanation' in parsed &&
+        typeof (parsed as Record<string, unknown>).rewrite === 'string' &&
+        typeof (parsed as Record<string, unknown>).explanation === 'string'
+      ) {
+        return parsed as LlmRewritePayload;
+      }
+    } catch {
+      return null;
     }
-  } catch {
     return null;
+  };
+
+  const cleaned = raw.replace(/^```(?:json)?\s*/i, '').replace(/\s*```$/m, '').trim();
+  const cleanedResult = tryParse(cleaned);
+  if (cleanedResult) return cleanedResult;
+
+  const firstBrace = raw.indexOf('{');
+  const lastBrace = raw.lastIndexOf('}');
+  if (firstBrace !== -1 && lastBrace > firstBrace) {
+    return tryParse(raw.slice(firstBrace, lastBrace + 1));
   }
+
   return null;
 }
 
@@ -151,7 +201,7 @@ async function twoPassRewrite(
   fewShotExamples?: string[],
 ): Promise<LlmRewritePayload | null> {
   const pass1Result = await adapter.complete({
-    systemPrompt: SYSTEM_PROMPT,
+    systemPrompt: getSystemPrompt(!!fewShotExamples?.length),
     userPrompt: buildUserPrompt(sentence, voiceProfile, fewShotExamples),
     temperature: 0.7,
     maxTokens: 256,
@@ -167,7 +217,7 @@ async function twoPassRewrite(
   }
 
   const pass2Result = await adapter.complete({
-    systemPrompt: SYSTEM_PROMPT,
+    systemPrompt: getSystemPrompt(!!fewShotExamples?.length),
     userPrompt: buildUserPrompt(pass1Payload.rewrite, voiceProfile, fewShotExamples),
     temperature: 0.85,
     maxTokens: 256,
@@ -279,7 +329,7 @@ export async function generateAlternativeSuggestions(
   const adapter = createLlmAdapter(apiKey, provider);
 
   const result = await adapter.completeMulti({
-    systemPrompt: MULTI_SYSTEM_PROMPT,
+    systemPrompt: getMultiSystemPrompt(!!fewShotExamples?.length),
     userPrompt: buildMultiUserPrompt(sentence, voiceProfile, fewShotExamples),
     temperature: 0.7,
     maxTokens: 768,
@@ -304,7 +354,7 @@ export async function generateAlternativeSuggestions(
     finalSafe = safe.slice(0, 3);
   } else {
     const recoveryResult = await adapter.completeMulti({
-      systemPrompt: MULTI_SYSTEM_PROMPT,
+      systemPrompt: getMultiSystemPrompt(!!fewShotExamples?.length),
       userPrompt: buildMultiUserPrompt(sentence, voiceProfile, fewShotExamples),
       temperature: 0.7,
       maxTokens: 768,
@@ -336,7 +386,7 @@ export async function generateAlternativeSuggestions(
   const refined = await Promise.all(
     finalSafe.map(async (s) => {
       const pass2Result = await adapter.complete({
-        systemPrompt: SYSTEM_PROMPT,
+        systemPrompt: getSystemPrompt(!!fewShotExamples?.length),
         userPrompt: buildUserPrompt(s.rewrite, voiceProfile, fewShotExamples),
         temperature: 0.85,
         maxTokens: 256,
