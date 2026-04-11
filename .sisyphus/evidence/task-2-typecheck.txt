@@ -1,2 +1,2 @@
-> ai-detector@0.1.0 typecheck
-> tsc --noEmit
+PASS: npm run typecheck
+tsc --noEmit completed with zero errors.
