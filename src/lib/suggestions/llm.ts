@@ -234,7 +234,7 @@ export class LlmSuggestionService implements SuggestionService {
   private readonly apiKey: string | undefined;
 
   constructor(apiKey?: string) {
-    this.apiKey = apiKey ?? process.env.COACHING_LLM_API_KEY;
+    this.apiKey = apiKey;
   }
 
   async suggest(sentences: SentenceEntry[]): Promise<Suggestion[]> {

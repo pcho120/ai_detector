@@ -10,11 +10,11 @@ const SAMPLE_TEXT =
 const OPENAI_URL = 'https://api.openai.com/v1/chat/completions';
 const SAPLING_URL = 'https://api.sapling.ai/api/v1/aidetect';
 
-function buildSuggestionRequest(body: unknown): NextRequest {
+function buildSuggestionRequest(body: unknown, extraHeaders?: Record<string, string>): NextRequest {
   return new NextRequest('http://localhost/api/suggestions', {
     method: 'POST',
     body: JSON.stringify(body),
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...extraHeaders },
   });
 }
 
@@ -92,12 +92,10 @@ function mockLlmFailure(status = 500): void {
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.resetAllMocks();
-  delete process.env.COACHING_LLM_API_KEY;
 });
 
 describe('POST /api/suggestions — success path', () => {
-  it('returns 200 with available suggestion when COACHING_LLM_API_KEY is set', async () => {
-    process.env.COACHING_LLM_API_KEY = 'test-key';
+  it('returns 200 with available suggestion when LLM API key is provided via header', async () => {
     mockLlmSuccess(
       'The experiment consistently demonstrated improved outcomes across all test groups.',
       'Replaced vague conclusion with a direct empirical claim.',
@@ -108,7 +106,7 @@ describe('POST /api/suggestions — success path', () => {
       sentenceIndex: 0,
       sentence: 'In conclusion, the experiment shows improved outcomes.',
       score: 0.9,
-    });
+    }, { 'x-llm-api-key': 'test-key' });
     const res = await POST(req);
 
     expect(res.status).toBe(200);
@@ -124,7 +122,6 @@ describe('POST /api/suggestions — success path', () => {
   });
 
   it('returns alternatives array with 2 or 3 entries on success', async () => {
-    process.env.COACHING_LLM_API_KEY = 'test-key';
     mockLlmMultiSuccess([
       { rewrite: 'The experiment consistently demonstrated improved outcomes across all groups.', explanation: 'Direct empirical claim.' },
       { rewrite: 'Results from the experiment showed consistent improvement.', explanation: 'More concise framing.' },
@@ -136,7 +133,7 @@ describe('POST /api/suggestions — success path', () => {
       sentenceIndex: 0,
       sentence: 'In conclusion, the experiment shows improved outcomes.',
       score: 0.9,
-    });
+    }, { 'x-llm-api-key': 'test-key' });
     const res = await POST(req);
 
     expect(res.status).toBe(200);
@@ -150,7 +147,6 @@ describe('POST /api/suggestions — success path', () => {
   });
 
   it('top-level rewrite and explanation are aliases to alternatives[0]', async () => {
-    process.env.COACHING_LLM_API_KEY = 'test-key';
     const first = { rewrite: 'The experiment consistently demonstrated improved outcomes.', explanation: 'Replaced vague conclusion with direct claim.' };
     mockLlmMultiSuccess([
       first,
@@ -162,7 +158,7 @@ describe('POST /api/suggestions — success path', () => {
       sentenceIndex: 0,
       sentence: 'In conclusion, the experiment shows improved outcomes.',
       score: 0.9,
-    });
+    }, { 'x-llm-api-key': 'test-key' });
     const res = await POST(req);
     const body = (await res.json()) as SuggestionAvailableResponse;
 
@@ -174,7 +170,6 @@ describe('POST /api/suggestions — success path', () => {
   });
 
   it('accepts optional voiceProfile in request body', async () => {
-    process.env.COACHING_LLM_API_KEY = 'test-key';
     mockLlmMultiSuccess([
       { rewrite: 'The experiment consistently demonstrated improved outcomes.', explanation: 'Direct empirical phrasing.' },
       { rewrite: 'Results from the experiment showed consistent improvement.', explanation: 'Concise framing.' },
@@ -186,7 +181,7 @@ describe('POST /api/suggestions — success path', () => {
       sentence: 'In conclusion, the experiment shows improved outcomes.',
       score: 0.9,
       voiceProfile: 'concise sentences, active verbs, first-person academic voice',
-    });
+    }, { 'x-llm-api-key': 'test-key' });
     const res = await POST(req);
 
     expect(res.status).toBe(200);
@@ -195,7 +190,6 @@ describe('POST /api/suggestions — success path', () => {
   });
 
   it('sanitizes voiceProfile wrapper before forwarding to LLM', async () => {
-    process.env.COACHING_LLM_API_KEY = 'test-key';
     const fetchMock = buildRoutedFetchMock(() =>
       Promise.resolve(
         openaiMultiResponse([
@@ -212,7 +206,7 @@ describe('POST /api/suggestions — success path', () => {
       sentence: 'In conclusion, the experiment shows improved outcomes.',
       score: 0.9,
       voiceProfile: 'Voice profile: concise and direct academic writing',
-    });
+    }, { 'x-llm-api-key': 'test-key' });
     const res = await POST(req);
 
     expect(res.status).toBe(200);
@@ -227,7 +221,6 @@ describe('POST /api/suggestions — success path', () => {
   });
 
   it('links response to the requested sentenceIndex', async () => {
-    process.env.COACHING_LLM_API_KEY = 'test-key';
     mockLlmSuccess(
       'Machine learning algorithms enable accurate image classification at scale.',
       'Replaced passive hedge with an active direct claim.',
@@ -238,7 +231,7 @@ describe('POST /api/suggestions — success path', () => {
       sentenceIndex: 5,
       sentence: 'Furthermore, machine learning can be utilized for image classification.',
       score: 0.75,
-    });
+    }, { 'x-llm-api-key': 'test-key' });
     const res = await POST(req);
     const body = (await res.json()) as SuggestionResponse;
 
@@ -246,7 +239,6 @@ describe('POST /api/suggestions — success path', () => {
   });
 
   it('rewrite is a full sentence replacement, not a coaching hint', async () => {
-    process.env.COACHING_LLM_API_KEY = 'test-key';
     const fullSentence = 'Recent educational research demonstrates that early literacy programs substantially reduce long-term achievement gaps.';
     mockLlmSuccess(fullSentence, 'Replaced generic importance claim with specific evidence-backed statement.');
 
@@ -255,7 +247,7 @@ describe('POST /api/suggestions — success path', () => {
       sentenceIndex: 2,
       sentence: 'The importance of education cannot be overstated in today\'s society.',
       score: 0.8,
-    });
+    }, { 'x-llm-api-key': 'test-key' });
     const res = await POST(req);
     const body = (await res.json()) as SuggestionResponse;
 
@@ -266,9 +258,7 @@ describe('POST /api/suggestions — success path', () => {
     }
   });
 
-  it('returns available=false when COACHING_LLM_API_KEY is missing', async () => {
-    delete process.env.COACHING_LLM_API_KEY;
-
+  it('returns available=false when LLM API key is not provided', async () => {
     const req = buildSuggestionRequest({
       text: SAMPLE_TEXT,
       sentenceIndex: 1,
@@ -284,7 +274,6 @@ describe('POST /api/suggestions — success path', () => {
   });
 
   it('returns available=false when LLM call fails', async () => {
-    process.env.COACHING_LLM_API_KEY = 'test-key';
     mockLlmFailure(503);
 
     const req = buildSuggestionRequest({
@@ -292,7 +281,7 @@ describe('POST /api/suggestions — success path', () => {
       sentenceIndex: 3,
       sentence: 'In conclusion, the results are significant.',
       score: 0.9,
-    });
+    }, { 'x-llm-api-key': 'test-key' });
     const res = await POST(req);
 
     expect(res.status).toBe(200);
@@ -302,7 +291,6 @@ describe('POST /api/suggestions — success path', () => {
   });
 
   it('returns available=false when all LLM alternatives contain banned phrases', async () => {
-    process.env.COACHING_LLM_API_KEY = 'test-key';
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue({
@@ -330,7 +318,7 @@ describe('POST /api/suggestions — success path', () => {
       sentenceIndex: 2,
       sentence: 'Furthermore, this approach demonstrates the concept.',
       score: 0.78,
-    });
+    }, { 'x-llm-api-key': 'test-key' });
     const res = await POST(req);
 
     expect(res.status).toBe(200);
@@ -339,7 +327,6 @@ describe('POST /api/suggestions — success path', () => {
   });
 
   it('returns available=false when LLM returns only 1 safe alternative (below 2-alt minimum)', async () => {
-    process.env.COACHING_LLM_API_KEY = 'test-key';
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue({
@@ -365,7 +352,7 @@ describe('POST /api/suggestions — success path', () => {
       sentenceIndex: 0,
       sentence: 'In conclusion, the experiment shows improved outcomes.',
       score: 0.9,
-    });
+    }, { 'x-llm-api-key': 'test-key' });
     const res = await POST(req);
 
     expect(res.status).toBe(200);
@@ -375,7 +362,6 @@ describe('POST /api/suggestions — success path', () => {
   });
 
   it('returns available=false when LLM output contains banned phrases', async () => {
-    process.env.COACHING_LLM_API_KEY = 'test-key';
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue({
@@ -401,7 +387,7 @@ describe('POST /api/suggestions — success path', () => {
       sentenceIndex: 2,
       sentence: 'Furthermore, this approach demonstrates the concept.',
       score: 0.78,
-    });
+    }, { 'x-llm-api-key': 'test-key' });
     const res = await POST(req);
 
     expect(res.status).toBe(200);
@@ -410,7 +396,6 @@ describe('POST /api/suggestions — success path', () => {
   });
 
   it('response does not contain evasion language even on success', async () => {
-    process.env.COACHING_LLM_API_KEY = 'test-key';
     mockLlmSuccess(
       'The data clearly indicates a measurable improvement in student engagement.',
       'Replaced vague connector with a direct evidence statement.',
@@ -421,7 +406,7 @@ describe('POST /api/suggestions — success path', () => {
       sentenceIndex: 0,
       sentence: 'Furthermore, the data shows improvement.',
       score: 0.8,
-    });
+    }, { 'x-llm-api-key': 'test-key' });
     const res = await POST(req);
     const body = (await res.json()) as SuggestionResponse;
 
@@ -523,7 +508,6 @@ describe('POST /api/suggestions — request validation', () => {
   });
 
   it('accepts request body without voiceProfile field (backward compat)', async () => {
-    process.env.COACHING_LLM_API_KEY = 'test-key';
     mockLlmMultiSuccess([
       { rewrite: 'The experiment demonstrated clear improvements.', explanation: 'Direct empirical claim.' },
       { rewrite: 'Results indicate consistent improvement across groups.', explanation: 'Empirically grounded.' },
@@ -534,7 +518,7 @@ describe('POST /api/suggestions — request validation', () => {
       sentenceIndex: 0,
       sentence: 'In conclusion, the experiment shows improved outcomes.',
       score: 0.9,
-    });
+    }, { 'x-llm-api-key': 'test-key' });
     const res = await POST(req);
     expect(res.status).toBe(200);
     const body = (await res.json()) as SuggestionResponse;
@@ -542,7 +526,6 @@ describe('POST /api/suggestions — request validation', () => {
   });
 
   it('empty string voiceProfile behaves identically to absent voiceProfile', async () => {
-    process.env.COACHING_LLM_API_KEY = 'test-key';
     const fetchMock = buildRoutedFetchMock(() =>
       Promise.resolve(
         openaiMultiResponse([
@@ -559,7 +542,7 @@ describe('POST /api/suggestions — request validation', () => {
       sentence: 'In conclusion, the experiment shows improved outcomes.',
       score: 0.9,
       voiceProfile: '',
-    });
+    }, { 'x-llm-api-key': 'test-key' });
     const res = await POST(req);
     expect(res.status).toBe(200);
     const body = (await res.json()) as SuggestionResponse;
@@ -576,9 +559,7 @@ describe('POST /api/suggestions — request validation', () => {
 });
 
 describe('POST /api/suggestions — unavailable branch isolation', () => {
-  it('branch: missing COACHING_LLM_API_KEY → exact { available:false, sentenceIndex }', async () => {
-    delete process.env.COACHING_LLM_API_KEY;
-
+  it('branch: missing LLM API key → exact { available:false, sentenceIndex }', async () => {
     const req = buildSuggestionRequest({
       text: SAMPLE_TEXT,
       sentenceIndex: 7,
@@ -598,7 +579,6 @@ describe('POST /api/suggestions — unavailable branch isolation', () => {
   });
 
   it('branch: multi-call parse failure (malformed JSON from LLM) → exact { available:false, sentenceIndex }', async () => {
-    process.env.COACHING_LLM_API_KEY = 'test-key';
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue({
@@ -614,7 +594,7 @@ describe('POST /api/suggestions — unavailable branch isolation', () => {
       sentenceIndex: 8,
       sentence: 'Furthermore, the data supports this hypothesis.',
       score: 0.85,
-    });
+    }, { 'x-llm-api-key': 'test-key' });
     const res = await POST(req);
 
     expect(res.status).toBe(200);
@@ -628,7 +608,6 @@ describe('POST /api/suggestions — unavailable branch isolation', () => {
   });
 
   it('branch: all alternatives guardrail-filtered → exact { available:false, sentenceIndex }', async () => {
-    process.env.COACHING_LLM_API_KEY = 'test-key';
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue({
@@ -656,7 +635,7 @@ describe('POST /api/suggestions — unavailable branch isolation', () => {
       sentenceIndex: 9,
       sentence: 'In conclusion, the experiment shows improved outcomes.',
       score: 0.88,
-    });
+    }, { 'x-llm-api-key': 'test-key' });
     const res = await POST(req);
 
     expect(res.status).toBe(200);
@@ -670,7 +649,6 @@ describe('POST /api/suggestions — unavailable branch isolation', () => {
   });
 
   it('branch: <2 safe alternatives after guardrail filtering → exact { available:false, sentenceIndex }', async () => {
-    process.env.COACHING_LLM_API_KEY = 'test-key';
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue({
@@ -697,7 +675,7 @@ describe('POST /api/suggestions — unavailable branch isolation', () => {
       sentenceIndex: 10,
       sentence: 'Furthermore, the data supports this hypothesis.',
       score: 0.82,
-    });
+    }, { 'x-llm-api-key': 'test-key' });
     const res = await POST(req);
 
     expect(res.status).toBe(200);
@@ -713,8 +691,6 @@ describe('POST /api/suggestions — unavailable branch isolation', () => {
 
 describe('POST /api/suggestions — safe degradation does not break analyze flow', () => {
   it('suggestion endpoint failure does not affect analyze route (isolated modules)', async () => {
-    delete process.env.COACHING_LLM_API_KEY;
-
     const req = buildSuggestionRequest({
       text: SAMPLE_TEXT,
       sentenceIndex: 0,
@@ -732,8 +708,6 @@ describe('POST /api/suggestions — safe degradation does not break analyze flow
 
 describe('POST /api/suggestions — unavailable response contract', () => {
   it('unavailable response contains exactly { available, sentenceIndex } with no extra required fields', async () => {
-    delete process.env.COACHING_LLM_API_KEY;
-
     const req = buildSuggestionRequest({
       text: SAMPLE_TEXT,
       sentenceIndex: 2,
@@ -754,7 +728,6 @@ describe('POST /api/suggestions — unavailable response contract', () => {
   });
 
   it('unavailable response from LLM failure also preserves strict contract', async () => {
-    process.env.COACHING_LLM_API_KEY = 'test-key';
     mockLlmFailure(503);
 
     const req = buildSuggestionRequest({
@@ -762,7 +735,7 @@ describe('POST /api/suggestions — unavailable response contract', () => {
       sentenceIndex: 4,
       sentence: 'In conclusion, this shows the impact.',
       score: 0.9,
-    });
+    }, { 'x-llm-api-key': 'test-key' });
 
     const res = await POST(req);
     expect(res.status).toBe(200);
@@ -776,7 +749,6 @@ describe('POST /api/suggestions — unavailable response contract', () => {
   });
 
   it('unavailable response from all-banned alternatives preserves strict contract', async () => {
-    process.env.COACHING_LLM_API_KEY = 'test-key';
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue({
@@ -803,7 +775,7 @@ describe('POST /api/suggestions — unavailable response contract', () => {
       sentenceIndex: 6,
       sentence: 'Furthermore, this confirms the result.',
       score: 0.8,
-    });
+    }, { 'x-llm-api-key': 'test-key' });
 
     const res = await POST(req);
     expect(res.status).toBe(200);
@@ -819,7 +791,6 @@ describe('POST /api/suggestions — unavailable response contract', () => {
 
 describe('POST /api/suggestions — recovery path for partial LLM output', () => {
   it('recovery: first call gives 1 safe alt, second call provides more → available:true with 2-3 alternatives', async () => {
-    process.env.COACHING_LLM_API_KEY = 'test-key';
     const fetchMock = vi.fn()
       .mockResolvedValueOnce({
         ok: true,
@@ -859,7 +830,7 @@ describe('POST /api/suggestions — recovery path for partial LLM output', () =>
       sentenceIndex: 11,
       sentence: 'In conclusion, the experiment shows improved outcomes.',
       score: 0.9,
-    });
+    }, { 'x-llm-api-key': 'test-key' });
     const res = await POST(req);
 
     expect(res.status).toBe(200);
@@ -875,7 +846,6 @@ describe('POST /api/suggestions — recovery path for partial LLM output', () =>
   });
 
   it('recovery: first call returns single-object format, second call provides 2 safe alts → available:true', async () => {
-    process.env.COACHING_LLM_API_KEY = 'test-key';
     const fetchMock = vi.fn()
       .mockResolvedValueOnce({
         ok: true,
@@ -913,7 +883,7 @@ describe('POST /api/suggestions — recovery path for partial LLM output', () =>
       sentenceIndex: 12,
       sentence: 'In conclusion, the experiment shows improved outcomes.',
       score: 0.9,
-    });
+    }, { 'x-llm-api-key': 'test-key' });
     const res = await POST(req);
 
     expect(res.status).toBe(200);
@@ -924,7 +894,6 @@ describe('POST /api/suggestions — recovery path for partial LLM output', () =>
   });
 
   it('recovery: both calls produce all-banned alternatives → available:false, strict contract preserved', async () => {
-    process.env.COACHING_LLM_API_KEY = 'test-key';
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue({
@@ -949,7 +918,7 @@ describe('POST /api/suggestions — recovery path for partial LLM output', () =>
       sentenceIndex: 13,
       sentence: 'Furthermore, this demonstrates the concept.',
       score: 0.78,
-    });
+    }, { 'x-llm-api-key': 'test-key' });
     const res = await POST(req);
 
     expect(res.status).toBe(200);
@@ -964,8 +933,6 @@ describe('POST /api/suggestions — recovery path for partial LLM output', () =>
 
 describe('POST /api/suggestions — previewScore enrichment', () => {
   it('alternatives carry previewScore numbers when Sapling is available', async () => {
-    process.env.COACHING_LLM_API_KEY = 'test-key';
-    process.env.SAPLING_API_KEY = 'sapling-key';
     vi.stubGlobal(
       'fetch',
       buildRoutedFetchMock(
@@ -986,7 +953,7 @@ describe('POST /api/suggestions — previewScore enrichment', () => {
       sentenceIndex: 0,
       sentence: 'In conclusion, the experiment shows improved outcomes.',
       score: 0.9,
-    });
+    }, { 'x-llm-api-key': 'test-key', 'x-detection-api-key': 'sapling-key' });
     const res = await POST(req);
 
     expect(res.status).toBe(200);
@@ -998,14 +965,9 @@ describe('POST /api/suggestions — previewScore enrichment', () => {
       expect(alt.previewScore).toBeGreaterThanOrEqual(0);
       expect(alt.previewScore).toBeLessThanOrEqual(1);
     }
-
-    delete process.env.SAPLING_API_KEY;
   });
 
   it('sends revised full text to Sapling when sentence whitespace does not exactly match', async () => {
-    process.env.COACHING_LLM_API_KEY = 'test-key';
-    process.env.SAPLING_API_KEY = 'sapling-key';
-
     const saplingRequestBodies: Array<{ key: string; text: string; sent_scores: number[] }> = [];
     vi.stubGlobal(
       'fetch',
@@ -1043,7 +1005,7 @@ describe('POST /api/suggestions — previewScore enrichment', () => {
       sentenceIndex: 0,
       sentence: 'In conclusion, the experiment shows improved outcomes.',
       score: 0.9,
-    });
+    }, { 'x-llm-api-key': 'test-key', 'x-detection-api-key': 'sapling-key' });
     const res = await POST(req);
 
     expect(res.status).toBe(200);
@@ -1055,13 +1017,9 @@ describe('POST /api/suggestions — previewScore enrichment', () => {
     expect(saplingRequestBodies.some((request) => request.text.includes('reveals improved outcomes across cohorts.'))).toBe(true);
     expect(saplingRequestBodies.some((request) => request.text.includes('The experiment consistently demonstrated improved outcomes.'))).toBe(true);
     expect(body.alternatives[0].previewScore).toBe(0.42);
-
-    delete process.env.SAPLING_API_KEY;
   });
 
   it('alternatives return without previewScore when SAPLING_API_KEY is absent — response still available:true', async () => {
-    process.env.COACHING_LLM_API_KEY = 'test-key';
-    delete process.env.SAPLING_API_KEY;
     mockLlmMultiSuccess([
       { rewrite: 'The experiment consistently demonstrated improved outcomes.', explanation: 'Direct empirical claim.' },
       { rewrite: 'Results from the experiment showed consistent improvement.', explanation: 'More concise framing.' },
@@ -1072,7 +1030,7 @@ describe('POST /api/suggestions — previewScore enrichment', () => {
       sentenceIndex: 0,
       sentence: 'In conclusion, the experiment shows improved outcomes.',
       score: 0.9,
-    });
+    }, { 'x-llm-api-key': 'test-key' });
     const res = await POST(req);
 
     expect(res.status).toBe(200);
@@ -1088,8 +1046,6 @@ describe('POST /api/suggestions — previewScore enrichment', () => {
   });
 
   it('alternatives return without previewScore when Sapling call fails — response still available:true', async () => {
-    process.env.COACHING_LLM_API_KEY = 'test-key';
-    process.env.SAPLING_API_KEY = 'sapling-key';
     vi.stubGlobal(
       'fetch',
       buildRoutedFetchMock(
@@ -1108,7 +1064,7 @@ describe('POST /api/suggestions — previewScore enrichment', () => {
       sentenceIndex: 0,
       sentence: 'In conclusion, the experiment shows improved outcomes.',
       score: 0.9,
-    });
+    }, { 'x-llm-api-key': 'test-key', 'x-detection-api-key': 'sapling-key' });
     const res = await POST(req);
 
     expect(res.status).toBe(200);
@@ -1119,20 +1075,15 @@ describe('POST /api/suggestions — previewScore enrichment', () => {
     for (const alt of body.alternatives) {
       expect(alt.previewScore).toBeUndefined();
     }
-
-    delete process.env.SAPLING_API_KEY;
   });
 
-  it('unavailable response has no previewScore even when SAPLING_API_KEY is set', async () => {
-    delete process.env.COACHING_LLM_API_KEY;
-    process.env.SAPLING_API_KEY = 'sapling-key';
-
+  it('unavailable response has no previewScore even when detection API key is set', async () => {
     const req = buildSuggestionRequest({
       text: SAMPLE_TEXT,
       sentenceIndex: 14,
       sentence: 'In conclusion, the experiment shows improved outcomes.',
       score: 0.9,
-    });
+    }, { 'x-detection-api-key': 'sapling-key' });
     const res = await POST(req);
 
     expect(res.status).toBe(200);
@@ -1142,7 +1093,5 @@ describe('POST /api/suggestions — previewScore enrichment', () => {
     expect(body.rewrite).toBeUndefined();
     expect(body.explanation).toBeUndefined();
     expect(body.alternatives).toBeUndefined();
-
-    delete process.env.SAPLING_API_KEY;
   });
 });

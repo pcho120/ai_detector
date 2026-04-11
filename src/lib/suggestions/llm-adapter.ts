@@ -57,15 +57,14 @@ export interface LlmAdapter {
 /**
  * Factory function to create an LLM adapter.
  *
- * @param apiKey - API key for the provider. Defaults to `process.env.COACHING_LLM_API_KEY`
- *   if not provided or undefined. Provider is read from `process.env.LLM_PROVIDER` (defaults to 'openai').
- * @param provider - Optional provider override. If not provided, uses `process.env.LLM_PROVIDER` (defaults to 'openai').
+ * @param apiKey - API key for the provider. API key must be provided by the caller.
+ * @param provider - Optional provider override. If not provided, defaults to 'openai'.
  * @returns An LlmAdapter instance for the configured provider.
  * @throws {FileProcessingError} with code `DETECTION_FAILED` if the provider is unknown.
  */
 export function createLlmAdapter(apiKey?: string, provider?: string): LlmAdapter {
-  const resolvedProvider = (provider ?? process.env.LLM_PROVIDER ?? 'openai').toLowerCase();
-  const finalApiKey = apiKey ?? process.env.COACHING_LLM_API_KEY;
+  const resolvedProvider = (provider ?? 'openai').toLowerCase();
+  const finalApiKey = apiKey;
 
   switch (resolvedProvider) {
     case 'openai':
@@ -75,7 +74,7 @@ export function createLlmAdapter(apiKey?: string, provider?: string): LlmAdapter
     default:
       throw new FileProcessingError(
         'DETECTION_FAILED',
-        `Unknown LLM provider: "${resolvedProvider}". Set LLM_PROVIDER to "openai" or "anthropic".`,
+        `Unknown LLM provider: "${resolvedProvider}". Select "openai" or "anthropic" in Settings.`,
       );
   }
 }

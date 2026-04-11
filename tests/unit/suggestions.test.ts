@@ -251,11 +251,9 @@ describe('LlmSuggestionService', () => {
   afterEach(() => {
     vi.unstubAllGlobals();
     vi.resetAllMocks();
-    delete process.env.COACHING_LLM_API_KEY;
   });
 
-  it('returns empty array when COACHING_LLM_API_KEY is absent', async () => {
-    delete process.env.COACHING_LLM_API_KEY;
+  it('returns empty array when apiKey is not provided', async () => {
     const service = new LlmSuggestionService();
     const result = await service.suggest([{ sentence: 'In conclusion, this matters.', index: 0 }]);
     expect(result).toEqual([]);

@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createLlmAdapter } from '../llm-adapter';
 import { FileProcessingError } from '@/lib/files/errors';
 import { OpenAiLlmAdapter } from '../adapters/openai';
@@ -15,85 +15,38 @@ vi.mock('@anthropic-ai/sdk', () => ({
   })),
 }));
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-function saveEnv(keys: string[]) {
-  const saved: Record<string, string | undefined> = {};
-  for (const k of keys) {
-    saved[k] = process.env[k];
-  }
-  return saved;
-}
-
-function restoreEnv(saved: Record<string, string | undefined>) {
-  for (const [k, v] of Object.entries(saved)) {
-    if (v === undefined) {
-      delete process.env[k];
-    } else {
-      process.env[k] = v;
-    }
-  }
-}
-
-const ENV_KEYS = ['LLM_PROVIDER', 'COACHING_LLM_API_KEY'];
-
 // ── Factory branch selection ──────────────────────────────────────────────────
 
 describe('createLlmAdapter – factory branch selection', () => {
-  let saved: Record<string, string | undefined>;
-
-  beforeEach(() => {
-    saved = saveEnv(ENV_KEYS);
-    delete process.env.LLM_PROVIDER;
-    delete process.env.COACHING_LLM_API_KEY;
-  });
-
-  afterEach(() => {
-    restoreEnv(saved);
-  });
-
-  it('returns OpenAiLlmAdapter when provider is unset and COACHING_LLM_API_KEY is set', () => {
-    process.env.COACHING_LLM_API_KEY = 'test-key';
-
+  it('returns OpenAiLlmAdapter with undefined apiKey when called with no args', () => {
     const adapter = createLlmAdapter();
 
     expect(adapter).toBeInstanceOf(OpenAiLlmAdapter);
   });
 
-  it('returns OpenAiLlmAdapter when LLM_PROVIDER=openai', () => {
-    process.env.LLM_PROVIDER = 'openai';
-    process.env.COACHING_LLM_API_KEY = 'test-key';
-
-    const adapter = createLlmAdapter();
+  it('returns OpenAiLlmAdapter when provider is "openai"', () => {
+    const adapter = createLlmAdapter('test-key', 'openai');
 
     expect(adapter).toBeInstanceOf(OpenAiLlmAdapter);
   });
 
-  it('returns OpenAiLlmAdapter when LLM_PROVIDER=OPENAI (uppercase normalized)', () => {
-    process.env.LLM_PROVIDER = 'OPENAI';
-    process.env.COACHING_LLM_API_KEY = 'test-key';
-
-    const adapter = createLlmAdapter();
+  it('returns OpenAiLlmAdapter when provider is "OPENAI" (uppercase normalized)', () => {
+    const adapter = createLlmAdapter('test-key', 'OPENAI');
 
     expect(adapter).toBeInstanceOf(OpenAiLlmAdapter);
   });
 
-  it('returns ClaudeLlmAdapter when LLM_PROVIDER=anthropic', () => {
-    process.env.LLM_PROVIDER = 'anthropic';
-    process.env.COACHING_LLM_API_KEY = 'test-key';
-
-    const adapter = createLlmAdapter();
+  it('returns ClaudeLlmAdapter when provider is "anthropic"', () => {
+    const adapter = createLlmAdapter('test-key', 'anthropic');
 
     expect(adapter).toBeInstanceOf(ClaudeLlmAdapter);
   });
 
   it('throws FileProcessingError with DETECTION_FAILED code for unknown provider', () => {
-    process.env.LLM_PROVIDER = 'bogus';
-
-    expect(() => createLlmAdapter()).toThrow(FileProcessingError);
+    expect(() => createLlmAdapter(undefined, 'bogus')).toThrow(FileProcessingError);
 
     try {
-      createLlmAdapter();
+      createLlmAdapter(undefined, 'bogus');
     } catch (err) {
       expect(err).toBeInstanceOf(FileProcessingError);
       expect((err as FileProcessingError).code).toBe('DETECTION_FAILED');
@@ -101,14 +54,18 @@ describe('createLlmAdapter – factory branch selection', () => {
   });
 
   it('error message for unknown provider contains provider name', () => {
-    process.env.LLM_PROVIDER = 'bogus';
-
-    expect(() => createLlmAdapter()).toThrowError(/bogus/);
+    expect(() => createLlmAdapter(undefined, 'bogus')).toThrowError(/bogus/);
   });
 
   it('accepts an explicit apiKey argument and forwards it to the adapter', () => {
     // Provider unset → openai; explicit key passed
     const adapter = createLlmAdapter('explicit-key');
+
+    expect(adapter).toBeInstanceOf(OpenAiLlmAdapter);
+  });
+
+  it('defaults provider to openai when no provider argument is given', () => {
+    const adapter = createLlmAdapter('test-key');
 
     expect(adapter).toBeInstanceOf(OpenAiLlmAdapter);
   });

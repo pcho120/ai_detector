@@ -4,11 +4,11 @@ import { NextRequest } from 'next/server';
 import { POST } from '@/app/api/voice-profile/generate/route';
 import type { VoiceProfileResponse } from '@/app/api/voice-profile/generate/route';
 
-function buildRequest(body: unknown): NextRequest {
+function buildRequest(body: unknown, extraHeaders?: Record<string, string>): NextRequest {
   return new NextRequest('http://localhost/api/voice-profile/generate', {
     method: 'POST',
     body: JSON.stringify(body),
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...extraHeaders },
   });
 }
 
@@ -35,15 +35,13 @@ function mockLlmNetworkError(): void {
 afterEach(() => {
   vi.unstubAllGlobals();
   vi.resetAllMocks();
-  delete process.env.COACHING_LLM_API_KEY;
 });
 
 describe('POST /api/voice-profile/generate — success path', () => {
   it('returns 200 with profile and language for presets-only input', async () => {
-    process.env.COACHING_LLM_API_KEY = 'test-key';
     mockLlmSuccess('Clear, evidence-grounded prose with logical structure and precise vocabulary.');
 
-    const req = buildRequest({ presets: ['academic'] });
+    const req = buildRequest({ presets: ['academic'] }, { 'x-llm-api-key': 'test-key' });
     const res = await POST(req);
 
     expect(res.status).toBe(200);
@@ -54,10 +52,9 @@ describe('POST /api/voice-profile/generate — success path', () => {
   });
 
   it('returns 200 with profile and language for writingSample-only input', async () => {
-    process.env.COACHING_LLM_API_KEY = 'test-key';
     mockLlmSuccess('Conversational and direct with natural first-person flow.');
 
-    const req = buildRequest({ writingSample: 'I think this approach really works well for most cases.' });
+    const req = buildRequest({ writingSample: 'I think this approach really works well for most cases.' }, { 'x-llm-api-key': 'test-key' });
     const res = await POST(req);
 
     expect(res.status).toBe(200);
@@ -68,13 +65,12 @@ describe('POST /api/voice-profile/generate — success path', () => {
   });
 
   it('returns 200 with profile for mixed presets + writingSample', async () => {
-    process.env.COACHING_LLM_API_KEY = 'test-key';
     mockLlmSuccess('Technical and structured with precise terminology.');
 
     const req = buildRequest({
       presets: ['technical', 'formal'],
       writingSample: 'The system initializes the pipeline by invoking the bootstrapper.',
-    });
+    }, { 'x-llm-api-key': 'test-key' });
     const res = await POST(req);
 
     expect(res.status).toBe(200);
@@ -83,10 +79,9 @@ describe('POST /api/voice-profile/generate — success path', () => {
   });
 
   it('uses languageHint to override detected language', async () => {
-    process.env.COACHING_LLM_API_KEY = 'test-key';
     mockLlmSuccess('Precise academic voice with structured evidence.');
 
-    const req = buildRequest({ presets: ['academic'], languageHint: 'ko' });
+    const req = buildRequest({ presets: ['academic'], languageHint: 'ko' }, { 'x-llm-api-key': 'test-key' });
     const res = await POST(req);
 
     expect(res.status).toBe(200);
@@ -95,10 +90,9 @@ describe('POST /api/voice-profile/generate — success path', () => {
   });
 
   it('detects Korean language from writingSample when no hint given', async () => {
-    process.env.COACHING_LLM_API_KEY = 'test-key';
     mockLlmSuccess('자연스러운 대화체 문장과 직접적인 어조.');
 
-    const req = buildRequest({ writingSample: '나는 이 접근법이 효과적이라고 생각한다.' });
+    const req = buildRequest({ writingSample: '나는 이 접근법이 효과적이라고 생각한다.' }, { 'x-llm-api-key': 'test-key' });
     const res = await POST(req);
 
     expect(res.status).toBe(200);
@@ -107,10 +101,9 @@ describe('POST /api/voice-profile/generate — success path', () => {
   });
 
   it('strips common wrapper prefix from LLM profile output', async () => {
-    process.env.COACHING_LLM_API_KEY = 'test-key';
     mockLlmSuccess('Voice profile: Analytical and precise with clear logical transitions.');
 
-    const req = buildRequest({ presets: ['academic'] });
+    const req = buildRequest({ presets: ['academic'] }, { 'x-llm-api-key': 'test-key' });
     const res = await POST(req);
 
     const body = (await res.json()) as VoiceProfileResponse;
@@ -119,11 +112,10 @@ describe('POST /api/voice-profile/generate — success path', () => {
   });
 
   it('clamps profile to MAX_PROFILE_LENGTH characters', async () => {
-    process.env.COACHING_LLM_API_KEY = 'test-key';
     const longText = 'A'.repeat(3000);
     mockLlmSuccess(longText);
 
-    const req = buildRequest({ presets: ['narrative'] });
+    const req = buildRequest({ presets: ['narrative'] }, { 'x-llm-api-key': 'test-key' });
     const res = await POST(req);
 
     const body = (await res.json()) as VoiceProfileResponse;
@@ -131,10 +123,9 @@ describe('POST /api/voice-profile/generate — success path', () => {
   });
 
   it('response contains exactly profile and language fields', async () => {
-    process.env.COACHING_LLM_API_KEY = 'test-key';
     mockLlmSuccess('Direct and concise voice.');
 
-    const req = buildRequest({ presets: ['conversational'] });
+    const req = buildRequest({ presets: ['conversational'] }, { 'x-llm-api-key': 'test-key' });
     const res = await POST(req);
 
     const body = (await res.json()) as Record<string, unknown>;
@@ -222,8 +213,6 @@ describe('POST /api/voice-profile/generate — request validation', () => {
 
 describe('POST /api/voice-profile/generate — safe degradation', () => {
   it('returns 503 when COACHING_LLM_API_KEY is missing', async () => {
-    delete process.env.COACHING_LLM_API_KEY;
-
     const req = buildRequest({ presets: ['academic'] });
     const res = await POST(req);
     expect(res.status).toBe(503);
@@ -232,10 +221,9 @@ describe('POST /api/voice-profile/generate — safe degradation', () => {
   });
 
   it('returns 503 when LLM API returns non-OK status', async () => {
-    process.env.COACHING_LLM_API_KEY = 'test-key';
     mockLlmFailure(503);
 
-    const req = buildRequest({ presets: ['formal'] });
+    const req = buildRequest({ presets: ['formal'] }, { 'x-llm-api-key': 'test-key' });
     const res = await POST(req);
     expect(res.status).toBe(503);
     const body = (await res.json()) as { error: string };
@@ -243,10 +231,9 @@ describe('POST /api/voice-profile/generate — safe degradation', () => {
   });
 
   it('returns 503 when LLM call throws a network error', async () => {
-    process.env.COACHING_LLM_API_KEY = 'test-key';
     mockLlmNetworkError();
 
-    const req = buildRequest({ presets: ['technical'] });
+    const req = buildRequest({ presets: ['technical'] }, { 'x-llm-api-key': 'test-key' });
     const res = await POST(req);
     expect(res.status).toBe(503);
     const body = (await res.json()) as { error: string };
@@ -254,8 +241,6 @@ describe('POST /api/voice-profile/generate — safe degradation', () => {
   });
 
   it('503 error body does not include profile, language, or alternatives fields', async () => {
-    delete process.env.COACHING_LLM_API_KEY;
-
     const req = buildRequest({ presets: ['academic'] });
     const res = await POST(req);
     expect(res.status).toBe(503);
@@ -268,10 +253,9 @@ describe('POST /api/voice-profile/generate — safe degradation', () => {
   });
 
   it('503 from LLM failure also preserves strict error-only contract', async () => {
-    process.env.COACHING_LLM_API_KEY = 'test-key';
     mockLlmFailure(429);
 
-    const req = buildRequest({ presets: ['narrative'] });
+    const req = buildRequest({ presets: ['narrative'] }, { 'x-llm-api-key': 'test-key' });
     const res = await POST(req);
     expect(res.status).toBe(503);
     const body = (await res.json()) as Record<string, unknown>;
@@ -287,10 +271,9 @@ describe('POST /api/voice-profile/generate — all valid preset keys accepted', 
 
   for (const preset of VALID_PRESETS) {
     it(`accepts preset "${preset}"`, async () => {
-      process.env.COACHING_LLM_API_KEY = 'test-key';
       mockLlmSuccess(`Voice profile for ${preset} style.`);
 
-      const req = buildRequest({ presets: [preset] });
+      const req = buildRequest({ presets: [preset] }, { 'x-llm-api-key': 'test-key' });
       const res = await POST(req);
       expect(res.status).toBe(200);
     });
