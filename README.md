@@ -59,9 +59,7 @@ npm run test:e2e  # Playwright end-to-end tests
 
 This application is designed for the Vercel Node.js runtime.
 
-1. Set the following environment variables in your deployment dashboard:
-   - `SAPLING_API_KEY`: Your Sapling API key for AI content detection.
-   - `COACHING_LLM_API_KEY`: Your LLM API key for rewritten sentence suggestions.
+1. API keys are configured through the in-app **Settings** modal. No server-side environment variables are required for API key configuration.
 
 2. Ensure the project is configured for the App Router and Node.js runtime (set to `nodejs` in relevant routes).
 

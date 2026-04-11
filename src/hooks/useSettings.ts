@@ -54,7 +54,7 @@ export function useSettings() {
  * Helper to build HTTP headers from settings for fetch calls.
  *
  * Returns an object suitable for inclusion in fetch `headers` option.
- * Empty strings are omitted from headers (to trigger server-side env var fallback).
+ * Empty strings are omitted from headers. Server returns defaults or undefined when headers are absent.
  *
  * @param settings - AppSettings object from useSettings
  * @returns HeadersInit object with settings-based custom headers
