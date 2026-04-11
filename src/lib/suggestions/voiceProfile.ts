@@ -120,18 +120,19 @@ export function buildRewriteContextBlock(
 export function buildFewShotContextBlock(sentences: string[]): string {
   if (!sentences || sentences.length === 0) return '';
 
-  const header = `The following sentences are examples of this author's writing. Match their:\n`
-    + `- sentence structure and length patterns\n`
-    + `- vocabulary level and word choices\n`
-    + `- tone (formal/informal, active/passive voice preference)\n`
-    + `- transition and linking patterns\n\n`
-    + `Author's example sentences:\n`;
+  const header = `You will rewrite text to match a specific author's writing style.\n\n`
+    + `First, analyze the author's style from these examples:\n\n`;
 
-  const footer = `\nRewrite to sound like this specific author, not like generic AI text.`;
+  const footer = `\nConsider these style dimensions:\n`
+    + `- Vocabulary: What word choices characterize this author? (formal/informal, technical/accessible, specific/general)\n`
+    + `- Sentence structure: What are their sentence length and complexity patterns?\n`
+    + `- Tone: What is the emotional register and formality level?\n`
+    + `- Transitions: How does the author connect ideas and build arguments?\n\n`
+    + `Now rewrite the following text to authentically match this author's voice. The rewrite must feel like this specific person wrote it, not like generic AI or a different writer.`;
 
   let body = '';
   for (let i = 0; i < sentences.length; i++) {
-    const line = `${i + 1}. "${sentences[i]}"\n`;
+    const line = `Example ${i + 1}: "${sentences[i]}"\n`;
     const candidate = header + body + line + footer;
     if (candidate.length > MAX_FEWSHOT_CONTEXT_LENGTH) {
       if (body.length > 0) break;
