@@ -202,6 +202,47 @@ describe('ClaudeLlmAdapter – with mocked Anthropic SDK', () => {
     );
   });
 
+  it('complete() passes only top_p (no temperature) when topP is provided', async () => {
+    mockCreate.mockResolvedValue({
+      content: [{ type: 'text', text: 'Result.' }],
+    });
+
+    const adapter = new ClaudeLlmAdapter('test-api-key');
+    await adapter.complete({
+      systemPrompt: 'System',
+      userPrompt: 'User',
+      temperature: 0.7,
+      maxTokens: 256,
+      topP: 0.9,
+    });
+
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ top_p: 0.9 })
+    );
+    const callArgs = mockCreate.mock.calls[0][0] as Record<string, unknown>;
+    expect(callArgs).not.toHaveProperty('temperature');
+  });
+
+  it('complete() passes only temperature (no top_p) when topP is not provided', async () => {
+    mockCreate.mockResolvedValue({
+      content: [{ type: 'text', text: 'Result.' }],
+    });
+
+    const adapter = new ClaudeLlmAdapter('test-api-key');
+    await adapter.complete({
+      systemPrompt: 'System',
+      userPrompt: 'User',
+      temperature: 0.7,
+      maxTokens: 256,
+    });
+
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ temperature: 0.7 })
+    );
+    const callArgs = mockCreate.mock.calls[0][0] as Record<string, unknown>;
+    expect(callArgs).not.toHaveProperty('top_p');
+  });
+
   it('constructor passes the apiKey to the Anthropic SDK', () => {
     new ClaudeLlmAdapter('test-api-key');
 
