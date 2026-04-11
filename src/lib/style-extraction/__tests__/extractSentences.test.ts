@@ -49,6 +49,7 @@ describe('filterCandidates', () => {
     ];
 
     expect(filterCandidates(candidates)).toEqual([
+      'The effect remained stable across semesters (Smith 2020).',
       'The replication produced a measurable improvement in student confidence.',
       'This sentence remains because it reads like natural academic prose.',
     ]);
@@ -77,6 +78,24 @@ describe('filterCandidates', () => {
     ];
 
     expect(filterCandidates(candidates)).toEqual(candidates);
+  });
+
+  it('passes a sentence containing an inline APA citation', () => {
+    const sentence = 'Smith (2020) argues that data shows a clear trend in the market.';
+
+    expect(filterCandidates([sentence])).toHaveLength(1);
+  });
+
+  it('passes a sentence containing a bracket numeric citation', () => {
+    const sentence = 'The results were statistically significant and supported previous work [3].';
+
+    expect(filterCandidates([sentence])).toHaveLength(1);
+  });
+
+  it('still rejects a standalone reference list entry', () => {
+    const entry = 'Smith, J. (2020). Title of the paper. Journal of Something, 5(2), 1-10.';
+
+    expect(filterCandidates([entry])).toHaveLength(0);
   });
 });
 
@@ -111,7 +130,11 @@ describe('selectDiverse', () => {
 });
 
 describe('extractStyleSentences', () => {
-  it('extracts six diverse sentences from normal academic text within size bounds', () => {
+  it('DEFAULT_SENTENCE_COUNT is 5', () => {
+    expect(DEFAULT_SENTENCE_COUNT).toBe(5);
+  });
+
+  it('extracts five diverse sentences from normal academic text within size bounds', () => {
     const text = padText(
       [
         'The introduction situates the case study within a broader debate about assessment and revision.',

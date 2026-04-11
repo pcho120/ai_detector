@@ -3,7 +3,7 @@ import type { StyleExtractionResult } from './types';
 
 export const MIN_STYLE_TEXT_LENGTH = 500;
 export const MAX_STYLE_TEXT_LENGTH = 50000;
-export const DEFAULT_SENTENCE_COUNT = 6;
+export const DEFAULT_SENTENCE_COUNT = 5;
 const MIN_SENTENCE_LENGTH = 20;
 const MAX_SENTENCE_LENGTH = 300;
 
@@ -157,10 +157,19 @@ export function filterCandidates(sentences: string[]): string[] {
       return false;
     }
     if (CITATION_PATTERN.test(sentence)) {
+      const stripped = sentence.replace(CITATION_PATTERN, '').trim();
+      if (stripped.length < 30) {
+        return false;
+      }
+    }
+    if (REFERENCE_ENTRY_PATTERN.test(sentence)) {
       return false;
     }
-    if (REFERENCE_ENTRY_PATTERN.test(sentence) || AUTHOR_YEAR_LEAD_PATTERN.test(sentence)) {
-      return false;
+    if (AUTHOR_YEAR_LEAD_PATTERN.test(sentence)) {
+      const strippedLead = sentence.replace(AUTHOR_YEAR_LEAD_PATTERN, '').trim();
+      if (strippedLead.length < 30) {
+        return false;
+      }
     }
     if (FIGURE_CAPTION_PATTERN.test(sentence)) {
       return false;
