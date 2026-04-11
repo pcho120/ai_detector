@@ -398,37 +398,29 @@ describe('CopyleaksDetectionAdapter – normalized detect() success', () => {
   });
 });
 
-// ── Environment sandbox fallback ──────────────────────────────────────────────
+// ── Sandbox default behavior ──────────────────────────────────────────────────
 
-describe('CopyleaksDetectionAdapter – sandbox env fallback', () => {
+describe('CopyleaksDetectionAdapter – sandbox defaults to false', () => {
   let fetchSpy: ReturnType<typeof vi.fn>;
-  let savedEnv: string | undefined;
 
   beforeEach(() => {
-    savedEnv = process.env.COPYLEAKS_SANDBOX;
     fetchSpy = vi.fn();
     vi.stubGlobal('fetch', fetchSpy);
   });
 
   afterEach(() => {
     vi.unstubAllGlobals();
-    if (savedEnv === undefined) {
-      delete process.env.COPYLEAKS_SANDBOX;
-    } else {
-      process.env.COPYLEAKS_SANDBOX = savedEnv;
-    }
   });
 
-  it('uses sandbox: true when COPYLEAKS_SANDBOX env var is "true"', async () => {
-    process.env.COPYLEAKS_SANDBOX = 'true';
-
+  it('uses sandbox: true when constructed with sandbox: true', async () => {
     fetchSpy
       .mockResolvedValueOnce(makeResponse(makeLoginResponse()))
       .mockResolvedValueOnce(makeResponse(makeDetectResponse()));
 
     const adapter = new CopyleaksDetectionAdapter({
-      email: `env-sandbox-${Date.now()}@example.com`,
+      email: `sandbox-explicit-${Date.now()}@example.com`,
       apiKey: API_KEY,
+      sandbox: true,
     });
 
     await adapter.detect(VALID_TEXT);
@@ -438,15 +430,13 @@ describe('CopyleaksDetectionAdapter – sandbox env fallback', () => {
     expect(body.sandbox).toBe(true);
   });
 
-  it('uses sandbox: false when COPYLEAKS_SANDBOX env var is absent', async () => {
-    delete process.env.COPYLEAKS_SANDBOX;
-
+  it('uses sandbox: false when sandbox option is omitted', async () => {
     fetchSpy
       .mockResolvedValueOnce(makeResponse(makeLoginResponse()))
       .mockResolvedValueOnce(makeResponse(makeDetectResponse()));
 
     const adapter = new CopyleaksDetectionAdapter({
-      email: `env-no-sandbox-${Date.now()}@example.com`,
+      email: `sandbox-default-${Date.now()}@example.com`,
       apiKey: API_KEY,
     });
 

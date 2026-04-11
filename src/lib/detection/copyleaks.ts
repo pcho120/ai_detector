@@ -86,8 +86,8 @@ export class CopyleaksDetectionAdapter implements DetectionAdapter {
     }
     this.email = email;
     this.apiKey = apiKey;
-    // Honour explicit option; fall back to env var.
-    this.sandbox = sandbox ?? process.env.COPYLEAKS_SANDBOX === 'true';
+    // Honour explicit option; default to false.
+    this.sandbox = sandbox ?? false;
   }
 
   // ── Private: login ──────────────────────────────────────────────────────────

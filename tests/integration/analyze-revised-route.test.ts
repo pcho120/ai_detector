@@ -43,11 +43,11 @@ function mockSaplingFailure(status = 500): void {
   );
 }
 
-function buildJsonRequest(body: unknown): NextRequest {
+function buildJsonRequest(body: unknown, extraHeaders?: Record<string, string>): NextRequest {
   return new NextRequest('http://localhost/api/analyze/revised', {
     method: 'POST',
     body: JSON.stringify(body),
-    headers: { 'Content-Type': 'application/json' },
+    headers: { 'Content-Type': 'application/json', ...extraHeaders },
   });
 }
 
@@ -58,10 +58,9 @@ afterEach(() => {
 
 describe('POST /api/analyze/revised — success path', () => {
   it('returns 200 with AnalysisSuccessResponse shape for valid text', async () => {
-    process.env.SAPLING_API_KEY = 'test-key';
     mockSaplingSuccess();
 
-    const req = buildJsonRequest({ text: 'This is revised text for analysis.' });
+    const req = buildJsonRequest({ text: 'This is revised text for analysis.' }, { 'x-detection-api-key': 'test-key' });
     const res = await POST(req);
 
     expect(res.status).toBe(200);
@@ -74,11 +73,10 @@ describe('POST /api/analyze/revised — success path', () => {
   });
 
   it('returns the provided text in the response body', async () => {
-    process.env.SAPLING_API_KEY = 'test-key';
     mockSaplingSuccess();
 
     const revisedText = 'This is a revised version of the original essay text.';
-    const req = buildJsonRequest({ text: revisedText });
+    const req = buildJsonRequest({ text: revisedText }, { 'x-detection-api-key': 'test-key' });
     const res = await POST(req);
 
     const body = (await res.json()) as AnalysisSuccessResponse;
@@ -86,11 +84,10 @@ describe('POST /api/analyze/revised — success path', () => {
   });
 
   it('score matches detection fixture score', async () => {
-    process.env.SAPLING_API_KEY = 'test-key';
     mockSaplingSuccess();
 
     const fixture = loadJsonFixture('sapling-success.json') as { score: number };
-    const req = buildJsonRequest({ text: 'Some text to reanalyze.' });
+    const req = buildJsonRequest({ text: 'Some text to reanalyze.' }, { 'x-detection-api-key': 'test-key' });
     const res = await POST(req);
     const body = (await res.json()) as AnalysisSuccessResponse;
 
@@ -98,10 +95,9 @@ describe('POST /api/analyze/revised — success path', () => {
   });
 
   it('highlights contain valid span entries with sentenceIndex', async () => {
-    process.env.SAPLING_API_KEY = 'test-key';
     mockSaplingAiLike();
 
-    const req = buildJsonRequest({ text: 'This sentence has AI-like phrasing and should be flagged.' });
+    const req = buildJsonRequest({ text: 'This sentence has AI-like phrasing and should be flagged.' }, { 'x-detection-api-key': 'test-key' });
     const res = await POST(req);
     const body = (await res.json()) as AnalysisSuccessResponse;
 
@@ -117,10 +113,9 @@ describe('POST /api/analyze/revised — success path', () => {
   });
 
   it('response shape matches AnalysisSuccessResponse exactly', async () => {
-    process.env.SAPLING_API_KEY = 'test-key';
     mockSaplingSuccess();
 
-    const req = buildJsonRequest({ text: 'Some revised text.' });
+    const req = buildJsonRequest({ text: 'Some revised text.' }, { 'x-detection-api-key': 'test-key' });
     const res = await POST(req);
     const body = (await res.json()) as AnalysisSuccessResponse;
 
@@ -184,9 +179,7 @@ describe('POST /api/analyze/revised — invalid request', () => {
 });
 
 describe('POST /api/analyze/revised — detection failure', () => {
-  it('returns 503 when SAPLING_API_KEY is missing', async () => {
-    delete process.env.SAPLING_API_KEY;
-
+  it('returns 503 when detection API key is missing', async () => {
     const req = buildJsonRequest({ text: 'Some revised text to analyze.' });
     const res = await POST(req);
 
@@ -196,10 +189,9 @@ describe('POST /api/analyze/revised — detection failure', () => {
   });
 
   it('returns 502 when Sapling returns HTTP 500', async () => {
-    process.env.SAPLING_API_KEY = 'test-key';
     mockSaplingFailure(500);
 
-    const req = buildJsonRequest({ text: 'Some revised text to analyze.' });
+    const req = buildJsonRequest({ text: 'Some revised text to analyze.' }, { 'x-detection-api-key': 'test-key' });
     const res = await POST(req);
 
     expect(res.status).toBe(502);
@@ -208,8 +200,6 @@ describe('POST /api/analyze/revised — detection failure', () => {
   });
 
   it('error responses have error and message fields', async () => {
-    delete process.env.SAPLING_API_KEY;
-
     const req = buildJsonRequest({ text: 'Some text.' });
     const res = await POST(req);
     const body = (await res.json()) as { error: string; message: string };

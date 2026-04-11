@@ -23,6 +23,7 @@ function buildMultipartRequest(
   filename: string,
   mimeType: string,
   data: Uint8Array,
+  extraHeaders?: Record<string, string>,
 ): NextRequest {
   const boundary = `----FormBoundary${Math.random().toString(36).slice(2)}`;
   const CRLF = '\r\n';
@@ -44,21 +45,22 @@ function buildMultipartRequest(
   return new NextRequest('http://localhost/api/analyze', {
     method: 'POST',
     body,
-    headers: { 'Content-Type': `multipart/form-data; boundary=${boundary}` },
+    headers: { 'Content-Type': `multipart/form-data; boundary=${boundary}`, ...extraHeaders },
   });
 }
 
-function buildDocxRequest(buf: Buffer, filename = 'essay.docx'): NextRequest {
+function buildDocxRequest(buf: Buffer, filename = 'essay.docx', extraHeaders?: Record<string, string>): NextRequest {
   return buildMultipartRequest(
     'file',
     filename,
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     new Uint8Array(buf),
+    extraHeaders,
   );
 }
 
-function buildDocRequest(buf: Buffer, filename = 'essay.doc'): NextRequest {
-  return buildMultipartRequest('file', filename, 'application/msword', new Uint8Array(buf));
+function buildDocRequest(buf: Buffer, filename = 'essay.doc', extraHeaders?: Record<string, string>): NextRequest {
+  return buildMultipartRequest('file', filename, 'application/msword', new Uint8Array(buf), extraHeaders);
 }
 
 function mockSaplingSuccess(): void {
@@ -99,11 +101,10 @@ afterEach(() => {
 
 describe('POST /api/analyze — success path (docx)', () => {
   it('returns 200 with score, sentences, highlights, suggestions on valid English docx', async () => {
-    process.env.SAPLING_API_KEY = 'test-key';
     mockSaplingSuccess();
 
     const buf = loadFixture('valid.docx');
-    const req = buildDocxRequest(buf);
+    const req = buildDocxRequest(buf, 'essay.docx', { 'x-detection-api-key': 'test-key' });
     const res = await POST(req);
 
     expect(res.status).toBe(200);
@@ -115,11 +116,10 @@ describe('POST /api/analyze — success path (docx)', () => {
   });
 
   it('returns suggestions array (may be empty when no coaching patterns match high-risk sentences)', async () => {
-    process.env.SAPLING_API_KEY = 'test-key';
     mockSaplingSuccess();
 
     const buf = loadFixture('valid.docx');
-    const req = buildDocxRequest(buf);
+    const req = buildDocxRequest(buf, 'essay.docx', { 'x-detection-api-key': 'test-key' });
     const res = await POST(req);
     const body = (await res.json()) as AnalysisSuccessResponse;
 
@@ -134,12 +134,11 @@ describe('POST /api/analyze — success path (docx)', () => {
   });
 
   it('score matches detection fixture score', async () => {
-    process.env.SAPLING_API_KEY = 'test-key';
     mockSaplingSuccess();
 
     const fixture = loadJsonFixture('sapling-success.json') as { score: number };
     const buf = loadFixture('valid.docx');
-    const req = buildDocxRequest(buf);
+    const req = buildDocxRequest(buf, 'essay.docx', { 'x-detection-api-key': 'test-key' });
     const res = await POST(req);
     const body = (await res.json()) as AnalysisSuccessResponse;
 
@@ -147,14 +146,13 @@ describe('POST /api/analyze — success path (docx)', () => {
   });
 
   it('sentences array contains entries from detection fixture', async () => {
-    process.env.SAPLING_API_KEY = 'test-key';
     mockSaplingSuccess();
 
     const fixture = loadJsonFixture('sapling-success.json') as {
       sentence_scores: { score: number; sentence: string }[];
     };
     const buf = loadFixture('valid.docx');
-    const req = buildDocxRequest(buf);
+    const req = buildDocxRequest(buf, 'essay.docx', { 'x-detection-api-key': 'test-key' });
     const res = await POST(req);
     const body = (await res.json()) as AnalysisSuccessResponse;
 
@@ -163,11 +161,10 @@ describe('POST /api/analyze — success path (docx)', () => {
   });
 
   it('highlights array contains only valid span entries', async () => {
-    process.env.SAPLING_API_KEY = 'test-key';
     mockSaplingSuccess();
 
     const buf = loadFixture('valid.docx');
-    const req = buildDocxRequest(buf);
+    const req = buildDocxRequest(buf, 'essay.docx', { 'x-detection-api-key': 'test-key' });
     const res = await POST(req);
     const body = (await res.json()) as AnalysisSuccessResponse;
 
@@ -183,11 +180,10 @@ describe('POST /api/analyze — success path (docx)', () => {
   });
 
   it('returns populated suggestions when AI-like fixture sentences match coaching patterns', async () => {
-    process.env.SAPLING_API_KEY = 'test-key';
     mockSaplingAiLike();
 
     const buf = loadFixture('valid.docx');
-    const req = buildDocxRequest(buf);
+    const req = buildDocxRequest(buf, 'essay.docx', { 'x-detection-api-key': 'test-key' });
     const res = await POST(req);
 
     expect(res.status).toBe(200);
@@ -198,11 +194,10 @@ describe('POST /api/analyze — success path (docx)', () => {
   });
 
   it('each suggestion has required fields and valid sentenceIndex for AI-like fixture', async () => {
-    process.env.SAPLING_API_KEY = 'test-key';
     mockSaplingAiLike();
 
     const buf = loadFixture('valid.docx');
-    const req = buildDocxRequest(buf);
+    const req = buildDocxRequest(buf, 'essay.docx', { 'x-detection-api-key': 'test-key' });
     const res = await POST(req);
     const body = (await res.json()) as AnalysisSuccessResponse;
 
@@ -218,11 +213,10 @@ describe('POST /api/analyze — success path (docx)', () => {
   });
 
   it('each suggestion sentenceIndex points to the matching sentence in the sentences array', async () => {
-    process.env.SAPLING_API_KEY = 'test-key';
     mockSaplingAiLike();
 
     const buf = loadFixture('valid.docx');
-    const req = buildDocxRequest(buf);
+    const req = buildDocxRequest(buf, 'essay.docx', { 'x-detection-api-key': 'test-key' });
     const res = await POST(req);
     const body = (await res.json()) as AnalysisSuccessResponse;
 
@@ -234,11 +228,10 @@ describe('POST /api/analyze — success path (docx)', () => {
 
 describe('POST /api/analyze — success path (doc)', () => {
   it('returns 200 with score, sentences, highlights on valid .doc fixture', async () => {
-    process.env.SAPLING_API_KEY = 'test-key';
     mockSaplingSuccess();
 
     const buf = loadFixture('valid_essay.doc');
-    const req = buildDocRequest(buf);
+    const req = buildDocRequest(buf, 'essay.doc', { 'x-detection-api-key': 'test-key' });
     const res = await POST(req);
 
     expect(res.status).toBe(200);
@@ -316,7 +309,6 @@ describe('POST /api/analyze — text length policy', () => {
 
 describe('POST /api/analyze — UNSUPPORTED_LANGUAGE', () => {
   it('returns 422 with UNSUPPORTED_LANGUAGE for a non-English docx', async () => {
-    process.env.SAPLING_API_KEY = 'test-key';
 
     const JSZip = (await import('jszip')).default;
     const zip = new JSZip();
@@ -371,11 +363,10 @@ describe('POST /api/analyze — UNSUPPORTED_LANGUAGE', () => {
 
 describe('POST /api/analyze — detection failure', () => {
   it('returns 502 with DETECTION_FAILED when Sapling returns HTTP 500', async () => {
-    process.env.SAPLING_API_KEY = 'test-key';
     mockSaplingFailure(500);
 
     const buf = loadFixture('valid.docx');
-    const req = buildDocxRequest(buf);
+    const req = buildDocxRequest(buf, 'essay.docx', { 'x-detection-api-key': 'test-key' });
     const res = await POST(req);
 
     expect(res.status).toBe(502);
@@ -383,9 +374,7 @@ describe('POST /api/analyze — detection failure', () => {
     expect(body.error).toBe('DETECTION_FAILED');
   });
 
-  it('returns 503 with DETECTION_FAILED when SAPLING_API_KEY is missing', async () => {
-    delete process.env.SAPLING_API_KEY;
-
+  it('returns 503 with DETECTION_FAILED when detection API key is missing', async () => {
     const buf = loadFixture('valid.docx');
     const req = buildDocxRequest(buf);
     const res = await POST(req);
@@ -396,7 +385,6 @@ describe('POST /api/analyze — detection failure', () => {
   });
 
   it('detection error does not leak internal messages', async () => {
-    process.env.SAPLING_API_KEY = 'test-key';
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue({
@@ -407,7 +395,7 @@ describe('POST /api/analyze — detection failure', () => {
     );
 
     const buf = loadFixture('valid.docx');
-    const req = buildDocxRequest(buf);
+    const req = buildDocxRequest(buf, 'essay.docx', { 'x-detection-api-key': 'test-key' });
     const res = await POST(req);
 
     expect(res.status).toBe(502);
@@ -475,24 +463,22 @@ async function captureAndAssertCleanup(
 
 describe('POST /api/analyze — temp-file lifecycle cleanup', () => {
   it('cleans up the temp file on the success path (docx)', async () => {
-    process.env.SAPLING_API_KEY = 'test-key';
     mockSaplingSuccess();
 
     await captureAndAssertCleanup(async () => {
       const buf = loadFixture('valid.docx');
-      const req = buildDocxRequest(buf);
+      const req = buildDocxRequest(buf, 'essay.docx', { 'x-detection-api-key': 'test-key' });
       const res = await POST(req);
       expect(res.status).toBe(200);
     });
   });
 
   it('cleans up the temp file on the success path (doc)', async () => {
-    process.env.SAPLING_API_KEY = 'test-key';
     mockSaplingSuccess();
 
     await captureAndAssertCleanup(async () => {
       const buf = loadFixture('valid_essay.doc');
-      const req = buildDocRequest(buf);
+      const req = buildDocRequest(buf, 'essay.doc', { 'x-detection-api-key': 'test-key' });
       const res = await POST(req);
       expect(res.status).toBe(200);
     });

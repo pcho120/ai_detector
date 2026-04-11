@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { createAnalysisDetectionAdapter } from '@/lib/analysis/analyzeText';
 import { FileProcessingError } from '@/lib/files/errors';
 import { SaplingDetectionAdapter } from '@/lib/detection/sapling';
@@ -7,103 +7,47 @@ import { OriginalityDetectionAdapter } from '@/lib/detection/adapters/originalit
 import { GPTZeroDetectionAdapter } from '@/lib/detection/adapters/gptzero';
 import { CompositeDetectionAdapter } from '@/lib/detection/composite';
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-function saveEnv(keys: string[]) {
-  const saved: Record<string, string | undefined> = {};
-  for (const k of keys) {
-    saved[k] = process.env[k];
-  }
-  return saved;
-}
-
-function restoreEnv(saved: Record<string, string | undefined>) {
-  for (const [k, v] of Object.entries(saved)) {
-    if (v === undefined) {
-      delete process.env[k];
-    } else {
-      process.env[k] = v;
-    }
-  }
-}
-
-const ENV_KEYS = [
-  'DETECTION_PROVIDER',
-  'SAPLING_API_KEY',
-  'WINSTON_API_KEY',
-  'ORIGINALITY_API_KEY',
-  'GPTZERO_API_KEY',
-  'COPYLEAKS_EMAIL',
-  'COPYLEAKS_API_KEY',
-];
-
 // ── Factory branch selection ──────────────────────────────────────────────────
 
 describe('createAnalysisDetectionAdapter – factory branch selection', () => {
-  let saved: Record<string, string | undefined>;
-
-  beforeEach(() => {
-    saved = saveEnv(ENV_KEYS);
-    for (const k of ENV_KEYS) {
-      delete process.env[k];
-    }
-  });
-
-  afterEach(() => {
-    restoreEnv(saved);
-  });
-
-  it('returns SaplingDetectionAdapter when provider is unset and SAPLING_API_KEY is set', () => {
-    process.env.SAPLING_API_KEY = 'test-key';
-
-    const adapter = createAnalysisDetectionAdapter();
+  it('returns SaplingDetectionAdapter when provider is unset and apiKey is provided', () => {
+    const adapter = createAnalysisDetectionAdapter({ apiKey: 'test-key' });
 
     expect(adapter).toBeInstanceOf(SaplingDetectionAdapter);
   });
 
-  it('returns SaplingDetectionAdapter when DETECTION_PROVIDER=sapling', () => {
-    process.env.DETECTION_PROVIDER = 'sapling';
-    process.env.SAPLING_API_KEY = 'test-key';
-
-    const adapter = createAnalysisDetectionAdapter();
+  it('returns SaplingDetectionAdapter when provider=sapling', () => {
+    const adapter = createAnalysisDetectionAdapter({ provider: 'sapling', apiKey: 'test-key' });
 
     expect(adapter).toBeInstanceOf(SaplingDetectionAdapter);
   });
 
-  it('returns WinstonDetectionAdapter when DETECTION_PROVIDER=winston', () => {
-    process.env.DETECTION_PROVIDER = 'winston';
-    process.env.WINSTON_API_KEY = 'test-key';
-
-    const adapter = createAnalysisDetectionAdapter();
-
-    expect(adapter).toBeInstanceOf(WinstonDetectionAdapter);
+  it('throws "not yet implemented" for stub provider winston', () => {
+    expect(() => createAnalysisDetectionAdapter({ provider: 'winston', apiKey: 'test-key' })).toThrow(FileProcessingError);
+    expect(() => createAnalysisDetectionAdapter({ provider: 'winston', apiKey: 'test-key' })).toThrowError(
+      /not yet implemented/,
+    );
   });
 
-  it('returns OriginalityDetectionAdapter when DETECTION_PROVIDER=originality', () => {
-    process.env.DETECTION_PROVIDER = 'originality';
-    process.env.ORIGINALITY_API_KEY = 'test-key';
-
-    const adapter = createAnalysisDetectionAdapter();
-
-    expect(adapter).toBeInstanceOf(OriginalityDetectionAdapter);
+  it('throws "not yet implemented" for stub provider originality', () => {
+    expect(() => createAnalysisDetectionAdapter({ provider: 'originality', apiKey: 'test-key' })).toThrow(FileProcessingError);
+    expect(() => createAnalysisDetectionAdapter({ provider: 'originality', apiKey: 'test-key' })).toThrowError(
+      /not yet implemented/,
+    );
   });
 
-  it('returns GPTZeroDetectionAdapter when DETECTION_PROVIDER=gptzero', () => {
-    process.env.DETECTION_PROVIDER = 'gptzero';
-    process.env.GPTZERO_API_KEY = 'test-key';
-
-    const adapter = createAnalysisDetectionAdapter();
-
-    expect(adapter).toBeInstanceOf(GPTZeroDetectionAdapter);
+  it('throws "not yet implemented" for stub provider gptzero', () => {
+    expect(() => createAnalysisDetectionAdapter({ provider: 'gptzero', apiKey: 'test-key' })).toThrow(FileProcessingError);
+    expect(() => createAnalysisDetectionAdapter({ provider: 'gptzero', apiKey: 'test-key' })).toThrowError(
+      /not yet implemented/,
+    );
   });
 
   it('throws FileProcessingError with DETECTION_FAILED code for unknown provider', () => {
-    process.env.DETECTION_PROVIDER = 'bogus';
-
-    expect(() => createAnalysisDetectionAdapter()).toThrow(FileProcessingError);
+    expect(() => createAnalysisDetectionAdapter({ provider: 'bogus' })).toThrow(FileProcessingError);
 
     try {
-      createAnalysisDetectionAdapter();
+      createAnalysisDetectionAdapter({ provider: 'bogus' });
     } catch (err) {
       expect(err).toBeInstanceOf(FileProcessingError);
       expect((err as FileProcessingError).code).toBe('DETECTION_FAILED');
@@ -111,42 +55,45 @@ describe('createAnalysisDetectionAdapter – factory branch selection', () => {
   });
 
   it('error message for unknown provider contains provider name', () => {
-    process.env.DETECTION_PROVIDER = 'bogus';
+    expect(() => createAnalysisDetectionAdapter({ provider: 'bogus' })).toThrowError(/bogus/);
+  });
+});
 
-    expect(() => createAnalysisDetectionAdapter()).toThrowError(/bogus/);
+// ── No config → throws (detection not configured) ─────────────────────────────
+
+describe('createAnalysisDetectionAdapter – no config throws', () => {
+  it('throws FileProcessingError when called with no config at all', () => {
+    expect(() => createAnalysisDetectionAdapter()).toThrow(FileProcessingError);
+  });
+
+  it('thrown error has code DETECTION_FAILED', () => {
+    try {
+      createAnalysisDetectionAdapter();
+    } catch (err) {
+      expect(err).toBeInstanceOf(FileProcessingError);
+      expect((err as FileProcessingError).code).toBe('DETECTION_FAILED');
+    }
+  });
+
+  it('thrown error message is "Detection service is not configured."', () => {
+    expect(() => createAnalysisDetectionAdapter()).toThrowError(
+      'Detection service is not configured.',
+    );
   });
 });
 
 // ── Missing key error message (load-bearing) ──────────────────────────────────
 
 describe('createAnalysisDetectionAdapter – missing API key throws exact message', () => {
-  let saved: Record<string, string | undefined>;
-
-  beforeEach(() => {
-    saved = saveEnv(ENV_KEYS);
-    for (const k of ENV_KEYS) {
-      delete process.env[k];
-    }
-  });
-
-  afterEach(() => {
-    restoreEnv(saved);
-  });
-
   it('sapling: throws with exact message "Detection service is not configured."', () => {
-    process.env.DETECTION_PROVIDER = 'sapling';
-    // SAPLING_API_KEY intentionally absent
-
-    expect(() => createAnalysisDetectionAdapter()).toThrowError(
+    expect(() => createAnalysisDetectionAdapter({ provider: 'sapling' })).toThrowError(
       'Detection service is not configured.',
     );
   });
 
   it('sapling: thrown error is FileProcessingError with DETECTION_FAILED', () => {
-    process.env.DETECTION_PROVIDER = 'sapling';
-
     try {
-      createAnalysisDetectionAdapter();
+      createAnalysisDetectionAdapter({ provider: 'sapling' });
     } catch (err) {
       expect(err).toBeInstanceOf(FileProcessingError);
       expect((err as FileProcessingError).code).toBe('DETECTION_FAILED');
@@ -154,30 +101,21 @@ describe('createAnalysisDetectionAdapter – missing API key throws exact messag
     }
   });
 
-  it('winston: throws with exact message "Detection service is not configured."', () => {
-    process.env.DETECTION_PROVIDER = 'winston';
-    // WINSTON_API_KEY intentionally absent
-
-    expect(() => createAnalysisDetectionAdapter()).toThrowError(
-      'Detection service is not configured.',
+  it('winston: throws "not yet implemented" (stub provider, before API key check)', () => {
+    expect(() => createAnalysisDetectionAdapter({ provider: 'winston' })).toThrowError(
+      /not yet implemented/,
     );
   });
 
-  it('originality: throws with exact message "Detection service is not configured."', () => {
-    process.env.DETECTION_PROVIDER = 'originality';
-    // ORIGINALITY_API_KEY intentionally absent
-
-    expect(() => createAnalysisDetectionAdapter()).toThrowError(
-      'Detection service is not configured.',
+  it('originality: throws "not yet implemented" (stub provider, before API key check)', () => {
+    expect(() => createAnalysisDetectionAdapter({ provider: 'originality' })).toThrowError(
+      /not yet implemented/,
     );
   });
 
-  it('gptzero: throws with exact message "Detection service is not configured."', () => {
-    process.env.DETECTION_PROVIDER = 'gptzero';
-    // GPTZERO_API_KEY intentionally absent
-
-    expect(() => createAnalysisDetectionAdapter()).toThrowError(
-      'Detection service is not configured.',
+  it('gptzero: throws "not yet implemented" (stub provider, before API key check)', () => {
+    expect(() => createAnalysisDetectionAdapter({ provider: 'gptzero' })).toThrowError(
+      /not yet implemented/,
     );
   });
 });
@@ -244,33 +182,22 @@ describe('GPTZeroDetectionAdapter – stub throws FileProcessingError', () => {
 // ── Factory: Copyleaks composite selection ────────────────────────────────────
 
 describe('createAnalysisDetectionAdapter – composite adapter selection with Copyleaks', () => {
-  let saved: Record<string, string | undefined>;
-
-  beforeEach(() => {
-    saved = saveEnv(ENV_KEYS);
-    for (const k of ENV_KEYS) {
-      delete process.env[k];
-    }
-  });
-
-  afterEach(() => {
-    restoreEnv(saved);
-  });
-
   it('returns CompositeDetectionAdapter when sapling + copyleaks credentials are present', () => {
-    process.env.SAPLING_API_KEY = 'sapling-key';
-    process.env.COPYLEAKS_EMAIL = 'user@example.com';
-    process.env.COPYLEAKS_API_KEY = 'copyleaks-key';
-
-    const adapter = createAnalysisDetectionAdapter();
+    const adapter = createAnalysisDetectionAdapter({
+      provider: 'sapling',
+      apiKey: 'sapling-key',
+      copyleaksEmail: 'user@example.com',
+      copyleaksApiKey: 'copyleaks-key',
+    });
 
     expect(adapter).toBeInstanceOf(CompositeDetectionAdapter);
   });
 
   it('returns SaplingDetectionAdapter (not composite) when sapling key present but no copyleaks', () => {
-    process.env.SAPLING_API_KEY = 'sapling-key';
-
-    const adapter = createAnalysisDetectionAdapter();
+    const adapter = createAnalysisDetectionAdapter({
+      provider: 'sapling',
+      apiKey: 'sapling-key',
+    });
 
     expect(adapter).toBeInstanceOf(SaplingDetectionAdapter);
   });
@@ -287,31 +214,31 @@ describe('createAnalysisDetectionAdapter – composite adapter selection with Co
   });
 
   it('returns SaplingDetectionAdapter when only copyleaksEmail provided (no apiKey)', () => {
-    process.env.SAPLING_API_KEY = 'sapling-key';
-    process.env.COPYLEAKS_EMAIL = 'user@example.com';
-    // COPYLEAKS_API_KEY intentionally absent
-
-    const adapter = createAnalysisDetectionAdapter();
+    const adapter = createAnalysisDetectionAdapter({
+      provider: 'sapling',
+      apiKey: 'sapling-key',
+      copyleaksEmail: 'user@example.com',
+    });
 
     expect(adapter).toBeInstanceOf(SaplingDetectionAdapter);
   });
 
   it('returns SaplingDetectionAdapter when only copyleaksApiKey provided (no email)', () => {
-    process.env.SAPLING_API_KEY = 'sapling-key';
-    process.env.COPYLEAKS_API_KEY = 'copyleaks-key';
-    // COPYLEAKS_EMAIL intentionally absent
-
-    const adapter = createAnalysisDetectionAdapter();
+    const adapter = createAnalysisDetectionAdapter({
+      provider: 'sapling',
+      apiKey: 'sapling-key',
+      copyleaksApiKey: 'copyleaks-key',
+    });
 
     expect(adapter).toBeInstanceOf(SaplingDetectionAdapter);
   });
 
   it('returns CompositeDetectionAdapter when only copyleaks credentials present (no sapling key)', () => {
-    // SAPLING_API_KEY intentionally absent
-    process.env.COPYLEAKS_EMAIL = 'user@example.com';
-    process.env.COPYLEAKS_API_KEY = 'copyleaks-key';
-
-    const adapter = createAnalysisDetectionAdapter();
+    const adapter = createAnalysisDetectionAdapter({
+      provider: 'sapling',
+      copyleaksEmail: 'user@example.com',
+      copyleaksApiKey: 'copyleaks-key',
+    });
 
     expect(adapter).toBeInstanceOf(CompositeDetectionAdapter);
   });
@@ -327,8 +254,6 @@ describe('createAnalysisDetectionAdapter – composite adapter selection with Co
   });
 
   it('throws when neither sapling nor copyleaks credentials are present', () => {
-    // All env keys deleted in beforeEach
-
-    expect(() => createAnalysisDetectionAdapter()).toThrow(FileProcessingError);
+    expect(() => createAnalysisDetectionAdapter({ provider: 'sapling' })).toThrow(FileProcessingError);
   });
 });

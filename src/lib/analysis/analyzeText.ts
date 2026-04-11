@@ -18,7 +18,7 @@ export function createAnalysisDetectionAdapter(config?: {
   copyleaksEmail?: string;
   copyleaksApiKey?: string;
 }): DetectionAdapter {
-  const provider = (config?.provider ?? process.env.DETECTION_PROVIDER ?? 'sapling').toLowerCase();
+  const provider = (config?.provider ?? 'sapling').toLowerCase();
 
   // Check if stub provider was explicitly requested via config
   if (config?.provider) {
@@ -34,14 +34,14 @@ export function createAnalysisDetectionAdapter(config?: {
     }
   }
 
-  // Resolve Copyleaks credentials (header/config → env var → undefined)
-  const copyleaksEmail = config?.copyleaksEmail || process.env.COPYLEAKS_EMAIL;
-  const copyleaksApiKey = config?.copyleaksApiKey || process.env.COPYLEAKS_API_KEY;
+  // Resolve Copyleaks credentials (config → undefined)
+  const copyleaksEmail = config?.copyleaksEmail;
+  const copyleaksApiKey = config?.copyleaksApiKey;
   const hasCopyleaks = Boolean(copyleaksEmail && copyleaksApiKey);
 
   switch (provider) {
     case 'sapling': {
-      const saplingApiKey = config?.apiKey ?? process.env.SAPLING_API_KEY;
+      const saplingApiKey = config?.apiKey;
       const hasSapling = Boolean(saplingApiKey);
 
       // Build whichever adapters are available and delegate to CompositeDetectionAdapter.
@@ -68,7 +68,7 @@ export function createAnalysisDetectionAdapter(config?: {
     }
 
     case 'winston': {
-      const apiKey = config?.apiKey ?? process.env.WINSTON_API_KEY;
+      const apiKey = config?.apiKey;
       if (!apiKey) {
         throw new FileProcessingError(
           'DETECTION_FAILED',
@@ -79,7 +79,7 @@ export function createAnalysisDetectionAdapter(config?: {
     }
 
     case 'originality': {
-      const apiKey = config?.apiKey ?? process.env.ORIGINALITY_API_KEY;
+      const apiKey = config?.apiKey;
       if (!apiKey) {
         throw new FileProcessingError(
           'DETECTION_FAILED',
@@ -90,7 +90,7 @@ export function createAnalysisDetectionAdapter(config?: {
     }
 
     case 'gptzero': {
-      const apiKey = config?.apiKey ?? process.env.GPTZERO_API_KEY;
+      const apiKey = config?.apiKey;
       if (!apiKey) {
         throw new FileProcessingError(
           'DETECTION_FAILED',
@@ -103,7 +103,7 @@ export function createAnalysisDetectionAdapter(config?: {
     default:
       throw new FileProcessingError(
         'DETECTION_FAILED',
-        `Unknown detection provider: "${provider}". Set DETECTION_PROVIDER to "sapling", "winston", "originality", or "gptzero".`,
+        `Unknown detection provider: "${provider}". Select a valid detection provider in Settings (sapling, winston, originality, or gptzero).`,
       );
   }
 }
