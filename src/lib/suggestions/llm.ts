@@ -1,6 +1,6 @@
 import type { Suggestion, SentenceEntry, SuggestionService } from './types';
 import { applyGuardrails } from './guardrails';
-import { sanitizeVoiceProfile, detectProfileLanguage, buildRewriteContextBlock } from './voiceProfile';
+import { sanitizeVoiceProfile, detectProfileLanguage, buildRewriteContextBlock, buildFewShotContextBlock } from './voiceProfile';
 import { createLlmAdapter } from './llm-adapter';
 
 interface LlmRewritePayload {
@@ -46,12 +46,33 @@ Rules:
 - Do NOT mention AI detection, evasion, or scores.
 - Each explanation must be one sentence, <= 120 characters.`;
 
-function buildUserPrompt(sentence: string): string {
-  return `Rewrite the following sentence to sound like natural human writing:\n\n"${sentence}"`;
+function buildUserPrompt(sentence: string, voiceProfile?: string, fewShotExamples?: string[]): string {
+  const base = `Rewrite the following sentence to sound like natural human writing:\n\n"${sentence}"`;
+
+  if (fewShotExamples && fewShotExamples.length > 0) {
+    const block = buildFewShotContextBlock(fewShotExamples);
+    if (block) return `${block}\n\n${base}`;
+  }
+
+  if (!voiceProfile) return base;
+
+  const sanitized = sanitizeVoiceProfile(voiceProfile);
+  if (!sanitized) return base;
+
+  const lang = detectProfileLanguage(sanitized);
+  const contextBlock = buildRewriteContextBlock(sanitized, lang);
+  if (!contextBlock) return base;
+
+  return `${contextBlock}\n\n${base}`;
 }
 
-function buildMultiUserPrompt(sentence: string, voiceProfile?: string): string {
+function buildMultiUserPrompt(sentence: string, voiceProfile?: string, fewShotExamples?: string[]): string {
   const base = `Rewrite the following sentence so it sounds like it was written by a real person, not an AI. Provide 3 distinct alternatives:\n\n"${sentence}"`;
+
+  if (fewShotExamples && fewShotExamples.length > 0) {
+    const block = buildFewShotContextBlock(fewShotExamples);
+    if (block) return `${block}\n\n${base}`;
+  }
 
   if (!voiceProfile) return base;
 
@@ -126,10 +147,12 @@ function parseMultiAlternativesPayload(raw: string): LlmRewritePayload[] | null 
 async function twoPassRewrite(
   adapter: ReturnType<typeof createLlmAdapter>,
   sentence: string,
+  voiceProfile?: string,
+  fewShotExamples?: string[],
 ): Promise<LlmRewritePayload | null> {
   const pass1Result = await adapter.complete({
     systemPrompt: SYSTEM_PROMPT,
-    userPrompt: buildUserPrompt(sentence),
+    userPrompt: buildUserPrompt(sentence, voiceProfile, fewShotExamples),
     temperature: 0.7,
     maxTokens: 256,
   });
@@ -138,9 +161,14 @@ async function twoPassRewrite(
   const pass1Payload = parseRewritePayload(pass1Result.content);
   if (!pass1Payload) return null;
 
+  // Skip Pass2 refinement when few-shot examples are active to preserve style signal
+  if (fewShotExamples && fewShotExamples.length > 0) {
+    return pass1Payload;
+  }
+
   const pass2Result = await adapter.complete({
     systemPrompt: SYSTEM_PROMPT,
-    userPrompt: buildUserPrompt(pass1Payload.rewrite),
+    userPrompt: buildUserPrompt(pass1Payload.rewrite, voiceProfile, fewShotExamples),
     temperature: 0.85,
     maxTokens: 256,
   });
@@ -197,11 +225,13 @@ export async function generateSingleSuggestionWithProvider(
   sentenceIndex: number,
   _score: number,
   provider?: string,
+  voiceProfile?: string,
+  fewShotExamples?: string[],
 ): Promise<Suggestion | null> {
   if (!apiKey) return null;
 
   const adapter = createLlmAdapter(apiKey, provider);
-  const payload = await twoPassRewrite(adapter, sentence);
+  const payload = await twoPassRewrite(adapter, sentence, voiceProfile, fewShotExamples);
   if (!payload) return null;
 
   const [filtered] = applyGuardrails([
@@ -242,6 +272,7 @@ export async function generateAlternativeSuggestions(
   _score: number,
   voiceProfile?: string,
   provider?: string,
+  fewShotExamples?: string[],
 ): Promise<SuggestionAlternative[] | null> {
   if (!apiKey) return null;
 
@@ -249,7 +280,7 @@ export async function generateAlternativeSuggestions(
 
   const result = await adapter.completeMulti({
     systemPrompt: MULTI_SYSTEM_PROMPT,
-    userPrompt: buildMultiUserPrompt(sentence, voiceProfile),
+    userPrompt: buildMultiUserPrompt(sentence, voiceProfile, fewShotExamples),
     temperature: 0.7,
     maxTokens: 768,
   });
@@ -274,7 +305,7 @@ export async function generateAlternativeSuggestions(
   } else {
     const recoveryResult = await adapter.completeMulti({
       systemPrompt: MULTI_SYSTEM_PROMPT,
-      userPrompt: buildMultiUserPrompt(sentence, voiceProfile),
+      userPrompt: buildMultiUserPrompt(sentence, voiceProfile, fewShotExamples),
       temperature: 0.7,
       maxTokens: 768,
     });
@@ -297,11 +328,16 @@ export async function generateAlternativeSuggestions(
     finalSafe = combinedSafe.slice(0, 3);
   }
 
+  // Skip Pass2 refinement when few-shot examples are active to preserve style signal
+  if (fewShotExamples && fewShotExamples.length > 0) {
+    return finalSafe.map((s) => ({ rewrite: s.rewrite, explanation: s.explanation }));
+  }
+
   const refined = await Promise.all(
     finalSafe.map(async (s) => {
       const pass2Result = await adapter.complete({
         systemPrompt: SYSTEM_PROMPT,
-        userPrompt: buildUserPrompt(s.rewrite),
+        userPrompt: buildUserPrompt(s.rewrite, voiceProfile, fewShotExamples),
         temperature: 0.85,
         maxTokens: 256,
       });
