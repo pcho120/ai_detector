@@ -19,6 +19,8 @@ export interface LlmCompletionRequest {
   temperature: number;
   /** Maximum tokens to generate. */
   maxTokens: number;
+  /** Optional nucleus sampling probability (0-1). When provided, constrains token sampling to top-p probability mass. */
+  topP?: number;
 }
 
 export interface LlmCompletionResponse {

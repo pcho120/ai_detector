@@ -205,16 +205,12 @@ async function twoPassRewrite(
     userPrompt: buildUserPrompt(sentence, voiceProfile, fewShotExamples),
     temperature: 0.7,
     maxTokens: 256,
+    ...(fewShotExamples && fewShotExamples.length > 0 ? { topP: 0.9 } : {}),
   });
   if (!pass1Result) return null;
 
   const pass1Payload = parseRewritePayload(pass1Result.content);
   if (!pass1Payload) return null;
-
-  // Skip Pass2 refinement when few-shot examples are active to preserve style signal
-  if (fewShotExamples && fewShotExamples.length > 0) {
-    return pass1Payload;
-  }
 
   const pass2Result = await adapter.complete({
     systemPrompt: getSystemPrompt(!!fewShotExamples?.length),
@@ -333,6 +329,7 @@ export async function generateAlternativeSuggestions(
     userPrompt: buildMultiUserPrompt(sentence, voiceProfile, fewShotExamples),
     temperature: 0.7,
     maxTokens: 768,
+    ...(fewShotExamples && fewShotExamples.length > 0 ? { topP: 0.9 } : {}),
   });
   if (!result) return null;
 
@@ -376,11 +373,6 @@ export async function generateAlternativeSuggestions(
     if (combinedSafe.length < 2) return null;
 
     finalSafe = combinedSafe.slice(0, 3);
-  }
-
-  // Skip Pass2 refinement when few-shot examples are active to preserve style signal
-  if (fewShotExamples && fewShotExamples.length > 0) {
-    return finalSafe.map((s) => ({ rewrite: s.rewrite, explanation: s.explanation }));
   }
 
   const refined = await Promise.all(

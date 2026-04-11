@@ -35,6 +35,7 @@ export class OpenAiLlmAdapter implements LlmAdapter {
           model: 'gpt-4o-mini',
           temperature: request.temperature,
           max_tokens: request.maxTokens,
+          ...(request.topP !== undefined ? { top_p: request.topP } : {}),
           messages: [
             { role: 'system', content: request.systemPrompt },
             { role: 'user', content: request.userPrompt },
@@ -75,6 +76,7 @@ export class OpenAiLlmAdapter implements LlmAdapter {
           model: 'gpt-4o-mini',
           temperature: request.temperature,
           max_tokens: request.maxTokens,
+          ...(request.topP !== undefined ? { top_p: request.topP } : {}),
           messages: [
             { role: 'system', content: request.systemPrompt },
             { role: 'user', content: request.userPrompt },

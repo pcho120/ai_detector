@@ -23,6 +23,7 @@ export class ClaudeLlmAdapter implements LlmAdapter {
         model: 'claude-sonnet-4-6',
         max_tokens: request.maxTokens,
         temperature: Math.min(request.temperature, 1.0),
+        ...(request.topP !== undefined ? { top_p: request.topP } : {}),
         system: request.systemPrompt,
         messages: [
           {

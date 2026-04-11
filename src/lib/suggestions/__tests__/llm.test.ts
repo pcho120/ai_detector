@@ -146,10 +146,14 @@ describe('twoPassRewrite call count', () => {
     vi.clearAllMocks();
   });
 
-  it('calls adapter.complete exactly once when fewShotExamples are provided', async () => {
-    mockComplete.mockResolvedValueOnce({
-      content: JSON.stringify({ rewrite: 'Pass one result.', explanation: 'first pass' }),
-    });
+  it('calls adapter.complete exactly twice when fewShotExamples are provided', async () => {
+    mockComplete
+      .mockResolvedValueOnce({
+        content: JSON.stringify({ rewrite: 'Pass one result.', explanation: 'first pass' }),
+      })
+      .mockResolvedValueOnce({
+        content: JSON.stringify({ rewrite: 'Pass two result.', explanation: 'second pass' }),
+      });
 
     const result = await generateSingleSuggestionWithProvider(
       'api-key',
@@ -161,14 +165,18 @@ describe('twoPassRewrite call count', () => {
       ['Example one.', 'Example two.'],
     );
 
-    expect(mockComplete).toHaveBeenCalledTimes(1);
-    expect(result?.rewrite).toBe('Pass one result.');
+    expect(mockComplete).toHaveBeenCalledTimes(2);
+    expect(result?.rewrite).toBe('Pass two result.');
   });
 
-  it('uses the style-aware system prompt when fewShotExamples are provided', async () => {
-    mockComplete.mockResolvedValueOnce({
-      content: JSON.stringify({ rewrite: 'Pass one result.', explanation: 'first pass' }),
-    });
+  it('Pass2 uses style-aware system prompt when fewShotExamples are provided', async () => {
+    mockComplete
+      .mockResolvedValueOnce({
+        content: JSON.stringify({ rewrite: 'Pass one result.', explanation: 'first pass' }),
+      })
+      .mockResolvedValueOnce({
+        content: JSON.stringify({ rewrite: 'Pass two result.', explanation: 'second pass' }),
+      });
 
     await generateSingleSuggestionWithProvider(
       'api-key',
@@ -180,8 +188,31 @@ describe('twoPassRewrite call count', () => {
       ['Example one.', 'Example two.'],
     );
 
-    expect(mockComplete).toHaveBeenCalledTimes(1);
-    expect(mockComplete.mock.calls[0]?.[0].systemPrompt).toBe(STYLE_SYSTEM_PROMPT_TEXT);
+    expect(mockComplete.mock.calls[1]?.[0].systemPrompt).toBe(getSystemPrompt(true));
+  });
+
+  it('Pass2 includes fewShotExamples in the user prompt when provided', async () => {
+    mockComplete
+      .mockResolvedValueOnce({
+        content: JSON.stringify({ rewrite: 'Pass one result.', explanation: 'first pass' }),
+      })
+      .mockResolvedValueOnce({
+        content: JSON.stringify({ rewrite: 'Pass two result.', explanation: 'second pass' }),
+      });
+
+    await generateSingleSuggestionWithProvider(
+      'api-key',
+      'Original sentence.',
+      0,
+      0.9,
+      'openai',
+      undefined,
+      ['Example one.', 'Example two.'],
+    );
+
+    expect(mockComplete.mock.calls[1]?.[0].userPrompt).toContain('Example one.');
+    expect(mockComplete.mock.calls[1]?.[0].userPrompt).toContain('Example two.');
+    expect(mockComplete.mock.calls[1]?.[0].userPrompt).toContain('Pass one result.');
   });
 
   it('calls adapter.complete exactly twice when no fewShotExamples (regression)', async () => {
@@ -255,6 +286,37 @@ describe('generateAlternativeSuggestions system prompts', () => {
 
     expect(mockCompleteMulti).toHaveBeenCalledTimes(1);
     expect(mockCompleteMulti.mock.calls[0]?.[0].systemPrompt).toBe(STYLE_MULTI_SYSTEM_PROMPT_TEXT);
+  });
+
+  it('runs Pass2 refinement for generated alternatives when fewShotExamples are provided', async () => {
+    mockCompleteMulti.mockResolvedValueOnce({
+      content: JSON.stringify({
+        alternatives: [
+          { rewrite: 'Alt one.', explanation: 'e1' },
+          { rewrite: 'Alt two.', explanation: 'e2' },
+          { rewrite: 'Alt three.', explanation: 'e3' },
+        ],
+      }),
+    });
+    mockComplete
+      .mockResolvedValueOnce({ content: JSON.stringify({ rewrite: 'Refined one.', explanation: 'r1' }) })
+      .mockResolvedValueOnce({ content: JSON.stringify({ rewrite: 'Refined two.', explanation: 'r2' }) })
+      .mockResolvedValueOnce({ content: JSON.stringify({ rewrite: 'Refined three.', explanation: 'r3' }) });
+
+    const result = await generateAlternativeSuggestions(
+      'api-key',
+      'Original sentence.',
+      0,
+      0.9,
+      undefined,
+      'openai',
+      ['Example one.', 'Example two.'],
+    );
+
+    expect(mockComplete).toHaveBeenCalledTimes(3);
+    expect(mockComplete.mock.calls[0]?.[0].systemPrompt).toBe(getSystemPrompt(true));
+    expect(mockComplete.mock.calls[0]?.[0].userPrompt).toContain('Example one.');
+    expect(result?.map((entry) => entry.rewrite)).toEqual(['Refined one.', 'Refined two.', 'Refined three.']);
   });
 
   it('uses the original multi system prompt when fewShotExamples are not provided', async () => {
