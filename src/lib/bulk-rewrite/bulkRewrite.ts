@@ -1,6 +1,10 @@
 import { analyzeText, createAnalysisDetectionAdapter } from '@/lib/analysis/analyzeText';
 import { applyGuardrails } from '@/lib/suggestions/guardrails';
-import { generateSingleSuggestionWithProvider } from '@/lib/suggestions/llm';
+import {
+  BULK_PROMPT_VARIATIONS,
+  generateParagraphSuggestionWithProvider,
+  generateSingleSuggestionWithProvider,
+} from '@/lib/suggestions/llm';
 import type {
   BulkRewriteEngineConfig,
   BulkRewriteRequest,
@@ -222,6 +226,69 @@ async function runWithConcurrency<T>(
   await Promise.all(workers);
 }
 
+function groupConsecutiveCandidates(
+  candidates: WorkingSentence[],
+  maxGroupSize: number = 4,
+): Array<WorkingSentence[]> {
+  const groups: Array<WorkingSentence[]> = [];
+  if (candidates.length === 0) return groups;
+
+  const pushPartitionedRun = (run: WorkingSentence[]) => {
+    if (run.length <= 1) {
+      groups.push(run);
+      return;
+    }
+
+    let remaining = run.length;
+    let offset = 0;
+
+    while (remaining > 0) {
+      if (remaining <= maxGroupSize + 1) {
+        groups.push(run.slice(offset, offset + remaining));
+        return;
+      }
+
+      if (remaining === 6) {
+        groups.push(run.slice(offset, offset + 3));
+        groups.push(run.slice(offset + 3, offset + 6));
+        return;
+      }
+
+      const groupSize = 5;
+      groups.push(run.slice(offset, offset + groupSize));
+      offset += groupSize;
+      remaining -= groupSize;
+    }
+  };
+
+  let currentRun: WorkingSentence[] = [candidates[0]];
+
+  for (let i = 1; i < candidates.length; i += 1) {
+    const prev = currentRun[currentRun.length - 1];
+    const curr = candidates[i];
+    const isConsecutive = Math.abs(curr.sentenceIndex - prev.sentenceIndex) <= 1;
+
+    if (isConsecutive) {
+      currentRun.push(curr);
+    } else {
+      pushPartitionedRun(currentRun);
+      currentRun = [curr];
+    }
+  }
+
+  pushPartitionedRun(currentRun);
+  return groups;
+}
+
+function splitIntoSentences(text: string): string[] {
+  const matches = text
+    .match(/[^.!?]+(?:[.!?]+|$)/g)
+    ?.map((sentence) => sentence.trim())
+    .filter(Boolean);
+
+  return matches && matches.length > 0 ? matches : [text.trim()].filter(Boolean);
+}
+
 export async function executeBulkRewrite(
   request: BulkRewriteRequest,
   onProgress?: BulkRewriteProgress,
@@ -277,38 +344,81 @@ export async function executeBulkRewrite(
           entry.score >= ELIGIBLE_SCORE_FLOOR &&
           preserveReplacements[entry.sentenceIndex] === undefined,
       )
-      .sort((a, b) => b.score - a.score);
+      .sort((a, b) => a.sentenceIndex - b.sentenceIndex);
 
     if (candidates.length === 0) break;
+
+    const groups = groupConsecutiveCandidates(candidates)
+      .sort((a, b) => {
+        const aMaxScore = Math.max(...a.map((entry) => entry.score));
+        const bMaxScore = Math.max(...b.map((entry) => entry.score));
+        return bMaxScore - aMaxScore || a[0].sentenceIndex - b[0].sentenceIndex;
+      });
 
     let completed = 0;
     let rewrittenInRound = 0;
     const attemptedRewrites: Record<number, { text: string }> = {};
+    const promptVariationIndex = iterations % BULK_PROMPT_VARIATIONS.length;
 
-    await runWithConcurrency(candidates, CONCURRENCY, async (candidate) => {
+    await runWithConcurrency(groups, CONCURRENCY, async (group) => {
       if (nowFn() >= deadline) return;
 
-      const suggestion = await generateSingleSuggestionWithProvider(
-        apiKey,
-        candidate.sentence,
-        candidate.sentenceIndex,
-        candidate.score,
-        llmProvider,
-        request.voiceProfile,
-        request.fewShotExamples,
-      );
+      if (group.length === 1) {
+        const candidate = group[0];
+        const suggestion = await generateSingleSuggestionWithProvider(
+          apiKey,
+          candidate.sentence,
+          candidate.sentenceIndex,
+          candidate.score,
+          llmProvider,
+          request.voiceProfile,
+          request.fewShotExamples,
+          true,
+          promptVariationIndex,
+        );
 
-      if (suggestion) {
-        const [safeSuggestion] = applyGuardrails([suggestion]);
-        if (safeSuggestion) {
-          rewrites[candidate.sentenceIndex] = safeSuggestion.rewrite;
-          attemptedRewrites[candidate.sentenceIndex] = { text: safeSuggestion.rewrite };
-          rewrittenInRound += 1;
+        let chosenRewrite: string | null = null;
+        if (suggestion) {
+          const [safeSuggestion] = applyGuardrails([suggestion]);
+          if (safeSuggestion) {
+            rewrites[candidate.sentenceIndex] = safeSuggestion.rewrite;
+            attemptedRewrites[candidate.sentenceIndex] = { text: safeSuggestion.rewrite };
+            rewrittenInRound += 1;
+          }
+        }
+      } else {
+        const paragraphText = group.map((entry) => entry.sentence).join(' ');
+        const averageScore = group.reduce((sum, entry) => sum + entry.score, 0) / group.length;
+        const rewrittenParagraph = await generateParagraphSuggestionWithProvider(
+          apiKey,
+          paragraphText,
+          averageScore,
+          llmProvider,
+          promptVariationIndex,
+        );
+
+        if (rewrittenParagraph) {
+          const rewrittenSentences = splitIntoSentences(rewrittenParagraph);
+          const mappedSuggestions = group
+            .slice(0, Math.min(rewrittenSentences.length, group.length))
+            .map((entry, index) => ({
+              sentence: entry.sentence,
+              rewrite: rewrittenSentences[index],
+              explanation: 'Paragraph-level bulk rewrite.',
+              sentenceIndex: entry.sentenceIndex,
+            }));
+          const safeSuggestions = applyGuardrails(mappedSuggestions);
+
+          for (const suggestion of safeSuggestions) {
+            rewrites[suggestion.sentenceIndex] = suggestion.rewrite;
+            attemptedRewrites[suggestion.sentenceIndex] = { text: suggestion.rewrite };
+            rewrittenInRound += 1;
+          }
         }
       }
 
       completed += 1;
-      emit(completed, candidates.length, 'rewriting');
+      emit(completed, groups.length, 'rewriting');
     });
 
     if (rewrittenInRound === 0) break;

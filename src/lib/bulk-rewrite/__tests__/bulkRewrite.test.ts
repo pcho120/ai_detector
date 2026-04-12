@@ -8,20 +8,30 @@ vi.mock('@/lib/analysis/analyzeText', () => ({
   analyzeText: vi.fn(),
 }));
 
-vi.mock('@/lib/suggestions/llm', () => ({
-  generateSingleSuggestion: vi.fn(),
-  generateSingleSuggestionWithProvider: vi.fn(),
-}));
+vi.mock('@/lib/suggestions/llm', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/suggestions/llm')>();
+  return {
+    generateSingleSuggestion: vi.fn(),
+    generateParagraphSuggestionWithProvider: vi.fn(),
+    generateSingleSuggestionWithProvider: vi.fn(),
+    BULK_PROMPT_VARIATIONS: actual.BULK_PROMPT_VARIATIONS,
+  };
+});
 
 vi.mock('@/lib/suggestions/guardrails', () => ({
   applyGuardrails: vi.fn((suggestions) => suggestions),
 }));
 
 import { analyzeText } from '@/lib/analysis/analyzeText';
-import { generateSingleSuggestion, generateSingleSuggestionWithProvider } from '@/lib/suggestions/llm';
+import {
+  generateParagraphSuggestionWithProvider,
+  generateSingleSuggestion,
+  generateSingleSuggestionWithProvider,
+} from '@/lib/suggestions/llm';
 import { applyGuardrails } from '@/lib/suggestions/guardrails';
 
 const mockAnalyzeText = vi.mocked(analyzeText);
+const mockGenerateParagraphSuggestionWithProvider = vi.mocked(generateParagraphSuggestionWithProvider);
 const mockGenerateSingleSuggestion = vi.mocked(generateSingleSuggestion);
 const mockGenerateSingleSuggestionWithProvider = vi.mocked(generateSingleSuggestionWithProvider);
 const mockApplyGuardrails = vi.mocked(applyGuardrails);
@@ -33,6 +43,18 @@ beforeEach(() => {
   mockGenerateSingleSuggestionWithProvider.mockImplementation(async (apiKey, sentence, sentenceIndex, score) =>
     mockGenerateSingleSuggestion(apiKey, sentence, sentenceIndex, score)
   );
+
+  mockGenerateParagraphSuggestionWithProvider.mockImplementation(async (apiKey, paragraphText, score) => {
+    const sentences = paragraphText.match(/[^.!?]+(?:[.!?]+|$)/g)?.map((sentence) => sentence.trim()).filter(Boolean) ?? [];
+    const rewrites: string[] = [];
+
+    for (const [index, sentence] of sentences.entries()) {
+      const suggestion = await mockGenerateSingleSuggestion(apiKey, sentence, index, score);
+      if (suggestion) rewrites.push(suggestion.rewrite);
+    }
+
+    return rewrites.length > 0 ? rewrites.join(' ') : null;
+  });
 });
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -150,6 +172,7 @@ describe('executeBulkRewrite – single round rewrite', () => {
       .mockResolvedValueOnce(
         makeAnalysisResult(0.8, [
           { sentence: 'AI sentence one.', score: 0.9 },
+          { sentence: 'Bridge sentence.', score: 0.01 },
           { sentence: 'AI sentence two.', score: 0.85 },
         ]),
       )
@@ -157,6 +180,7 @@ describe('executeBulkRewrite – single round rewrite', () => {
       .mockResolvedValueOnce(
         makeAnalysisResult(0.25, [
           { sentence: 'Human sentence one.', score: 0.2 },
+          { sentence: 'Bridge sentence.', score: 0.01 },
           { sentence: 'Human sentence two.', score: 0.3 },
         ]),
       );
@@ -165,12 +189,20 @@ describe('executeBulkRewrite – single round rewrite', () => {
       .mockResolvedValueOnce(makeSuggestion(0, 'Human sentence one.'))
       .mockResolvedValueOnce(makeSuggestion(1, 'Human sentence two.'));
 
-    const result = await executeBulkRewrite(makeRequest({ targetScore: 30 }), undefined, { llmApiKey: 'test-key' });
+    const result = await executeBulkRewrite(makeRequest({
+      targetScore: 30,
+      text: 'AI sentence one. Bridge sentence. AI sentence two.',
+      sentences: [
+        makeSentence('AI sentence one.', 0.9, 0),
+        makeSentence('Bridge sentence.', 0.01, 1),
+        makeSentence('AI sentence two.', 0.85, 2),
+      ],
+    }), undefined, { llmApiKey: 'test-key' });
 
     expect(result.targetMet).toBe(true);
     expect(result.iterations).toBe(1);
     expect(result.rewrites[0]).toBe('Human sentence one.');
-    expect(result.rewrites[1]).toBe('Human sentence two.');
+    expect(result.rewrites[2]).toBe('Human sentence two.');
     expect(result.totalRewritten).toBe(2);
     expect(result.achievedScore).toBeCloseTo(25);
   });
@@ -196,6 +228,78 @@ describe('executeBulkRewrite – single round rewrite', () => {
     expect(result.achievedScore).toBeGreaterThanOrEqual(0);
     expect(result.achievedScore).toBeLessThanOrEqual(100);
   });
+
+  it('groups adjacent high-score sentences into paragraph rewrites', async () => {
+    mockAnalyzeText
+      .mockResolvedValueOnce(
+        makeAnalysisResult(0.8, [
+          { sentence: 'First AI sentence.', score: 0.9 },
+          { sentence: 'Second AI sentence.', score: 0.85 },
+        ]),
+      )
+      .mockResolvedValueOnce(
+        makeAnalysisResult(0.2, [
+          { sentence: 'First human sentence.', score: 0.1 },
+          { sentence: 'Second human sentence.', score: 0.1 },
+        ]),
+      );
+
+    mockGenerateParagraphSuggestionWithProvider.mockResolvedValueOnce(
+      'First human sentence. Second human sentence.',
+    );
+
+    const result = await executeBulkRewrite(makeRequest({ targetScore: 30 }), undefined, { llmApiKey: 'test-key' });
+
+    expect(mockGenerateParagraphSuggestionWithProvider).toHaveBeenCalledWith(
+      'test-key',
+      'Sentence one. Sentence two.',
+      0.8500000000000001,
+      undefined,
+      0,
+    );
+    expect(mockGenerateSingleSuggestionWithProvider).not.toHaveBeenCalled();
+    expect(result.rewrites).toEqual({
+      0: 'First human sentence.',
+      1: 'Second human sentence.',
+    });
+  });
+
+  it('falls back to sentence-level rewriting for isolated high-score sentences', async () => {
+    mockAnalyzeText
+      .mockResolvedValueOnce(
+        makeAnalysisResult(0.8, [
+          { sentence: 'First AI sentence.', score: 0.9 },
+          { sentence: 'Middle low sentence.', score: 0.01 },
+          { sentence: 'Third AI sentence.', score: 0.85 },
+        ]),
+      )
+      .mockResolvedValueOnce(
+        makeAnalysisResult(0.2, [
+          { sentence: 'First human sentence.', score: 0.1 },
+          { sentence: 'Middle low sentence.', score: 0.01 },
+          { sentence: 'Third human sentence.', score: 0.1 },
+        ]),
+      );
+
+    mockGenerateSingleSuggestion
+      .mockResolvedValueOnce(makeSuggestion(0, 'First human sentence.'))
+      .mockResolvedValueOnce(makeSuggestion(2, 'Third human sentence.'));
+
+    const result = await executeBulkRewrite(makeRequest({
+      targetScore: 30,
+      text: 'First AI sentence. Middle low sentence. Third AI sentence.',
+      sentences: [
+        makeSentence('First AI sentence.', 0.9, 0),
+        makeSentence('Middle low sentence.', 0.01, 1),
+        makeSentence('Third AI sentence.', 0.85, 2),
+      ],
+    }), undefined, { llmApiKey: 'test-key' });
+
+    expect(mockGenerateParagraphSuggestionWithProvider).not.toHaveBeenCalled();
+    expect(mockGenerateSingleSuggestionWithProvider).toHaveBeenCalledTimes(2);
+    expect(result.rewrites[0]).toBe('First human sentence.');
+    expect(result.rewrites[2]).toBe('Third human sentence.');
+  });
 });
 
 describe('executeBulkRewrite – null suggestion skip', () => {
@@ -206,12 +310,14 @@ describe('executeBulkRewrite – null suggestion skip', () => {
       .mockResolvedValueOnce(
         makeAnalysisResult(0.85, [
           { sentence: 'AI sentence one.', score: 0.9 },
+          { sentence: 'Bridge sentence.', score: 0.01 },
           { sentence: 'AI sentence two.', score: 0.8 },
         ]),
       )
       .mockResolvedValueOnce(
         makeAnalysisResult(0.75, [
           { sentence: 'AI sentence one.', score: 0.9 },
+          { sentence: 'Bridge sentence.', score: 0.01 },
           { sentence: 'Human sentence two.', score: 0.2 },
         ]),
       );
@@ -221,10 +327,18 @@ describe('executeBulkRewrite – null suggestion skip', () => {
       .mockResolvedValueOnce(null)
       .mockResolvedValueOnce(makeSuggestion(1, 'Human sentence two.'));
 
-    const result = await executeBulkRewrite(makeRequest({ targetScore: 30 }), undefined, { llmApiKey: 'test-key' });
+    const result = await executeBulkRewrite(makeRequest({
+      targetScore: 30,
+      text: 'AI sentence one. Bridge sentence. AI sentence two.',
+      sentences: [
+        makeSentence('AI sentence one.', 0.9, 0),
+        makeSentence('Bridge sentence.', 0.01, 1),
+        makeSentence('AI sentence two.', 0.8, 2),
+      ],
+    }), undefined, { llmApiKey: 'test-key' });
 
     expect(result.rewrites[0]).toBeUndefined();
-    expect(result.rewrites[1]).toBe('Human sentence two.');
+    expect(result.rewrites[2]).toBe('Human sentence two.');
     expect(result.totalRewritten).toBe(1);
   });
 });
@@ -561,14 +675,14 @@ describe('executeBulkRewrite – prioritization', () => {
       targetScore: 30,
       sentences: [
         makeSentence('Low risk.', 0.5, 0),
-        makeSentence('High risk.', 0.95, 1),
-        makeSentence('Medium risk.', 0.7, 2),
+        makeSentence('High risk.', 0.95, 2),
+        makeSentence('Medium risk.', 0.7, 4),
       ],
     }), undefined, { llmApiKey: 'test-key' });
 
-    // Sentence with highest score (sentenceIndex=1, score=0.95) should be called before lower ones
-    expect(callOrder.indexOf(1)).toBeLessThan(callOrder.indexOf(0));
-    expect(callOrder.indexOf(1)).toBeLessThan(callOrder.indexOf(2));
+    // Highest-scored isolated group should be processed before lower-score isolated groups.
+    expect(callOrder.indexOf(2)).toBeLessThan(callOrder.indexOf(0));
+    expect(callOrder.indexOf(2)).toBeLessThan(callOrder.indexOf(4));
   });
 
   it('excludes sentences with score below ELIGIBLE_SCORE_FLOOR (0.05)', async () => {
@@ -642,13 +756,16 @@ describe('executeBulkRewrite – manual replacements preservation', () => {
 
     mockGenerateSingleSuggestion
       .mockResolvedValueOnce(makeSuggestion(0, 'rewrite-v1'))
-      .mockResolvedValueOnce(makeSuggestion(0, 'rewrite-v2'));
+      .mockResolvedValueOnce(null) // intra-round retry (round 1) — no alternative
+      .mockResolvedValueOnce(makeSuggestion(0, 'rewrite-v2'))
+      .mockResolvedValueOnce(null); // intra-round retry (round 2) — no alternative
 
     const result = await executeBulkRewrite(makeRequest({
       targetScore: 10,
       sentences: [makeSentence('AI sentence.', 0.9, 0)],
     }), undefined, { llmApiKey: 'test-key' });
 
+    // Round 1 primary attempt (variation 0)
     expect(mockGenerateSingleSuggestionWithProvider).toHaveBeenNthCalledWith(
       1,
       'test-key',
@@ -658,7 +775,10 @@ describe('executeBulkRewrite – manual replacements preservation', () => {
       undefined,
       undefined,
       undefined,
+      true,
+      0,
     );
+    // Round 1 intra-round retry (variation 1) — returns null
     expect(mockGenerateSingleSuggestionWithProvider).toHaveBeenNthCalledWith(
       2,
       'test-key',
@@ -668,8 +788,10 @@ describe('executeBulkRewrite – manual replacements preservation', () => {
       undefined,
       undefined,
       undefined,
+      true,
+      1,
     );
-    expect(result.rewrites[0]).toBe('rewrite-v2');
+    expect(result.rewrites[0]).toBe('rewrite-v1');
   });
 
   it('should keep old rewrite when retry produces higher score (regression protection)', async () => {
@@ -768,6 +890,8 @@ describe('executeBulkRewrite – manual replacements preservation', () => {
     mockGenerateSingleSuggestion
       .mockResolvedValueOnce(makeSuggestion(4, 'Rewrite first v1.'))
       .mockResolvedValueOnce(makeSuggestion(9, 'Rewrite second v1.'))
+      .mockResolvedValueOnce(null) // intra-round retry (round 1, group 1)
+      .mockResolvedValueOnce(null) // intra-round retry (round 1, group 2)
       .mockResolvedValueOnce(makeSuggestion(4, 'Rewrite first v2.'))
       .mockResolvedValueOnce(makeSuggestion(9, 'Rewrite second v2.'));
 
@@ -789,6 +913,8 @@ describe('executeBulkRewrite – manual replacements preservation', () => {
       undefined,
       undefined,
       undefined,
+      true,
+      1,
     );
     expect(mockGenerateSingleSuggestionWithProvider).toHaveBeenNthCalledWith(
       4,
@@ -799,10 +925,12 @@ describe('executeBulkRewrite – manual replacements preservation', () => {
       undefined,
       undefined,
       undefined,
+      true,
+      1,
     );
     expect(result.rewrites).toEqual({
-      4: 'Rewrite first v2.',
-      9: 'Rewrite second v2.',
+      4: 'Rewrite first v1.',
+      9: 'Rewrite second v1.',
     });
   });
 });
@@ -830,8 +958,11 @@ describe('executeBulkRewrite – concurrency ceiling', () => {
         ),
       );
 
-    mockGenerateSingleSuggestion.mockImplementation(async (_key, _sentence, sentenceIndex) => {
-      return makeSuggestion(sentenceIndex as number, `human-${sentenceIndex}`);
+    mockGenerateParagraphSuggestionWithProvider.mockImplementation(async (_key, paragraphText) => {
+      return paragraphText
+        .match(/[^.!?]+(?:[.!?]+|$)/g)
+        ?.map((sentence, index) => `human-${index}.`)
+        .join(' ') ?? null;
     });
 
     const result = await executeBulkRewrite({
@@ -842,6 +973,7 @@ describe('executeBulkRewrite – concurrency ceiling', () => {
 
     expect(result.totalRewritten).toBe(10);
     expect(Object.keys(result.rewrites).length).toBe(10);
+    expect(mockGenerateParagraphSuggestionWithProvider).toHaveBeenCalledTimes(2);
   });
 });
 
@@ -942,6 +1074,8 @@ describe('executeBulkRewrite – voice profile threading', () => {
       undefined,
       'Author voice profile:\nDirect and conversational.',
       undefined,
+      true,
+      0,
     );
   });
 });

@@ -59,3 +59,15 @@
 - twoPassRewrite now skips Pass 2 when bulkMode=true (early return after pass1Payload)
 - Temperature 0.95 for bulk Pass 1 (was 0.8 after T2, now raised to 0.95)
 - Single-suggestion path unchanged: still 2 passes at 0.7/0.85
+
+## [2026-04-12] Task 4: Paragraph-Level Rewriting
+- Bulk rewrite now groups adjacent eligible sentences by consecutive `sentenceIndex` runs, then partitions each run into blocks of 2-5 while leaving isolated sentences as single-sentence fallbacks.
+- Paragraph blocks are rewritten through a dedicated paragraph prompt and then split back into sentence slots in original order; when the model returns fewer/more sentences than expected, mapping is capped to the overlap.
+- Group scheduling keeps `CONCURRENCY = 5` unchanged but now applies it to rewrite blocks, and group priority still favors runs containing the highest-risk sentences first.
+
+## [2026-04-12] Task 5: Intra-Round Retry with Varied Prompts
+- Prompt variation rotation already in place: `promptVariationIndex = iterations % BULK_PROMPT_VARIATIONS.length` cycles through 4 prompt variations across rounds.
+- Inter-round retry (existing) plus best-rewrite rollback logic provides effective multi-attempt coverage without needing explicit intra-round retry — if a rewrite regresses (higher score than previous best), the best-scoring version is automatically restored.
+- Test mock pattern for retry: use `mockResolvedValueOnce(null)` slots for intra-round retry attempts that return no alternative; the delegation from `mockGenerateSingleSuggestionWithProvider` to `mockGenerateSingleSuggestion` means mock queue ordering matters.
+- Adjacent sentences get grouped into paragraph-level rewrites, which changes the mock consumption pattern — tests with adjacent sentenceIndex values need `mockGenerateParagraphSuggestionWithProvider` returns, not `mockGenerateSingleSuggestion`.
+- 644 tests passing after Task 5 (up from 639 baseline in handoff notes).

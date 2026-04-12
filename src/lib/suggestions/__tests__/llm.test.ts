@@ -15,6 +15,8 @@ vi.mock('../guardrails', () => ({
 }));
 
 import {
+  buildParagraphUserPrompt,
+  generateParagraphSuggestionWithProvider,
   generateAlternativeSuggestions,
   generateSingleSuggestionWithProvider,
   getMultiSystemPrompt,
@@ -417,6 +419,60 @@ describe('score-aware prompts', () => {
     const pass1Prompt = mockComplete.mock.calls[0]?.[0].userPrompt as string;
     expect(pass1Prompt).not.toContain('0% likely');
     expect(pass1Prompt).not.toContain('likely AI-generated');
+  });
+});
+
+describe('paragraph rewrite helpers', () => {
+  beforeEach(() => {
+    mockComplete.mockReset();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('buildParagraphUserPrompt includes score context when score is provided', () => {
+    const prompt = buildParagraphUserPrompt('Sentence one. Sentence two.', 0.85);
+    expect(prompt).toContain('85% likely AI-generated');
+    expect(prompt).toContain('Rewrite the following paragraph');
+    expect(prompt).toContain('Maintain the same number of sentences');
+  });
+
+  it('generateParagraphSuggestionWithProvider uses bulk prompt settings and returns parsed rewrite', async () => {
+    mockComplete.mockResolvedValueOnce({
+      content: JSON.stringify({ rewrite: 'Rewritten paragraph.', explanation: 'done' }),
+    });
+
+    const result = await generateParagraphSuggestionWithProvider(
+      'api-key',
+      'Original paragraph.',
+      0.9,
+      'openai',
+      2,
+    );
+
+    expect(result).toBe('Rewritten paragraph.');
+    expect(mockComplete).toHaveBeenCalledTimes(1);
+    expect(mockComplete.mock.calls[0]?.[0].temperature).toBe(0.95);
+    expect(mockComplete.mock.calls[0]?.[0].maxTokens).toBe(1024);
+    expect(mockComplete.mock.calls[0]?.[0].topP).toBe(0.9);
+    expect(mockComplete.mock.calls[0]?.[0].userPrompt).toContain('Original paragraph.');
+  });
+
+  it('generateParagraphSuggestionWithProvider falls back to trimmed raw content', async () => {
+    mockComplete.mockResolvedValueOnce({
+      content: '  Raw rewritten paragraph.  ',
+    });
+
+    const result = await generateParagraphSuggestionWithProvider(
+      'api-key',
+      'Original paragraph.',
+      0.9,
+      'openai',
+      0,
+    );
+
+    expect(result).toBe('Raw rewritten paragraph.');
   });
 });
 

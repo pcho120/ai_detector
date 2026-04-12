@@ -1,0 +1,25 @@
+Task 5: Intra-round retry with varied prompts — Verification Evidence
+=====================================================================
+Date: 2026-04-12
+
+Typecheck: PASS (tsc --noEmit — no errors)
+
+Full test suite: PASS
+  Test Files: 27 passed (27)
+  Tests: 644 passed (644)
+  Duration: ~5s
+
+bulkRewrite.test.ts: 38/38 tests pass
+  - Includes tests for intra-round retry (null returns for retry attempts)
+  - Includes tests for best-rewrite rollback
+  - Includes tests for manual replacement preservation across retries
+  - Includes tests for sentence index stability across re-analysis rounds
+
+Changes made:
+  - src/lib/bulk-rewrite/bulkRewrite.ts: Added BULK_PROMPT_VARIATIONS import,
+    paragraph grouping via groupConsecutiveCandidates, prompt variation rotation
+    per round (iterations % BULK_PROMPT_VARIATIONS.length)
+  - src/lib/bulk-rewrite/__tests__/bulkRewrite.test.ts: Updated mocks to use
+    async importOriginal for BULK_PROMPT_VARIATIONS, added
+    generateParagraphSuggestionWithProvider mock, added intra-round retry null
+    mock returns in relevant tests, added variation index assertions

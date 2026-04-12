@@ -165,6 +165,18 @@ function buildUserPrompt(sentence: string, voiceProfile?: string, fewShotExample
   return `${contextBlock}\n\n${base}`;
 }
 
+export function buildParagraphUserPrompt(
+  paragraphText: string,
+  score?: number,
+): string {
+  const scoreContext =
+    score && score > 0
+      ? `This passage is flagged as ${Math.round(score * 100)}% likely AI-generated. `
+      : '';
+
+  return `${scoreContext}Rewrite the following paragraph, applying all the structural transformations. Maintain the same number of sentences and preserve the core meaning of each.\n\nParagraph:\n${paragraphText}\n\nRespond with JSON: {"rewrite":"...","explanation":"..."}`;
+}
+
 function buildMultiUserPrompt(
   sentence: string,
   voiceProfile?: string,
@@ -387,6 +399,31 @@ export async function generateSingleSuggestionWithProvider(
   ]);
 
   return filtered ?? null;
+}
+
+export async function generateParagraphSuggestionWithProvider(
+  apiKey: string | undefined,
+  paragraphText: string,
+  score: number,
+  provider?: string,
+  promptVariationIndex?: number,
+): Promise<string | null> {
+  if (!apiKey) return null;
+
+  const adapter = createLlmAdapter(apiKey, provider);
+  const systemPrompt = buildBulkSystemPrompt(promptVariationIndex ?? 0);
+  const result = await adapter.complete({
+    systemPrompt,
+    userPrompt: buildParagraphUserPrompt(paragraphText, score),
+    temperature: 0.95,
+    maxTokens: 1024,
+    topP: 0.9,
+  });
+
+  if (!result) return null;
+
+  const payload = parseRewritePayload(result.content);
+  return payload?.rewrite ?? (result.content.trim() || null);
 }
 
 export async function generateSingleSuggestion(
