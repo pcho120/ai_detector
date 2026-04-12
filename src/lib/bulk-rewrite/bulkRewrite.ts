@@ -15,6 +15,8 @@ const DEFAULT_DEADLINE_MS = 50_000;
 const CONCURRENCY = 5;
 // Lowered to let more low/medium-score sentences participate in rewrite rounds.
 const ELIGIBLE_SCORE_FLOOR = 0.05;
+const PLATEAU_THRESHOLD = 0.02;
+const PLATEAU_ROUNDS = 2;
 
 function normalizeTargetScorePercent(percent: number): number {
   if (!Number.isFinite(percent)) return 1;
@@ -94,6 +96,8 @@ export async function executeBulkRewrite(
   const llmProvider = config?.llmProvider;
   let workingSentences = request.sentences.slice();
   let iterations = 0;
+  let previousScore = achievedScore;
+  let plateauCount = 0;
 
   while (iterations < MAX_ROUNDS && achievedScore > targetScore && nowFn() < deadline) {
     if (nowFn() >= deadline) break;
@@ -151,6 +155,14 @@ export async function executeBulkRewrite(
       score: entry.score,
       sentenceIndex,
     }));
+
+    if ((previousScore - achievedScore) < PLATEAU_THRESHOLD) {
+      plateauCount += 1;
+    } else {
+      plateauCount = 0;
+    }
+    if (plateauCount >= PLATEAU_ROUNDS) break;
+    previousScore = achievedScore;
   }
 
   return {

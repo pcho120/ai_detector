@@ -260,13 +260,75 @@ describe('executeBulkRewrite – guardrails filtering', () => {
 describe('executeBulkRewrite – max rounds limit', () => {
   afterEach(() => { vi.resetAllMocks(); });
 
-  it('stops after MAX_ROUNDS=10 iterations even if target is never met', async () => {
-    // Score stays high through all rounds
-    const highScoreAnalysis = makeAnalysisResult(0.8, [
-      { sentence: 'AI sentence.', score: 0.85 },
-    ]);
+  it('should stop when score improvement plateaus (<2% over 2 consecutive rounds)', async () => {
+    mockAnalyzeText
+      .mockResolvedValueOnce(makeAnalysisResult(0.8, [{ sentence: 'AI sentence.', score: 0.9 }]))
+      .mockResolvedValueOnce(makeAnalysisResult(0.78, [{ sentence: 'AI sentence.', score: 0.88 }]))
+      .mockResolvedValueOnce(makeAnalysisResult(0.77, [{ sentence: 'AI sentence.', score: 0.87 }]))
+      .mockResolvedValueOnce(makeAnalysisResult(0.76, [{ sentence: 'AI sentence.', score: 0.86 }]));
 
-    mockAnalyzeText.mockResolvedValue(highScoreAnalysis);
+    mockGenerateSingleSuggestion.mockResolvedValue(makeSuggestion(0, 'Human sentence.'));
+
+    const result = await executeBulkRewrite(makeRequest({
+      targetScore: 30,
+      sentences: [makeSentence('AI sentence.', 0.9, 0)],
+    }), undefined, { llmApiKey: 'test-key' });
+
+    expect(result.iterations).toBe(3);
+    expect(mockAnalyzeText).toHaveBeenCalledTimes(4);
+  });
+
+  it('should continue when improvement is above threshold', async () => {
+    mockAnalyzeText
+      .mockResolvedValueOnce(makeAnalysisResult(0.8, [{ sentence: 'AI sentence.', score: 0.9 }]))
+      .mockResolvedValueOnce(makeAnalysisResult(0.6, [{ sentence: 'AI sentence.', score: 0.7 }]))
+      .mockResolvedValueOnce(makeAnalysisResult(0.4, [{ sentence: 'AI sentence.', score: 0.5 }]))
+      .mockResolvedValueOnce(makeAnalysisResult(0.2, [{ sentence: 'AI sentence.', score: 0.3 }]));
+
+    mockGenerateSingleSuggestion.mockResolvedValue(makeSuggestion(0, 'Human sentence.'));
+
+    const result = await executeBulkRewrite(makeRequest({
+      targetScore: 30,
+      sentences: [makeSentence('AI sentence.', 0.9, 0)],
+    }), undefined, { llmApiKey: 'test-key' });
+
+    expect(result.iterations).toBe(3);
+    expect(result.targetMet).toBe(true);
+    expect(mockAnalyzeText).toHaveBeenCalledTimes(4);
+  });
+
+  it('should reset plateau counter when a round has significant improvement', async () => {
+    mockAnalyzeText
+      .mockResolvedValueOnce(makeAnalysisResult(0.8, [{ sentence: 'AI sentence.', score: 0.9 }]))
+      .mockResolvedValueOnce(makeAnalysisResult(0.78, [{ sentence: 'AI sentence.', score: 0.88 }]))
+      .mockResolvedValueOnce(makeAnalysisResult(0.6, [{ sentence: 'AI sentence.', score: 0.7 }]))
+      .mockResolvedValueOnce(makeAnalysisResult(0.59, [{ sentence: 'AI sentence.', score: 0.69 }]))
+      .mockResolvedValueOnce(makeAnalysisResult(0.58, [{ sentence: 'AI sentence.', score: 0.68 }]));
+
+    mockGenerateSingleSuggestion.mockResolvedValue(makeSuggestion(0, 'Human sentence.'));
+
+    const result = await executeBulkRewrite(makeRequest({
+      targetScore: 30,
+      sentences: [makeSentence('AI sentence.', 0.9, 0)],
+    }), undefined, { llmApiKey: 'test-key' });
+
+    expect(result.iterations).toBe(4);
+    expect(mockAnalyzeText).toHaveBeenCalledTimes(5);
+  });
+
+  it('stops after MAX_ROUNDS=10 iterations even if target is never met', async () => {
+    mockAnalyzeText
+      .mockResolvedValueOnce(makeAnalysisResult(0.8, [{ sentence: 'AI sentence.', score: 0.85 }]))
+      .mockResolvedValueOnce(makeAnalysisResult(0.74, [{ sentence: 'AI sentence.', score: 0.8 }]))
+      .mockResolvedValueOnce(makeAnalysisResult(0.68, [{ sentence: 'AI sentence.', score: 0.74 }]))
+      .mockResolvedValueOnce(makeAnalysisResult(0.62, [{ sentence: 'AI sentence.', score: 0.68 }]))
+      .mockResolvedValueOnce(makeAnalysisResult(0.56, [{ sentence: 'AI sentence.', score: 0.62 }]))
+      .mockResolvedValueOnce(makeAnalysisResult(0.5, [{ sentence: 'AI sentence.', score: 0.56 }]))
+      .mockResolvedValueOnce(makeAnalysisResult(0.44, [{ sentence: 'AI sentence.', score: 0.5 }]))
+      .mockResolvedValueOnce(makeAnalysisResult(0.38, [{ sentence: 'AI sentence.', score: 0.44 }]))
+      .mockResolvedValueOnce(makeAnalysisResult(0.32, [{ sentence: 'AI sentence.', score: 0.38 }]))
+      .mockResolvedValueOnce(makeAnalysisResult(0.26, [{ sentence: 'AI sentence.', score: 0.32 }]))
+      .mockResolvedValueOnce(makeAnalysisResult(0.2, [{ sentence: 'AI sentence.', score: 0.26 }]));
     mockGenerateSingleSuggestion.mockResolvedValue(makeSuggestion(0, 'Somewhat human.'));
 
     const result = await executeBulkRewrite(makeRequest({
@@ -377,9 +439,18 @@ describe('executeBulkRewrite – time-budget engine', () => {
 
   it('should cap at MAX_ROUNDS=10 even with remaining time budget', async () => {
     const nowMock = vi.fn(() => 0);
-    const highScoreAnalysis = makeAnalysisResult(0.8, [{ sentence: 'AI sentence.', score: 0.85 }]);
-
-    mockAnalyzeText.mockResolvedValue(highScoreAnalysis);
+    mockAnalyzeText
+      .mockResolvedValueOnce(makeAnalysisResult(0.8, [{ sentence: 'AI sentence.', score: 0.85 }]))
+      .mockResolvedValueOnce(makeAnalysisResult(0.74, [{ sentence: 'AI sentence.', score: 0.8 }]))
+      .mockResolvedValueOnce(makeAnalysisResult(0.68, [{ sentence: 'AI sentence.', score: 0.74 }]))
+      .mockResolvedValueOnce(makeAnalysisResult(0.62, [{ sentence: 'AI sentence.', score: 0.68 }]))
+      .mockResolvedValueOnce(makeAnalysisResult(0.56, [{ sentence: 'AI sentence.', score: 0.62 }]))
+      .mockResolvedValueOnce(makeAnalysisResult(0.5, [{ sentence: 'AI sentence.', score: 0.56 }]))
+      .mockResolvedValueOnce(makeAnalysisResult(0.44, [{ sentence: 'AI sentence.', score: 0.5 }]))
+      .mockResolvedValueOnce(makeAnalysisResult(0.38, [{ sentence: 'AI sentence.', score: 0.44 }]))
+      .mockResolvedValueOnce(makeAnalysisResult(0.32, [{ sentence: 'AI sentence.', score: 0.38 }]))
+      .mockResolvedValueOnce(makeAnalysisResult(0.26, [{ sentence: 'AI sentence.', score: 0.32 }]))
+      .mockResolvedValueOnce(makeAnalysisResult(0.2, [{ sentence: 'AI sentence.', score: 0.26 }]));
     mockGenerateSingleSuggestion.mockResolvedValue(makeSuggestion(0, 'Still not enough.'));
 
     const result = await executeBulkRewrite(
