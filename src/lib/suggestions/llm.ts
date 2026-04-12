@@ -107,8 +107,17 @@ function buildUserPrompt(sentence: string, voiceProfile?: string, fewShotExample
   return `${contextBlock}\n\n${base}`;
 }
 
-function buildMultiUserPrompt(sentence: string, voiceProfile?: string, fewShotExamples?: string[]): string {
-  const base = `Rewrite the following sentence so it sounds like it was written by a real person, not an AI. Provide 3 distinct alternatives:\n\n"${sentence}"`;
+function buildMultiUserPrompt(
+  sentence: string,
+  voiceProfile?: string,
+  fewShotExamples?: string[],
+  score?: number,
+): string {
+  const scoreContext =
+    score && score > 0
+      ? `This sentence was flagged as ${Math.round(score * 100)}% likely AI-generated. Focus on making it sound distinctly human — vary rhythm, use specific details, and avoid formulaic patterns.\n\n`
+      : '';
+  const base = `${scoreContext}Rewrite the following sentence so it sounds like it was written by a real person, not an AI. Provide 3 distinct alternatives:\n\n"${sentence}"`;
 
   if (fewShotExamples && fewShotExamples.length > 0) {
     const block = buildFewShotContextBlock(fewShotExamples);
@@ -321,7 +330,7 @@ export async function generateAlternativeSuggestions(
   apiKey: string | undefined,
   sentence: string,
   sentenceIndex: number,
-  _score: number,
+  score: number,
   voiceProfile?: string,
   provider?: string,
   fewShotExamples?: string[],
@@ -332,7 +341,7 @@ export async function generateAlternativeSuggestions(
 
   const result = await adapter.completeMulti({
     systemPrompt: getMultiSystemPrompt(!!fewShotExamples?.length),
-    userPrompt: buildMultiUserPrompt(sentence, voiceProfile, fewShotExamples),
+    userPrompt: buildMultiUserPrompt(sentence, voiceProfile, fewShotExamples, score),
     temperature: 0.7,
     maxTokens: 768,
     ...(fewShotExamples && fewShotExamples.length > 0 ? { topP: 0.9 } : {}),
@@ -358,7 +367,7 @@ export async function generateAlternativeSuggestions(
   } else {
     const recoveryResult = await adapter.completeMulti({
       systemPrompt: getMultiSystemPrompt(!!fewShotExamples?.length),
-      userPrompt: buildMultiUserPrompt(sentence, voiceProfile, fewShotExamples),
+      userPrompt: buildMultiUserPrompt(sentence, voiceProfile, fewShotExamples, score),
       temperature: 0.7,
       maxTokens: 768,
     });

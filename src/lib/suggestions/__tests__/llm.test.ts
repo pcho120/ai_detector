@@ -321,6 +321,22 @@ describe('generateAlternativeSuggestions system prompts', () => {
     expect(result?.map((entry) => entry.rewrite)).toEqual(['Refined one.', 'Refined two.', 'Refined three.']);
   });
 
+  it('includes score context in multi prompts when score is provided', async () => {
+    mockCompleteMulti.mockResolvedValueOnce({
+      content: JSON.stringify({
+        alternatives: [
+          { rewrite: 'Alt one.', explanation: 'e1' },
+          { rewrite: 'Alt two.', explanation: 'e2' },
+          { rewrite: 'Alt three.', explanation: 'e3' },
+        ],
+      }),
+    });
+
+    await generateAlternativeSuggestions('api-key', 'Original sentence.', 0, 0.85, undefined, 'openai');
+
+    expect(mockCompleteMulti.mock.calls[0]?.[0].userPrompt).toContain('85% likely AI-generated');
+  });
+
   it('uses the original multi system prompt when fewShotExamples are not provided', async () => {
     mockCompleteMulti.mockResolvedValueOnce({
       content: JSON.stringify({
