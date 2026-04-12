@@ -54,3 +54,8 @@
 - `twoPassRewrite` now accepts and threads through `bulkMode` and `promptVariationIndex` optional params
 - Single-suggestion UI path unchanged: `SYSTEM_PROMPT`, `STYLE_SYSTEM_PROMPT`, `MULTI_SYSTEM_PROMPT`, `STYLE_MULTI_SYSTEM_PROMPT` all untouched
 - 639 tests passing (up from 637 baseline — likely tests added in prior tasks)
+
+## [2026-04-12] Task 3: Single-Pass Bulk Rewrite
+- twoPassRewrite now skips Pass 2 when bulkMode=true (early return after pass1Payload)
+- Temperature 0.95 for bulk Pass 1 (was 0.8 after T2, now raised to 0.95)
+- Single-suggestion path unchanged: still 2 passes at 0.7/0.85

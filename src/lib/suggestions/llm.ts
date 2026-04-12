@@ -291,7 +291,7 @@ async function twoPassRewrite(
   const pass1Result = await adapter.complete({
     systemPrompt,
     userPrompt: buildUserPrompt(sentence, voiceProfile, fewShotExamples, score),
-    temperature: useBulk ? 0.8 : 0.7,
+    temperature: useBulk ? 0.95 : 0.7,
     maxTokens: 256,
     ...(fewShotExamples && fewShotExamples.length > 0 ? { topP: 0.9 } : {}),
   });
@@ -299,6 +299,8 @@ async function twoPassRewrite(
 
   const pass1Payload = parseRewritePayload(pass1Result.content);
   if (!pass1Payload) return null;
+
+  if (useBulk) return pass1Payload;
 
   const pass2SystemPrompt = useBulk
     ? buildBulkSystemPrompt(promptVariationIndex ?? 0)
