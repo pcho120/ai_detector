@@ -5,6 +5,7 @@ import {
   deriveRevisedText,
   hasAppliedReplacements,
 } from '@/lib/review/revisedAnalysisReducer';
+import { deriveTextWithRewrites } from '@/lib/bulk-rewrite/bulkRewrite';
 import type {
   RevisedAnalysisState,
   RevisedAnalysisAction,
@@ -434,6 +435,58 @@ describe('deriveRevisedText', () => {
     expect(deriveRevisedText(result, { 2: 'New third.' })).toBe(
       'First sentence. Second sentence. New third.'
     );
+  });
+});
+
+describe('deriveTextWithRewrites for revised analysis', () => {
+  it('preserves paragraph breaks when replacing a sentence', () => {
+    const originalText = 'First paragraph sentence one. First paragraph sentence two.\n\nSecond paragraph sentence one.';
+    const sentences = [
+      { sentence: 'First paragraph sentence one.', score: 0.8 },
+      { sentence: 'First paragraph sentence two.', score: 0.3 },
+      { sentence: 'Second paragraph sentence one.', score: 0.9 },
+    ];
+    const result = deriveTextWithRewrites(originalText, sentences, { 0: 'Rewritten first sentence.' });
+    expect(result).toBe('Rewritten first sentence. First paragraph sentence two.\n\nSecond paragraph sentence one.');
+    expect(result).toContain('\n\n');
+  });
+
+  it('returns original text unchanged when no replacements', () => {
+    const originalText = 'Paragraph one sentence.\n\nParagraph two sentence.';
+    const sentences = [
+      { sentence: 'Paragraph one sentence.', score: 0.5 },
+      { sentence: 'Paragraph two sentence.', score: 0.5 },
+    ];
+    const result = deriveTextWithRewrites(originalText, sentences, {});
+    expect(result).toBe(originalText);
+  });
+
+  it('preserves paragraph breaks for single-paragraph text (regression guard)', () => {
+    const originalText = 'First sentence. Second sentence. Third sentence.';
+    const sentences = [
+      { sentence: 'First sentence.', score: 0.8 },
+      { sentence: 'Second sentence.', score: 0.3 },
+      { sentence: 'Third sentence.', score: 0.5 },
+    ];
+    const result = deriveTextWithRewrites(originalText, sentences, { 1: 'Replaced sentence.' });
+    expect(result).toBe('First sentence. Replaced sentence. Third sentence.');
+    expect(result).not.toContain('\n\n');
+  });
+
+  it('applies multiple replacements across paragraphs while preserving structure', () => {
+    const originalText = 'Para one A. Para one B.\n\nPara two A. Para two B.';
+    const sentences = [
+      { sentence: 'Para one A.', score: 0.9 },
+      { sentence: 'Para one B.', score: 0.3 },
+      { sentence: 'Para two A.', score: 0.8 },
+      { sentence: 'Para two B.', score: 0.2 },
+    ];
+    const result = deriveTextWithRewrites(originalText, sentences, {
+      0: 'Rewritten one A.',
+      2: 'Rewritten two A.',
+    });
+    expect(result).toBe('Rewritten one A. Para one B.\n\nRewritten two A. Para two B.');
+    expect(result).toContain('\n\n');
   });
 });
 

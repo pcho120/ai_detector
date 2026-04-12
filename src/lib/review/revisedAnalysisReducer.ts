@@ -307,6 +307,8 @@ export function revisedAnalysisReducer(
  *
  * @param originalResult - the immutable original AnalysisSuccessResponse
  * @param appliedReplacements - map of sentenceIndex → replacement text
+ * @deprecated Use `deriveTextWithRewrites` from `'@/lib/bulk-rewrite/bulkRewrite'` instead.
+ *   That function preserves original text formatting (paragraph breaks, whitespace).
  * @returns the full derived revised text string
  */
 export function deriveRevisedText(

@@ -6,7 +6,8 @@ import { RevisedReviewPanel } from '@/components/RevisedReviewPanel';
 import { VoiceProfilePanel } from '@/components/VoiceProfilePanel';
 import { TargetScorePanel } from '@/components/TargetScorePanel';
 import { SettingsModal } from '@/components/SettingsModal';
-import { useRevisedAnalysisState, deriveRevisedText } from '@/app/useRevisedAnalysisState';
+import { useRevisedAnalysisState } from '@/app/useRevisedAnalysisState';
+import { deriveTextWithRewrites } from '@/lib/bulk-rewrite/bulkRewrite';
 import { useSettings, buildRequestHeaders } from '@/hooks/useSettings';
 
 export default function HomePage() {
@@ -40,7 +41,7 @@ export default function HomePage() {
     delete nextReplacements[sentenceIndex];
     
     if (Object.keys(nextReplacements).length > 0 && result) {
-      const revisedText = deriveRevisedText(result, nextReplacements);
+      const revisedText = deriveTextWithRewrites(result.text, result.sentences, nextReplacements);
       void revisedAnalysis.triggerRevisedAnalysis(revisedText);
     }
   };
@@ -114,7 +115,7 @@ export default function HomePage() {
 
       // Trigger revised analysis on the merged text so the right panel updates
       if (Object.keys(mergedReplacements).length > 0) {
-        const revisedText = deriveRevisedText(result, mergedReplacements);
+        const revisedText = deriveTextWithRewrites(result.text, result.sentences, mergedReplacements);
         void revisedAnalysis.triggerRevisedAnalysis(revisedText);
       }
     } catch {

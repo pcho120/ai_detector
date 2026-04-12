@@ -1,7 +1,7 @@
 import React, { MouseEvent, useEffect, useRef, useState } from 'react';
 import type { AnalysisSuccessResponse } from '@/app/api/analyze/route';
 import type { UseRevisedAnalysisStateReturn } from '@/app/useRevisedAnalysisState';
-import { deriveRevisedText } from '@/app/useRevisedAnalysisState';
+import { deriveTextWithRewrites } from '@/lib/bulk-rewrite/bulkRewrite';
 import type { SuggestionCacheEntry } from '@/lib/review/revisedAnalysisReducer';
 import type { AppSettings } from '@/lib/settings/types';
 import { buildRequestHeaders } from '@/hooks/useSettings';
@@ -17,10 +17,11 @@ interface ReviewPanelProps {
   result: AnalysisSuccessResponse;
   revisedState?: UseRevisedAnalysisStateReturn;
   voiceProfile?: string;
+  fewShotExamples?: string[];
   settings: AppSettings;
 }
 
-export function ReviewPanel({ result, revisedState, voiceProfile, settings }: ReviewPanelProps) {
+export function ReviewPanel({ result, revisedState, voiceProfile, fewShotExamples, settings }: ReviewPanelProps) {
   const { text, highlights, score } = result;
   
   const containerRef = useRef<HTMLDivElement>(null);
@@ -88,7 +89,8 @@ export function ReviewPanel({ result, revisedState, voiceProfile, settings }: Re
         sentenceIndex,
         sentence: sentenceText,
         score: spanScore,
-        ...(voiceProfile ? { voiceProfile } : {})
+        ...(voiceProfile ? { voiceProfile } : {}),
+        ...(fewShotExamples && fewShotExamples.length > 0 ? { fewShotExamples } : {}),
       };
       
       const res = await fetch('/api/suggestions', {
@@ -134,7 +136,7 @@ export function ReviewPanel({ result, revisedState, voiceProfile, settings }: Re
         ...revisedState.state.appliedReplacements,
         [sentenceIndex]: rewrite,
       };
-      const revisedText = deriveRevisedText(revisedState.state.originalResult, nextReplacements);
+      const revisedText = deriveTextWithRewrites(revisedState.state.originalResult.text, revisedState.state.originalResult.sentences, nextReplacements);
       void revisedState.triggerRevisedAnalysis(revisedText);
     }
   };

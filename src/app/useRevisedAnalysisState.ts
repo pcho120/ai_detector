@@ -4,7 +4,6 @@ import { useReducer, useCallback } from 'react';
 import {
   revisedAnalysisReducer,
   initialRevisedAnalysisState,
-  deriveRevisedText,
   hasAppliedReplacements,
 } from '@/lib/review/revisedAnalysisReducer';
 import type {
@@ -15,9 +14,10 @@ import type {
 import type { AnalysisSuccessResponse } from '@/app/api/analyze/route';
 import type { AppSettings } from '@/lib/settings/types';
 import { buildRequestHeaders } from '@/hooks/useSettings';
+import { deriveTextWithRewrites } from '@/lib/bulk-rewrite/bulkRewrite';
 
 export type { RevisedAnalysisState, RevisedAnalysisAction, SuggestionCacheEntry };
-export { deriveRevisedText, hasAppliedReplacements };
+export { hasAppliedReplacements };
 
 export interface UseRevisedAnalysisStateReturn {
   state: RevisedAnalysisState;
@@ -39,7 +39,7 @@ export function useRevisedAnalysisState(settings: AppSettings): UseRevisedAnalys
 
   const derivedRevisedText =
     state.originalResult && hasAppliedReplacements(state)
-      ? deriveRevisedText(state.originalResult, state.appliedReplacements)
+      ? deriveTextWithRewrites(state.originalResult.text, state.originalResult.sentences, state.appliedReplacements)
       : null;
 
   const hasReplacements = hasAppliedReplacements(state);
