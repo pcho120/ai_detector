@@ -8,7 +8,7 @@ import type { BulkRewriteRequest } from '@/lib/bulk-rewrite/types';
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
-const ROUTE_DEADLINE_MS = 50_000;
+const ROUTE_DEADLINE_MS = 100_000;
 const TARGET_SCORE_MIN = 10;
 const TARGET_SCORE_MAX = 100;
 

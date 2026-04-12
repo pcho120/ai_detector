@@ -14,8 +14,8 @@ import type {
 
 // Max API call ceiling: MAX_ROUNDS × N_sentences × 2 LLM calls + MAX_ROUNDS detection calls
 // At 10 rounds with 10 sentences: 10 × 10 × 2 + 10 = 210 API calls maximum
-const MAX_ROUNDS = 10;
-const DEFAULT_DEADLINE_MS = 50_000;
+const MAX_ROUNDS = 15;
+const DEFAULT_DEADLINE_MS = 100_000;
 const CONCURRENCY = 5;
 // Lowered to let more low/medium-score sentences participate in rewrite rounds.
 const ELIGIBLE_SCORE_FLOOR = 0.05;

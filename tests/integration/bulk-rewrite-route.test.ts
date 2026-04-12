@@ -67,13 +67,13 @@ describe('POST /api/bulk-rewrite', () => {
       },
       undefined,
       expect.objectContaining({
-        deadlineMs: 50_000,
+        deadlineMs: 100_000,
         llmApiKey: 'test-api-key',
       }),
     );
   });
 
-  it('passes deadlineMs: 50_000 to executeBulkRewrite', async () => {
+  it('passes deadlineMs: 100_000 to executeBulkRewrite', async () => {
     const { executeBulkRewrite } = await import('@/lib/bulk-rewrite/bulkRewrite');
     vi.mocked(executeBulkRewrite).mockResolvedValue({
       rewrites: {},
@@ -97,6 +97,6 @@ describe('POST /api/bulk-rewrite', () => {
     await POST(req);
 
     const callConfig = vi.mocked(executeBulkRewrite).mock.calls[0]?.[2];
-    expect(callConfig).toEqual(expect.objectContaining({ deadlineMs: 50_000 }));
+    expect(callConfig).toEqual(expect.objectContaining({ deadlineMs: 100_000 }));
   });
 });
