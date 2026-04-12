@@ -8,6 +8,7 @@ import type { BulkRewriteRequest } from '@/lib/bulk-rewrite/types';
 export const runtime = 'nodejs';
 export const maxDuration = 60;
 
+const ROUTE_DEADLINE_MS = 50_000;
 const TARGET_SCORE_MIN = 10;
 const TARGET_SCORE_MAX = 100;
 
@@ -134,6 +135,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       llmProvider: settings.llmProvider,
       detectionApiKey: settings.detectionApiKey,
       detectionProvider: settings.detectionProvider,
+      deadlineMs: ROUTE_DEADLINE_MS,
     });
     return NextResponse.json(result, { status: 200 });
   } catch (err) {
