@@ -5,7 +5,7 @@ import {
   deriveRevisedText,
   hasAppliedReplacements,
 } from '@/lib/review/revisedAnalysisReducer';
-import { deriveTextWithRewrites } from '@/lib/bulk-rewrite/bulkRewrite';
+import { deriveTextWithRewrites } from '@/lib/bulk-rewrite/textUtils';
 import type {
   RevisedAnalysisState,
   RevisedAnalysisAction,

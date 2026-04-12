@@ -1,7 +1,7 @@
 import React, { MouseEvent, useEffect, useRef, useState } from 'react';
 import type { AnalysisSuccessResponse } from '@/app/api/analyze/route';
 import type { UseRevisedAnalysisStateReturn } from '@/app/useRevisedAnalysisState';
-import { deriveTextWithRewrites } from '@/lib/bulk-rewrite/bulkRewrite';
+import { deriveTextWithRewrites } from '@/lib/bulk-rewrite/textUtils';
 import type { SuggestionCacheEntry } from '@/lib/review/revisedAnalysisReducer';
 import type { AppSettings } from '@/lib/settings/types';
 import { buildRequestHeaders } from '@/hooks/useSettings';

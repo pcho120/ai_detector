@@ -7,7 +7,7 @@ import { VoiceProfilePanel } from '@/components/VoiceProfilePanel';
 import { TargetScorePanel } from '@/components/TargetScorePanel';
 import { SettingsModal } from '@/components/SettingsModal';
 import { useRevisedAnalysisState } from '@/app/useRevisedAnalysisState';
-import { deriveTextWithRewrites } from '@/lib/bulk-rewrite/bulkRewrite';
+import { deriveTextWithRewrites } from '@/lib/bulk-rewrite/textUtils';
 import { useSettings, buildRequestHeaders } from '@/hooks/useSettings';
 
 export default function HomePage() {

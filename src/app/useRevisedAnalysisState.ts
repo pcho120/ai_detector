@@ -14,7 +14,7 @@ import type {
 import type { AnalysisSuccessResponse } from '@/app/api/analyze/route';
 import type { AppSettings } from '@/lib/settings/types';
 import { buildRequestHeaders } from '@/hooks/useSettings';
-import { deriveTextWithRewrites } from '@/lib/bulk-rewrite/bulkRewrite';
+import { deriveTextWithRewrites } from '@/lib/bulk-rewrite/textUtils';
 
 export type { RevisedAnalysisState, RevisedAnalysisAction, SuggestionCacheEntry };
 export { hasAppliedReplacements };

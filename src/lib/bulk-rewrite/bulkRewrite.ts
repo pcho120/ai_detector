@@ -5,12 +5,15 @@ import {
   generateParagraphSuggestionWithProvider,
   generateSingleSuggestionWithProvider,
 } from '@/lib/suggestions/llm';
+import { deriveTextWithRewrites } from './textUtils';
 import type {
   BulkRewriteEngineConfig,
   BulkRewriteRequest,
   BulkRewriteResult,
   BulkRewriteProgress,
 } from './types';
+
+export { deriveTextWithRewrites };
 
 // Max API call ceiling: MAX_ROUNDS × N_sentences × 2 LLM calls + MAX_ROUNDS detection calls
 // At 10 rounds with 10 sentences: 10 × 10 × 2 + 10 = 210 API calls maximum
@@ -22,55 +25,18 @@ const ELIGIBLE_SCORE_FLOOR = 0.05;
 const PLATEAU_THRESHOLD = 0.02;
 const PLATEAU_ROUNDS = 2;
 
+type WorkingSentence = SentenceEntry & {
+  score: number;
+};
+
 type SentenceEntry = {
   sentence: string;
   sentenceIndex: number;
 };
 
-type WorkingSentence = SentenceEntry & {
-  score: number;
-};
-
 function normalizeTargetScorePercent(percent: number): number {
   if (!Number.isFinite(percent)) return 1;
   return Math.max(0, Math.min(1, percent / 100));
-}
-
-export function deriveTextWithRewrites(
-  originalText: string,
-  originalSentences: Array<{ sentence: string; sentenceIndex?: number }>,
-  rewrites: Record<number, string>,
-): string {
-  if (originalSentences.length === 0) return originalText;
-
-  const indexedSentences = originalSentences.map((entry, sentenceIndex) => ({
-    sentence: entry.sentence,
-    sentenceIndex: entry.sentenceIndex ?? sentenceIndex,
-  }));
-
-  const sentenceRanges: Array<SentenceEntry & { start: number; end: number }> = [];
-  let searchFrom = 0;
-
-  for (const entry of indexedSentences) {
-    let start = originalText.indexOf(entry.sentence, searchFrom);
-    if (start === -1) {
-      start = originalText.indexOf(entry.sentence);
-    }
-    if (start === -1) continue;
-
-    const end = start + entry.sentence.length;
-    sentenceRanges.push({ ...entry, start, end });
-    searchFrom = end;
-  }
-
-  let result = originalText;
-  for (const entry of sentenceRanges.sort((a, b) => b.start - a.start)) {
-    const rewrite = rewrites[entry.sentenceIndex];
-    if (rewrite === undefined) continue;
-    result = `${result.slice(0, entry.start)}${rewrite}${result.slice(entry.end)}`;
-  }
-
-  return result;
 }
 
 function normalizeSentenceForMatching(sentence: string): string {
