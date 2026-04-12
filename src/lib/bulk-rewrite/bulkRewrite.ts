@@ -62,6 +62,7 @@ export async function executeBulkRewrite(
   const targetScore = normalizeTargetScorePercent(request.targetScore);
   const preserveReplacements = request.manualReplacements ?? {};
   const rewrites: Record<number, string> = {};
+  const bestRewrites: Record<number, { text: string; score: number }> = {};
   const nowFn = config?.now ?? Date.now;
   const deadlineMs = config?.deadlineMs ?? DEFAULT_DEADLINE_MS;
   const startTime = nowFn();
@@ -114,6 +115,7 @@ export async function executeBulkRewrite(
 
     let completed = 0;
     let rewrittenInRound = 0;
+    const attemptedRewrites: Record<number, { text: string }> = {};
 
     await runWithConcurrency(candidates, CONCURRENCY, async (candidate) => {
       if (nowFn() >= deadline) return;
@@ -132,6 +134,7 @@ export async function executeBulkRewrite(
         const [safeSuggestion] = applyGuardrails([suggestion]);
         if (safeSuggestion) {
           rewrites[candidate.sentenceIndex] = safeSuggestion.rewrite;
+          attemptedRewrites[candidate.sentenceIndex] = { text: safeSuggestion.rewrite };
           rewrittenInRound += 1;
         }
       }
@@ -156,6 +159,24 @@ export async function executeBulkRewrite(
       sentenceIndex,
     }));
 
+    for (const entry of workingSentences) {
+      const attemptedRewrite = attemptedRewrites[entry.sentenceIndex];
+      if (!attemptedRewrite) continue;
+
+      const bestRewrite = bestRewrites[entry.sentenceIndex];
+      if (bestRewrite && entry.score > bestRewrite.score) {
+        rewrites[entry.sentenceIndex] = bestRewrite.text;
+        entry.sentence = bestRewrite.text;
+        entry.score = bestRewrite.score;
+        continue;
+      }
+
+      bestRewrites[entry.sentenceIndex] = {
+        text: attemptedRewrite.text,
+        score: entry.score,
+      };
+    }
+
     if ((previousScore - achievedScore) < PLATEAU_THRESHOLD) {
       plateauCount += 1;
     } else {
@@ -165,11 +186,18 @@ export async function executeBulkRewrite(
     previousScore = achievedScore;
   }
 
+  const finalRewrites = {
+    ...preserveReplacements,
+    ...Object.fromEntries(
+      Object.entries(bestRewrites).map(([sentenceIndex, rewrite]) => [Number(sentenceIndex), rewrite.text]),
+    ),
+  };
+
   return {
-    rewrites,
+    rewrites: finalRewrites,
     achievedScore: achievedScore * 100,
     iterations,
-    totalRewritten: Object.keys(rewrites).length,
+    totalRewritten: Object.keys(bestRewrites).length,
     targetMet: achievedScore <= targetScore,
   };
 }

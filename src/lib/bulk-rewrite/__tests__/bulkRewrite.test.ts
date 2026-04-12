@@ -617,6 +617,122 @@ describe('executeBulkRewrite – manual replacements preservation', () => {
     expect(calledIndices).toContain(1);
     expect(result.rewrites[1]).toBe('Auto rewritten.');
   });
+
+  it('should retry already-rewritten sentences if score is still above threshold', async () => {
+    mockAnalyzeText
+      .mockResolvedValueOnce(makeAnalysisResult(0.9, [{ sentence: 'AI sentence.', score: 0.9 }]))
+      .mockResolvedValueOnce(makeAnalysisResult(0.5, [{ sentence: 'rewrite-v1', score: 0.4 }]))
+      .mockResolvedValueOnce(makeAnalysisResult(0.09, [{ sentence: 'rewrite-v2', score: 0.04 }]));
+
+    mockGenerateSingleSuggestion
+      .mockResolvedValueOnce(makeSuggestion(0, 'rewrite-v1'))
+      .mockResolvedValueOnce(makeSuggestion(0, 'rewrite-v2'));
+
+    const result = await executeBulkRewrite(makeRequest({
+      targetScore: 10,
+      sentences: [makeSentence('AI sentence.', 0.9, 0)],
+    }), undefined, { llmApiKey: 'test-key' });
+
+    expect(mockGenerateSingleSuggestionWithProvider).toHaveBeenNthCalledWith(
+      1,
+      'test-key',
+      'AI sentence.',
+      0,
+      0.9,
+      undefined,
+      undefined,
+      undefined,
+    );
+    expect(mockGenerateSingleSuggestionWithProvider).toHaveBeenNthCalledWith(
+      2,
+      'test-key',
+      'rewrite-v1',
+      0,
+      0.4,
+      undefined,
+      undefined,
+      undefined,
+    );
+    expect(result.rewrites[0]).toBe('rewrite-v2');
+  });
+
+  it('should keep old rewrite when retry produces higher score (regression protection)', async () => {
+    mockAnalyzeText
+      .mockResolvedValueOnce(makeAnalysisResult(0.9, [{ sentence: 'AI sentence.', score: 0.9 }]))
+      .mockResolvedValueOnce(makeAnalysisResult(0.5, [{ sentence: 'rewrite-v1', score: 0.5 }]))
+      .mockResolvedValueOnce(makeAnalysisResult(0.09, [{ sentence: 'rewrite-v2', score: 0.6 }]));
+
+    mockGenerateSingleSuggestion
+      .mockResolvedValueOnce(makeSuggestion(0, 'rewrite-v1'))
+      .mockResolvedValueOnce(makeSuggestion(0, 'rewrite-v2'));
+
+    const result = await executeBulkRewrite(makeRequest({
+      targetScore: 10,
+      sentences: [makeSentence('AI sentence.', 0.9, 0)],
+    }), undefined, { llmApiKey: 'test-key' });
+
+    expect(result.rewrites[0]).toBe('rewrite-v1');
+  });
+
+  it('should use new rewrite when retry produces lower score', async () => {
+    mockAnalyzeText
+      .mockResolvedValueOnce(makeAnalysisResult(0.9, [{ sentence: 'AI sentence.', score: 0.9 }]))
+      .mockResolvedValueOnce(makeAnalysisResult(0.5, [{ sentence: 'rewrite-v1', score: 0.5 }]))
+      .mockResolvedValueOnce(makeAnalysisResult(0.09, [{ sentence: 'rewrite-v2', score: 0.2 }]));
+
+    mockGenerateSingleSuggestion
+      .mockResolvedValueOnce(makeSuggestion(0, 'rewrite-v1'))
+      .mockResolvedValueOnce(makeSuggestion(0, 'rewrite-v2'));
+
+    const result = await executeBulkRewrite(makeRequest({
+      targetScore: 10,
+      sentences: [makeSentence('AI sentence.', 0.9, 0)],
+    }), undefined, { llmApiKey: 'test-key' });
+
+    expect(result.rewrites[0]).toBe('rewrite-v2');
+  });
+
+  it('should preserve manual replacements and never retry them', async () => {
+    mockAnalyzeText
+      .mockResolvedValueOnce(
+        makeAnalysisResult(0.9, [
+          { sentence: 'Original manual sentence.', score: 0.95 },
+          { sentence: 'AI sentence.', score: 0.85 },
+        ]),
+      )
+      .mockResolvedValueOnce(
+        makeAnalysisResult(0.5, [
+          { sentence: 'Manual replacement.', score: 0.95 },
+          { sentence: 'rewrite-v1', score: 0.4 },
+        ]),
+      )
+      .mockResolvedValueOnce(
+        makeAnalysisResult(0.09, [
+          { sentence: 'Manual replacement.', score: 0.95 },
+          { sentence: 'rewrite-v2', score: 0.04 },
+        ]),
+      );
+
+    mockGenerateSingleSuggestion
+      .mockResolvedValueOnce(makeSuggestion(1, 'rewrite-v1'))
+      .mockResolvedValueOnce(makeSuggestion(1, 'rewrite-v2'));
+
+    const result = await executeBulkRewrite(makeRequest({
+      targetScore: 10,
+      text: 'Original manual sentence. AI sentence.',
+      sentences: [
+        makeSentence('Original manual sentence.', 0.95, 0),
+        makeSentence('AI sentence.', 0.85, 1),
+      ],
+      manualReplacements: { 0: 'Manual replacement.' },
+    }), undefined, { llmApiKey: 'test-key' });
+
+    const calledIndices = mockGenerateSingleSuggestionWithProvider.mock.calls.map((call) => call[2]);
+    expect(calledIndices).not.toContain(0);
+    expect(calledIndices).toEqual([1, 1]);
+    expect(result.rewrites[0]).toBe('Manual replacement.');
+    expect(result.rewrites[1]).toBe('rewrite-v2');
+  });
 });
 
 describe('executeBulkRewrite – concurrency ceiling', () => {
