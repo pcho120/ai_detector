@@ -1,0 +1,10 @@
+Test run: 2026-04-12T12:37Z
+Command: npm run test
+
+ Test Files  27 passed (27)
+      Tests  639 passed (639)
+   Start at  08:37:33
+   Duration  6.58s
+
+All tests green. No regressions from prompt overhaul changes.
+Typecheck (tsc --noEmit): PASSED with no errors.
