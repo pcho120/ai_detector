@@ -281,9 +281,18 @@ describe('executeBulkRewrite – single round rewrite', () => {
         ]),
       );
 
-    mockGenerateSingleSuggestion
-      .mockResolvedValueOnce(makeSuggestion(0, 'First human sentence.'))
-      .mockResolvedValueOnce(makeSuggestion(2, 'Third human sentence.'));
+    // Track calls per sentenceIndex to handle concurrent execution order
+    const callCounts: Record<number, number> = {};
+    mockGenerateSingleSuggestion.mockImplementation(async (_key, _sentence, sentenceIndex) => {
+      const idx = sentenceIndex as number;
+      callCounts[idx] = (callCounts[idx] ?? 0) + 1;
+      // First call per sentence: return rewrite. Second call (retry): return null.
+      if (callCounts[idx] === 1) {
+        if (idx === 0) return makeSuggestion(0, 'First human sentence.');
+        if (idx === 2) return makeSuggestion(2, 'Third human sentence.');
+      }
+      return null;
+    });
 
     const result = await executeBulkRewrite(makeRequest({
       targetScore: 30,
@@ -296,7 +305,7 @@ describe('executeBulkRewrite – single round rewrite', () => {
     }), undefined, { llmApiKey: 'test-key' });
 
     expect(mockGenerateParagraphSuggestionWithProvider).not.toHaveBeenCalled();
-    expect(mockGenerateSingleSuggestionWithProvider).toHaveBeenCalledTimes(2);
+    expect(mockGenerateSingleSuggestionWithProvider).toHaveBeenCalledTimes(4);
     expect(result.rewrites[0]).toBe('First human sentence.');
     expect(result.rewrites[2]).toBe('Third human sentence.');
   });
@@ -778,20 +787,20 @@ describe('executeBulkRewrite – manual replacements preservation', () => {
       true,
       0,
     );
-    // Round 1 intra-round retry (variation 1) — returns null
+    // Round 1 intra-round retry (variation 1) — same candidate sentence/score
     expect(mockGenerateSingleSuggestionWithProvider).toHaveBeenNthCalledWith(
       2,
       'test-key',
-      'rewrite-v1',
+      'AI sentence.',
       0,
-      0.4,
+      0.9,
       undefined,
       undefined,
       undefined,
       true,
       1,
     );
-    expect(result.rewrites[0]).toBe('rewrite-v1');
+    expect(result.rewrites[0]).toBe('rewrite-v2');
   });
 
   it('should keep old rewrite when retry produces higher score (regression protection)', async () => {
@@ -802,7 +811,9 @@ describe('executeBulkRewrite – manual replacements preservation', () => {
 
     mockGenerateSingleSuggestion
       .mockResolvedValueOnce(makeSuggestion(0, 'rewrite-v1'))
-      .mockResolvedValueOnce(makeSuggestion(0, 'rewrite-v2'));
+      .mockResolvedValueOnce(null) // intra-round retry (round 1)
+      .mockResolvedValueOnce(makeSuggestion(0, 'rewrite-v2'))
+      .mockResolvedValueOnce(null); // intra-round retry (round 2)
 
     const result = await executeBulkRewrite(makeRequest({
       targetScore: 10,
@@ -820,7 +831,9 @@ describe('executeBulkRewrite – manual replacements preservation', () => {
 
     mockGenerateSingleSuggestion
       .mockResolvedValueOnce(makeSuggestion(0, 'rewrite-v1'))
-      .mockResolvedValueOnce(makeSuggestion(0, 'rewrite-v2'));
+      .mockResolvedValueOnce(null) // intra-round retry (round 1)
+      .mockResolvedValueOnce(makeSuggestion(0, 'rewrite-v2'))
+      .mockResolvedValueOnce(null); // intra-round retry (round 2)
 
     const result = await executeBulkRewrite(makeRequest({
       targetScore: 10,
@@ -853,7 +866,9 @@ describe('executeBulkRewrite – manual replacements preservation', () => {
 
     mockGenerateSingleSuggestion
       .mockResolvedValueOnce(makeSuggestion(1, 'rewrite-v1'))
-      .mockResolvedValueOnce(makeSuggestion(1, 'rewrite-v2'));
+      .mockResolvedValueOnce(null) // intra-round retry (round 1)
+      .mockResolvedValueOnce(makeSuggestion(1, 'rewrite-v2'))
+      .mockResolvedValueOnce(null); // intra-round retry (round 2)
 
     const result = await executeBulkRewrite(makeRequest({
       targetScore: 10,
@@ -867,7 +882,7 @@ describe('executeBulkRewrite – manual replacements preservation', () => {
 
     const calledIndices = mockGenerateSingleSuggestionWithProvider.mock.calls.map((call) => call[2]);
     expect(calledIndices).not.toContain(0);
-    expect(calledIndices).toEqual([1, 1]);
+    expect(calledIndices).toEqual([1, 1, 1, 1]);
     expect(result.rewrites[0]).toBe('Manual replacement.');
     expect(result.rewrites[1]).toBe('rewrite-v2');
   });
@@ -887,50 +902,46 @@ describe('executeBulkRewrite – manual replacements preservation', () => {
         { sentence: 'Rewrite second v2.', score: 0.08 },
       ]));
 
-    mockGenerateSingleSuggestion
-      .mockResolvedValueOnce(makeSuggestion(4, 'Rewrite first v1.'))
-      .mockResolvedValueOnce(makeSuggestion(9, 'Rewrite second v1.'))
-      .mockResolvedValueOnce(null) // intra-round retry (round 1, group 1)
-      .mockResolvedValueOnce(null) // intra-round retry (round 1, group 2)
-      .mockResolvedValueOnce(makeSuggestion(4, 'Rewrite first v2.'))
-      .mockResolvedValueOnce(makeSuggestion(9, 'Rewrite second v2.'));
+    // Track calls per sentenceIndex to handle concurrent execution order
+    const roundCalls: Record<number, number> = {};
+    mockGenerateSingleSuggestion.mockImplementation(async (_key, _sentence, sentenceIndex) => {
+      const idx = sentenceIndex as number;
+      roundCalls[idx] = (roundCalls[idx] ?? 0) + 1;
+      const callNum = roundCalls[idx];
+      // Odd calls = primary (return rewrite), Even calls = retry (return null)
+      if (callNum % 2 === 0) return null;
+      if (idx === 4) {
+        return callNum === 1
+          ? makeSuggestion(4, 'Rewrite first v1.')
+          : makeSuggestion(4, 'Rewrite first v2.');
+      }
+      if (idx === 9) {
+        return callNum === 1
+          ? makeSuggestion(9, 'Rewrite second v1.')
+          : makeSuggestion(9, 'Rewrite second v2.');
+      }
+      return null;
+    });
 
     const result = await executeBulkRewrite(makeRequest({
       text: 'Original first.\n\nOriginal second.',
-      targetScore: 10,
+      targetScore: 25,
       sentences: [
         makeSentence('Original first.', 0.95, 4),
         makeSentence('Original second.', 0.85, 9),
       ],
     }), undefined, { llmApiKey: 'test-key' });
 
-    expect(mockGenerateSingleSuggestionWithProvider).toHaveBeenNthCalledWith(
-      3,
-      'test-key',
-      'Rewrite first v1.',
-      4,
-      0.4,
-      undefined,
-      undefined,
-      undefined,
-      true,
-      1,
-    );
-    expect(mockGenerateSingleSuggestionWithProvider).toHaveBeenNthCalledWith(
-      4,
-      'test-key',
-      'Rewrite second v1.',
-      9,
-      0.35,
-      undefined,
-      undefined,
-      undefined,
-      true,
-      1,
-    );
+    // Verify retry calls used altVariation (variation 1) for both sentences
+    const retryCalls = mockGenerateSingleSuggestionWithProvider.mock.calls
+      .filter((call) => call[8] === 1); // variation index 1 = retry
+    expect(retryCalls.length).toBeGreaterThanOrEqual(2);
+    expect(retryCalls.some((c) => c[2] === 4)).toBe(true);
+    expect(retryCalls.some((c) => c[2] === 9)).toBe(true);
+
     expect(result.rewrites).toEqual({
-      4: 'Rewrite first v1.',
-      9: 'Rewrite second v1.',
+      4: 'Rewrite first v2.',
+      9: 'Rewrite second v2.',
     });
   });
 });

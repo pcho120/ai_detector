@@ -66,8 +66,11 @@
 - Group scheduling keeps `CONCURRENCY = 5` unchanged but now applies it to rewrite blocks, and group priority still favors runs containing the highest-risk sentences first.
 
 ## [2026-04-12] Task 5: Intra-Round Retry with Varied Prompts
-- Prompt variation rotation already in place: `promptVariationIndex = iterations % BULK_PROMPT_VARIATIONS.length` cycles through 4 prompt variations across rounds.
-- Inter-round retry (existing) plus best-rewrite rollback logic provides effective multi-attempt coverage without needing explicit intra-round retry — if a rewrite regresses (higher score than previous best), the best-scoring version is automatically restored.
-- Test mock pattern for retry: use `mockResolvedValueOnce(null)` slots for intra-round retry attempts that return no alternative; the delegation from `mockGenerateSingleSuggestionWithProvider` to `mockGenerateSingleSuggestion` means mock queue ordering matters.
-- Adjacent sentences get grouped into paragraph-level rewrites, which changes the mock consumption pattern — tests with adjacent sentenceIndex values need `mockGenerateParagraphSuggestionWithProvider` returns, not `mockGenerateSingleSuggestion`.
-- 644 tests passing after Task 5 (up from 639 baseline in handoff notes).
+- `selectMoreDiverseRewrite(original, a, b)` picks the rewrite with more unique words not in the original and more length variation from original
+- Retry only happens if > 8s remain before deadline (`RETRY_DEADLINE_BUFFER_MS = 8_000`)
+- `altVariationIndex = (promptVariationIndex + 1) % BULK_PROMPT_VARIATIONS.length` ensures different prompt variation is used for retry
+- Retry only on single-sentence path (group.length === 1), NOT paragraph path
+- Manual replacements (`preserveReplacements`) are never retried
+- Concurrent worker tests (multiple isolated sentences) MUST use `mockImplementation` with per-sentenceIndex call counting instead of `mockResolvedValueOnce` chains — `mockResolvedValueOnce` queue consumption is non-deterministic with CONCURRENCY=5
+- Adjacent sentences get grouped into paragraph-level rewrites, which changes mock consumption — tests with adjacent sentenceIndex values need `mockGenerateParagraphSuggestionWithProvider` returns
+- 644 tests passing after Task 5 implementation

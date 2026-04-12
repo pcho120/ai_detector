@@ -280,6 +280,27 @@ function groupConsecutiveCandidates(
   return groups;
 }
 
+function selectMoreDiverseRewrite(
+  original: string,
+  candidate1: string,
+  candidate2: string,
+): string {
+  const origWords = original.trim().split(/\s+/).length;
+  const words1 = candidate1.trim().split(/\s+/).length;
+  const words2 = candidate2.trim().split(/\s+/).length;
+  const wordDiff1 = Math.abs(words1 - origWords);
+  const wordDiff2 = Math.abs(words2 - origWords);
+
+  const origSet = new Set(original.toLowerCase().split(/\s+/));
+  const unique1 = candidate1.toLowerCase().split(/\s+/).filter(w => !origSet.has(w)).length;
+  const unique2 = candidate2.toLowerCase().split(/\s+/).filter(w => !origSet.has(w)).length;
+
+  const score1 = wordDiff1 + unique1;
+  const score2 = wordDiff2 + unique2;
+
+  return score2 > score1 ? candidate2 : candidate1;
+}
+
 function splitIntoSentences(text: string): string[] {
   const matches = text
     .match(/[^.!?]+(?:[.!?]+|$)/g)
@@ -381,10 +402,41 @@ export async function executeBulkRewrite(
         if (suggestion) {
           const [safeSuggestion] = applyGuardrails([suggestion]);
           if (safeSuggestion) {
-            rewrites[candidate.sentenceIndex] = safeSuggestion.rewrite;
-            attemptedRewrites[candidate.sentenceIndex] = { text: safeSuggestion.rewrite };
-            rewrittenInRound += 1;
+            chosenRewrite = safeSuggestion.rewrite;
           }
+        }
+
+        // Retry with different prompt variation if time permits
+        const RETRY_DEADLINE_BUFFER_MS = 8_000;
+        if (chosenRewrite !== null && nowFn() < deadline - RETRY_DEADLINE_BUFFER_MS) {
+          const altVariationIndex = (promptVariationIndex + 1) % BULK_PROMPT_VARIATIONS.length;
+          const altSuggestion = await generateSingleSuggestionWithProvider(
+            apiKey,
+            candidate.sentence,
+            candidate.sentenceIndex,
+            candidate.score,
+            llmProvider,
+            request.voiceProfile,
+            request.fewShotExamples,
+            true,
+            altVariationIndex,
+          );
+          if (altSuggestion) {
+            const [safeAlt] = applyGuardrails([altSuggestion]);
+            if (safeAlt) {
+              chosenRewrite = selectMoreDiverseRewrite(
+                candidate.sentence,
+                chosenRewrite,
+                safeAlt.rewrite,
+              );
+            }
+          }
+        }
+
+        if (chosenRewrite !== null) {
+          rewrites[candidate.sentenceIndex] = chosenRewrite;
+          attemptedRewrites[candidate.sentenceIndex] = { text: chosenRewrite };
+          rewrittenInRound += 1;
         }
       } else {
         const paragraphText = group.map((entry) => entry.sentence).join(' ');
