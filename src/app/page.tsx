@@ -20,6 +20,8 @@ export default function HomePage() {
   const [vpSelectedPresets, setVpSelectedPresets] = useState<string[]>([]);
   const [vpWritingSampleDraft, setVpWritingSampleDraft] = useState('');
   const [voiceProfile, setVoiceProfile] = useState('');
+  const [fewShotExamples, setFewShotExamples] = useState<string[]>([]);
+  const [activeStyleTab, setActiveStyleTab] = useState<'voice-profile' | 'my-paper'>('voice-profile');
   const [vpLoading, setVpLoading] = useState(false);
   const [vpError, setVpError] = useState<string | null>(null);
   const [vpCopied, setVpCopied] = useState(false);
@@ -27,7 +29,7 @@ export default function HomePage() {
   const [targetScore, setTargetScore] = useState('');
   const [bulkLoading, setBulkLoading] = useState(false);
   const [bulkProgress, setBulkProgress] = useState<{ current: number; total: number; phase: string } | null>(null);
-  const [bulkResult, setBulkResult] = useState<{ achievedScore: number; targetMet: boolean; targetScore: number } | null>(null);
+  const [bulkResult, setBulkResult] = useState<{ achievedScore: number; targetMet: boolean; targetScore: number; iterations?: number } | null>(null);
 
   const result = revisedState.originalResult;
 
@@ -67,6 +69,7 @@ export default function HomePage() {
           sentences,
           targetScore: parsedTargetScore,
           voiceProfile: voiceProfile || undefined,
+          fewShotExamples: fewShotExamples.length > 0 ? fewShotExamples : undefined,
           text: result.text,
           manualReplacements: Object.keys(revisedState.appliedReplacements).length > 0
             ? revisedState.appliedReplacements
@@ -106,6 +109,7 @@ export default function HomePage() {
         achievedScore: data.achievedScore,
         targetMet: data.targetMet,
         targetScore: parsedTargetScore,
+        iterations: data.iterations,
       });
 
       // Trigger revised analysis on the merged text so the right panel updates
@@ -119,6 +123,12 @@ export default function HomePage() {
       setBulkLoading(false);
       setBulkProgress(null);
     }
+  };
+
+  const handleStyleTabChange = (tab: 'voice-profile' | 'my-paper') => {
+    setActiveStyleTab(tab);
+    // mutual exclusivity is handled inside VoiceProfilePanel via its setVoiceProfile/setFewShotExamples calls
+    // no additional clearing needed here since VoiceProfilePanel already clears the other
   };
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -173,6 +183,7 @@ export default function HomePage() {
     <main className="min-h-screen bg-slate-50 px-6 py-12 text-slate-900 font-sans">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-8">
         <span data-testid="voice-profile-state" data-value={voiceProfile} style={{ display: 'none' }} aria-hidden="true" />
+        <span data-testid="active-style-tab-state" data-value={activeStyleTab} style={{ display: 'none' }} aria-hidden="true" />
         <header className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
             <div>
@@ -242,6 +253,9 @@ export default function HomePage() {
                 setVpWritingSampleDraft={setVpWritingSampleDraft}
                 voiceProfile={voiceProfile}
                 setVoiceProfile={setVoiceProfile}
+                fewShotExamples={fewShotExamples}
+                setFewShotExamples={setFewShotExamples}
+                onStyleTabChange={handleStyleTabChange}
                 vpLoading={vpLoading}
                 setVpLoading={setVpLoading}
                 vpError={vpError}
@@ -264,7 +278,13 @@ export default function HomePage() {
             </section>
             <div className={`flex gap-6 ${revisedState.revisedResult || revisedState.revisedLoading || revisedState.revisedError ? 'flex-col lg:flex-row' : 'flex-col'}`}>
               <section className="flex-1 rounded-xl border border-slate-200 bg-white p-6 shadow-sm min-w-0">
-                <ReviewPanel result={result} revisedState={revisedAnalysis} voiceProfile={voiceProfile || undefined} settings={settings} />
+                <ReviewPanel
+                  result={result}
+                  revisedState={revisedAnalysis}
+                  voiceProfile={voiceProfile || undefined}
+                  fewShotExamples={fewShotExamples.length > 0 ? fewShotExamples : undefined}
+                  settings={settings}
+                />
               </section>
               {(revisedState.revisedResult || revisedState.revisedLoading || revisedState.revisedError) && (
                 <section className="flex-1 rounded-xl border border-slate-200 bg-white p-6 shadow-sm min-w-0" data-testid="revised-panel-section">

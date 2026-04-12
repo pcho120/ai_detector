@@ -7,7 +7,7 @@ export interface TargetScorePanelProps {
   isLoading: boolean;
   disabled: boolean;
   progress: { current: number; total: number; phase: string } | null;
-  result: { achievedScore: number; targetMet: boolean; targetScore: number } | null;
+  result: { achievedScore: number; targetMet: boolean; targetScore: number; iterations?: number } | null;
 }
 
 export function TargetScorePanel({
@@ -105,7 +105,7 @@ export function TargetScorePanel({
           >
             {result.targetMet 
               ? `Score reduced to ${Math.round(result.achievedScore)}%!`
-              : `Best achieved: ${Math.round(result.achievedScore)}% (target: ${Math.round(result.targetScore)}%). Try editing individual sentences.`}
+              : `Best achieved: ${Math.round(result.achievedScore)}% after ${result.iterations ?? 0} round${(result.iterations ?? 0) !== 1 ? 's' : ''} (target: ${Math.round(result.targetScore)}%). The score may have plateaued — try editing individual high-risk sentences manually.`}
           </div>
         )}
       </div>
