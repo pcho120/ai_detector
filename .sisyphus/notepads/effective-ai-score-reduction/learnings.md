@@ -74,3 +74,19 @@
 - Concurrent worker tests (multiple isolated sentences) MUST use `mockImplementation` with per-sentenceIndex call counting instead of `mockResolvedValueOnce` chains — `mockResolvedValueOnce` queue consumption is non-deterministic with CONCURRENCY=5
 - Adjacent sentences get grouped into paragraph-level rewrites, which changes mock consumption — tests with adjacent sentenceIndex values need `mockGenerateParagraphSuggestionWithProvider` returns
 - 644 tests passing after Task 5 implementation
+
+## [2026-04-12] Task 6: Playwright E2E Test
+- Created `e2e/bulk-rewrite-score.spec.ts` — real API E2E test for bulk rewrite score reduction
+- Created `e2e/fixtures/ai-generated-essay.docx` — ~500 word AI-generated academic essay (3750 chars)
+- Fixture generated using `jszip` (transitive dep of mammoth) via `scripts/create-ai-essay-fixture.mjs`
+- Minimal valid .docx = zip with `[Content_Types].xml`, `_rels/.rels`, `word/document.xml`, `word/_rels/document.xml.rels`
+- Test uses `test.skip(!key1 || !key2, reason)` for graceful skip when env vars missing
+- `page.addInitScript()` injects localStorage settings BEFORE `page.goto('/')` — critical for settings hydration
+- `test.setTimeout(180_000)` for generous real API timeout; inner `expect` uses `timeout: 150_000`
+- Score parsing: regex `(\d+)%` on `data-testid="bulk-result-message"` text handles both success and partial messages
+- mammoth successfully reads the generated .docx fixture (verified programmatically)
+- `npm run typecheck` passes with zero errors
+
+## [2026-04-12T00:00:00] Task 7: Iterative Fix Loop
+- Iteration 1 paired the route and engine deadlines at 100_000 ms so the API layer no longer cuts off the rewrite loop at the previous 50-second ceiling.
+- Raising `MAX_ROUNDS` from 10 to 15 gives the paragraph-level bulk rewrite engine more chances to re-analyze and keep pushing down stubborn scores before plateau logic stops it.
