@@ -34,6 +34,11 @@ export interface BulkRewriteRequest {
   voiceProfile?: string;
 
   /**
+   * Optional few-shot examples to guide rewriting style.
+   */
+  fewShotExamples?: string[];
+
+  /**
    * The full text being analyzed.
    * Required for Sapling re-analysis after each rewrite round.
    */
@@ -45,6 +50,17 @@ export interface BulkRewriteRequest {
    * Sentences with existing manual replacements will not be rewritten.
    */
   manualReplacements?: Record<number, string>;
+}
+
+export interface BulkRewriteEngineConfig {
+  llmApiKey?: string;
+  llmProvider?: string;
+  detectionApiKey?: string;
+  detectionProvider?: string;
+  /** Milliseconds before the engine should return partial results. Defaults to 50000. */
+  deadlineMs?: number;
+  /** Injectable clock function for testing. Defaults to Date.now. */
+  now?: () => number;
 }
 
 /**

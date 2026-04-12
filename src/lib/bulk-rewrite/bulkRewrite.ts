@@ -1,9 +1,17 @@
 import { analyzeText, createAnalysisDetectionAdapter } from '@/lib/analysis/analyzeText';
 import { applyGuardrails } from '@/lib/suggestions/guardrails';
 import { generateSingleSuggestionWithProvider } from '@/lib/suggestions/llm';
-import type { BulkRewriteRequest, BulkRewriteResult, BulkRewriteProgress } from './types';
+import type {
+  BulkRewriteEngineConfig,
+  BulkRewriteRequest,
+  BulkRewriteResult,
+  BulkRewriteProgress,
+} from './types';
 
-const MAX_ROUNDS = 3;
+// Max API call ceiling: MAX_ROUNDS × N_sentences × 2 LLM calls + MAX_ROUNDS detection calls
+// At 10 rounds with 10 sentences: 10 × 10 × 2 + 10 = 210 API calls maximum
+const MAX_ROUNDS = 10;
+const DEFAULT_DEADLINE_MS = 50_000;
 const CONCURRENCY = 5;
 // Lowered to let more low/medium-score sentences participate in rewrite rounds.
 const ELIGIBLE_SCORE_FLOOR = 0.05;
@@ -47,16 +55,15 @@ async function runWithConcurrency<T>(
 export async function executeBulkRewrite(
   request: BulkRewriteRequest,
   onProgress?: BulkRewriteProgress,
-  config?: {
-    llmApiKey?: string;
-    llmProvider?: string;
-    detectionApiKey?: string;
-    detectionProvider?: string;
-  },
+  config?: BulkRewriteEngineConfig,
 ): Promise<BulkRewriteResult> {
   const targetScore = normalizeTargetScorePercent(request.targetScore);
   const preserveReplacements = request.manualReplacements ?? {};
   const rewrites: Record<number, string> = {};
+  const nowFn = config?.now ?? Date.now;
+  const deadlineMs = config?.deadlineMs ?? DEFAULT_DEADLINE_MS;
+  const startTime = nowFn();
+  const deadline = startTime + deadlineMs;
 
   const emit = (current: number, total: number, phase: 'rewriting' | 'analyzing') => {
     onProgress?.(current, total, phase);
@@ -88,7 +95,9 @@ export async function executeBulkRewrite(
   let workingSentences = request.sentences.slice();
   let iterations = 0;
 
-  while (iterations < MAX_ROUNDS && achievedScore > targetScore) {
+  while (iterations < MAX_ROUNDS && achievedScore > targetScore && nowFn() < deadline) {
+    if (nowFn() >= deadline) break;
+
     const candidates = workingSentences
       .filter(
         (entry) =>
@@ -103,6 +112,8 @@ export async function executeBulkRewrite(
     let rewrittenInRound = 0;
 
     await runWithConcurrency(candidates, CONCURRENCY, async (candidate) => {
+      if (nowFn() >= deadline) return;
+
       const suggestion = await generateSingleSuggestionWithProvider(
         apiKey,
         candidate.sentence,
@@ -132,6 +143,7 @@ export async function executeBulkRewrite(
 
     const mergedRewrites = { ...preserveReplacements, ...rewrites };
     const revisedText = deriveTextWithRewrites(originalSentences, mergedRewrites);
+    if (nowFn() >= deadline) break;
     const reAnalysis = await analyzeText(revisedText, detectionAdapter);
     achievedScore = reAnalysis.score;
     workingSentences = reAnalysis.sentences.map((entry, sentenceIndex) => ({

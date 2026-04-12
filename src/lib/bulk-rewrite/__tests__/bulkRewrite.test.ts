@@ -257,10 +257,10 @@ describe('executeBulkRewrite – guardrails filtering', () => {
   });
 });
 
-describe('executeBulkRewrite – max 3 rounds limit', () => {
+describe('executeBulkRewrite – max rounds limit', () => {
   afterEach(() => { vi.resetAllMocks(); });
 
-  it('stops after 3 iterations even if target is never met', async () => {
+  it('stops after MAX_ROUNDS=10 iterations even if target is never met', async () => {
     // Score stays high through all rounds
     const highScoreAnalysis = makeAnalysisResult(0.8, [
       { sentence: 'AI sentence.', score: 0.85 },
@@ -275,7 +275,7 @@ describe('executeBulkRewrite – max 3 rounds limit', () => {
     }), undefined, { llmApiKey: 'test-key' });
 
     expect(result.targetMet).toBe(false);
-    expect(result.iterations).toBeLessThanOrEqual(3);
+    expect(result.iterations).toBeLessThanOrEqual(10);
   });
 
   it('reports iterations count correctly across multiple rounds', async () => {
@@ -294,7 +294,154 @@ describe('executeBulkRewrite – max 3 rounds limit', () => {
     }), undefined, { llmApiKey: 'test-key' });
 
     expect(result.iterations).toBeGreaterThanOrEqual(1);
-    expect(result.iterations).toBeLessThanOrEqual(3);
+    expect(result.iterations).toBeLessThanOrEqual(10);
+  });
+});
+
+describe('executeBulkRewrite – time-budget engine', () => {
+  afterEach(() => { vi.resetAllMocks(); });
+
+  it('should use time budget instead of fixed MAX_ROUNDS', async () => {
+    let callCount = 0;
+    const nowMock = vi.fn(() => {
+      const checkpoints = [0, 10_000, 10_000, 10_000, 10_000, 20_000, 20_000, 20_000, 20_000, 30_000];
+      const value = checkpoints[Math.min(callCount, checkpoints.length - 1)];
+      callCount += 1;
+      return value;
+    });
+    const highScoreAnalysis = makeAnalysisResult(0.8, [{ sentence: 'AI sentence.', score: 0.85 }]);
+
+    mockAnalyzeText.mockResolvedValue(highScoreAnalysis);
+    mockGenerateSingleSuggestion.mockResolvedValue(makeSuggestion(0, 'Still not enough.'));
+
+    const config = {
+      llmApiKey: 'test-key',
+      deadlineMs: 25_000,
+      now: nowMock,
+    };
+
+    const result = await executeBulkRewrite(
+      makeRequest({
+        targetScore: 10,
+        sentences: [makeSentence('AI sentence.', 0.85, 0)],
+      }),
+      undefined,
+      config,
+    );
+
+    expect(result.iterations).toBe(2);
+  });
+
+  it('should return partial results when deadline is reached mid-run', async () => {
+    const nowMock = vi
+      .fn<() => number>()
+      .mockImplementationOnce(() => Date.now())
+      .mockImplementation(() => Number.POSITIVE_INFINITY);
+
+    mockAnalyzeText.mockResolvedValueOnce(
+      makeAnalysisResult(0.8, [{ sentence: 'AI sentence.', score: 0.85 }]),
+    );
+    mockGenerateSingleSuggestion.mockResolvedValue(makeSuggestion(0, 'Fallback rewrite.'));
+
+    const result = await executeBulkRewrite(
+      makeRequest({
+        targetScore: 10,
+        sentences: [makeSentence('AI sentence.', 0.85, 0)],
+      }),
+      undefined,
+      {
+        llmApiKey: 'test-key',
+        now: nowMock,
+      },
+    );
+
+    expect(result.targetMet).toBe(false);
+    expect(result.rewrites).toEqual(expect.any(Object));
+    expect(result.achievedScore).toEqual(expect.any(Number));
+  });
+
+  it('should accept injectable now() function and call it', async () => {
+    const nowMock = vi.fn(() => 0);
+
+    mockAnalyzeText.mockResolvedValueOnce(
+      makeAnalysisResult(0.2, [{ sentence: 'Already okay.', score: 0.2 }]),
+    );
+
+    await executeBulkRewrite(makeRequest({ targetScore: 30 }), undefined, {
+      llmApiKey: 'test-key',
+      now: nowMock,
+    });
+
+    expect(nowMock).toHaveBeenCalled();
+  });
+
+  it('should cap at MAX_ROUNDS=10 even with remaining time budget', async () => {
+    const nowMock = vi.fn(() => 0);
+    const highScoreAnalysis = makeAnalysisResult(0.8, [{ sentence: 'AI sentence.', score: 0.85 }]);
+
+    mockAnalyzeText.mockResolvedValue(highScoreAnalysis);
+    mockGenerateSingleSuggestion.mockResolvedValue(makeSuggestion(0, 'Still not enough.'));
+
+    const result = await executeBulkRewrite(
+      makeRequest({
+        targetScore: 10,
+        sentences: [makeSentence('AI sentence.', 0.85, 0)],
+      }),
+      undefined,
+      {
+        llmApiKey: 'test-key',
+        deadlineMs: 500_000,
+        now: nowMock,
+      },
+    );
+
+    expect(result.iterations).toBe(10);
+  });
+
+  it('should check deadline before starting each round', async () => {
+    const nowMock = vi.fn(() => Number.POSITIVE_INFINITY);
+
+    mockAnalyzeText.mockResolvedValueOnce(
+      makeAnalysisResult(0.8, [{ sentence: 'AI sentence.', score: 0.85 }]),
+    );
+
+    const result = await executeBulkRewrite(
+      makeRequest({
+        targetScore: 10,
+        sentences: [makeSentence('AI sentence.', 0.85, 0)],
+      }),
+      undefined,
+      {
+        llmApiKey: 'test-key',
+        deadlineMs: 25_000,
+        now: nowMock,
+      },
+    );
+
+    expect(result.iterations).toBe(0);
+    expect(mockGenerateSingleSuggestionWithProvider).not.toHaveBeenCalled();
+  });
+
+  it('should return immediately if deadline already passed before first round', async () => {
+    mockAnalyzeText.mockResolvedValueOnce(
+      makeAnalysisResult(0.8, [{ sentence: 'AI sentence.', score: 0.85 }]),
+    );
+
+    const result = await executeBulkRewrite(
+      makeRequest({
+        targetScore: 10,
+        sentences: [makeSentence('AI sentence.', 0.85, 0)],
+      }),
+      undefined,
+      {
+        llmApiKey: 'test-key',
+        deadlineMs: 0,
+        now: () => 1,
+      },
+    );
+
+    expect(result.iterations).toBe(0);
+    expect(mockGenerateSingleSuggestionWithProvider).not.toHaveBeenCalled();
   });
 });
 
