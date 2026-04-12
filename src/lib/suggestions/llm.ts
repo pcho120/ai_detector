@@ -83,8 +83,12 @@ export function getMultiSystemPrompt(hasFewShot: boolean): string {
   return hasFewShot ? STYLE_MULTI_SYSTEM_PROMPT : MULTI_SYSTEM_PROMPT;
 }
 
-function buildUserPrompt(sentence: string, voiceProfile?: string, fewShotExamples?: string[]): string {
-  const base = `Rewrite the following sentence to sound like natural human writing:\n\n"${sentence}"`;
+function buildUserPrompt(sentence: string, voiceProfile?: string, fewShotExamples?: string[], score?: number): string {
+  const scoreContext =
+    score && score > 0
+      ? `This sentence was flagged as ${Math.round(score * 100)}% likely AI-generated. Focus on making it sound distinctly human — vary rhythm, use specific details, and avoid formulaic patterns.\n\n`
+      : '';
+  const base = `${scoreContext}Rewrite the following sentence to sound like natural human writing:\n\n"${sentence}"`;
 
   if (fewShotExamples && fewShotExamples.length > 0) {
     const block = buildFewShotContextBlock(fewShotExamples);
@@ -199,10 +203,11 @@ async function twoPassRewrite(
   sentence: string,
   voiceProfile?: string,
   fewShotExamples?: string[],
+  score?: number,
 ): Promise<LlmRewritePayload | null> {
   const pass1Result = await adapter.complete({
     systemPrompt: getSystemPrompt(!!fewShotExamples?.length),
-    userPrompt: buildUserPrompt(sentence, voiceProfile, fewShotExamples),
+    userPrompt: buildUserPrompt(sentence, voiceProfile, fewShotExamples, score),
     temperature: 0.7,
     maxTokens: 256,
     ...(fewShotExamples && fewShotExamples.length > 0 ? { topP: 0.9 } : {}),
@@ -270,7 +275,7 @@ export async function generateSingleSuggestionWithProvider(
   apiKey: string | undefined,
   sentence: string,
   sentenceIndex: number,
-  _score: number,
+  score: number,
   provider?: string,
   voiceProfile?: string,
   fewShotExamples?: string[],
@@ -278,7 +283,7 @@ export async function generateSingleSuggestionWithProvider(
   if (!apiKey) return null;
 
   const adapter = createLlmAdapter(apiKey, provider);
-  const payload = await twoPassRewrite(adapter, sentence, voiceProfile, fewShotExamples);
+  const payload = await twoPassRewrite(adapter, sentence, voiceProfile, fewShotExamples, score);
   if (!payload) return null;
 
   const [filtered] = applyGuardrails([

@@ -342,6 +342,68 @@ describe('generateAlternativeSuggestions system prompts', () => {
   });
 });
 
+describe('score-aware prompts', () => {
+  beforeEach(() => {
+    mockComplete.mockReset();
+    mockCompleteMulti.mockReset();
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('should include detection score in user prompt when score is provided', async () => {
+    mockComplete
+      .mockResolvedValueOnce({
+        content: JSON.stringify({ rewrite: 'Pass one.', explanation: 'first' }),
+      })
+      .mockResolvedValueOnce({
+        content: JSON.stringify({ rewrite: 'Pass two.', explanation: 'second' }),
+      });
+
+    await generateSingleSuggestionWithProvider('api-key', 'Original sentence.', 0, 0.85, 'openai');
+
+    const pass1Prompt = mockComplete.mock.calls[0]?.[0].userPrompt as string;
+    expect(pass1Prompt).toContain('85% likely AI-generated');
+    expect(pass1Prompt).toContain('making it sound distinctly human');
+
+    // Pass 2 should NOT contain score context
+    const pass2Prompt = mockComplete.mock.calls[1]?.[0].userPrompt as string;
+    expect(pass2Prompt).not.toContain('likely AI-generated');
+  });
+
+  it('should not include score context when score is 0', async () => {
+    mockComplete
+      .mockResolvedValueOnce({
+        content: JSON.stringify({ rewrite: 'Pass one.', explanation: 'first' }),
+      })
+      .mockResolvedValueOnce({
+        content: JSON.stringify({ rewrite: 'Pass two.', explanation: 'second' }),
+      });
+
+    await generateSingleSuggestionWithProvider('api-key', 'Original sentence.', 0, 0, 'openai');
+
+    const pass1Prompt = mockComplete.mock.calls[0]?.[0].userPrompt as string;
+    expect(pass1Prompt).not.toContain('likely AI-generated');
+  });
+
+  it('should not include score context when score is very low (below threshold)', async () => {
+    mockComplete
+      .mockResolvedValueOnce({
+        content: JSON.stringify({ rewrite: 'Pass one.', explanation: 'first' }),
+      })
+      .mockResolvedValueOnce({
+        content: JSON.stringify({ rewrite: 'Pass two.', explanation: 'second' }),
+      });
+
+    await generateSingleSuggestionWithProvider('api-key', 'Original sentence.', 0, 0, 'openai');
+
+    const pass1Prompt = mockComplete.mock.calls[0]?.[0].userPrompt as string;
+    expect(pass1Prompt).not.toContain('0% likely');
+    expect(pass1Prompt).not.toContain('likely AI-generated');
+  });
+});
+
 describe('parseRewritePayload handling through single suggestion flow', () => {
   beforeEach(() => {
     mockComplete.mockReset();
