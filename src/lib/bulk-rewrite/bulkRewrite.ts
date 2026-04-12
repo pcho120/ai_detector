@@ -18,18 +18,186 @@ const ELIGIBLE_SCORE_FLOOR = 0.05;
 const PLATEAU_THRESHOLD = 0.02;
 const PLATEAU_ROUNDS = 2;
 
+type SentenceEntry = {
+  sentence: string;
+  sentenceIndex: number;
+};
+
+type WorkingSentence = SentenceEntry & {
+  score: number;
+};
+
 function normalizeTargetScorePercent(percent: number): number {
   if (!Number.isFinite(percent)) return 1;
   return Math.max(0, Math.min(1, percent / 100));
 }
 
 export function deriveTextWithRewrites(
-  originalSentences: Array<{ sentence: string }>,
+  originalText: string,
+  originalSentences: Array<{ sentence: string; sentenceIndex?: number }>,
   rewrites: Record<number, string>,
 ): string {
-  return originalSentences
-    .map((entry, sentenceIndex) => rewrites[sentenceIndex] ?? entry.sentence)
-    .join(' ');
+  if (originalSentences.length === 0) return originalText;
+
+  const indexedSentences = originalSentences.map((entry, sentenceIndex) => ({
+    sentence: entry.sentence,
+    sentenceIndex: entry.sentenceIndex ?? sentenceIndex,
+  }));
+
+  const sentenceRanges: Array<SentenceEntry & { start: number; end: number }> = [];
+  let searchFrom = 0;
+
+  for (const entry of indexedSentences) {
+    let start = originalText.indexOf(entry.sentence, searchFrom);
+    if (start === -1) {
+      start = originalText.indexOf(entry.sentence);
+    }
+    if (start === -1) continue;
+
+    const end = start + entry.sentence.length;
+    sentenceRanges.push({ ...entry, start, end });
+    searchFrom = end;
+  }
+
+  let result = originalText;
+  for (const entry of sentenceRanges.sort((a, b) => b.start - a.start)) {
+    const rewrite = rewrites[entry.sentenceIndex];
+    if (rewrite === undefined) continue;
+    result = `${result.slice(0, entry.start)}${rewrite}${result.slice(entry.end)}`;
+  }
+
+  return result;
+}
+
+function normalizeSentenceForMatching(sentence: string): string {
+  return sentence.replace(/\s+/g, ' ').trim();
+}
+
+function buildSentenceIndexLookup(
+  originalSentences: SentenceEntry[],
+  mergedRewrites: Record<number, string>,
+): Map<string, number[]> {
+  const lookup = new Map<string, number[]>();
+
+  const addVariant = (text: string | undefined, sentenceIndex: number) => {
+    if (!text) return;
+    const normalized = normalizeSentenceForMatching(text);
+    if (!normalized) return;
+
+    const entries = lookup.get(normalized) ?? [];
+    if (!entries.includes(sentenceIndex)) {
+      entries.push(sentenceIndex);
+      lookup.set(normalized, entries);
+    }
+  };
+
+  for (const entry of originalSentences) {
+    addVariant(entry.sentence, entry.sentenceIndex);
+    addVariant(mergedRewrites[entry.sentenceIndex], entry.sentenceIndex);
+  }
+
+  return lookup;
+}
+
+function takeLookupMatch(
+  matches: number[] | undefined,
+  usedIndices: Set<number>,
+  lastAssignedIndex: number,
+): number | undefined {
+  if (!matches) return undefined;
+
+  return matches.find((index) => index > lastAssignedIndex && !usedIndices.has(index))
+    ?? matches.find((index) => !usedIndices.has(index));
+}
+
+function getFallbackSentenceIndex(
+  sentence: string,
+  originalSentences: SentenceEntry[],
+  mergedRewrites: Record<number, string>,
+  usedIndices: Set<number>,
+  lastAssignedIndex: number,
+): number | undefined {
+  const normalizedSentence = normalizeSentenceForMatching(sentence);
+  const remaining = originalSentences.filter((entry) => !usedIndices.has(entry.sentenceIndex));
+  const orderedPools = [
+    remaining.filter((entry) => entry.sentenceIndex > lastAssignedIndex),
+    remaining,
+  ];
+
+  for (const pool of orderedPools) {
+    let bestMatch: { sentenceIndex: number; score: number } | undefined;
+
+    for (const entry of pool) {
+      const candidateTexts = [entry.sentence, mergedRewrites[entry.sentenceIndex]];
+      let matchScore = Number.NEGATIVE_INFINITY;
+
+      for (const candidateText of candidateTexts) {
+        if (!candidateText) continue;
+        const normalizedCandidate = normalizeSentenceForMatching(candidateText);
+        if (!normalizedCandidate) continue;
+
+        if (normalizedCandidate === normalizedSentence) {
+          matchScore = 1000;
+          break;
+        }
+
+        if (
+          normalizedCandidate.includes(normalizedSentence)
+          || normalizedSentence.includes(normalizedCandidate)
+        ) {
+          matchScore = Math.max(matchScore, Math.min(normalizedCandidate.length, normalizedSentence.length));
+        }
+      }
+
+      if (matchScore <= Number.NEGATIVE_INFINITY) continue;
+
+      if (
+        !bestMatch
+        || matchScore > bestMatch.score
+        || (matchScore === bestMatch.score && entry.sentenceIndex < bestMatch.sentenceIndex)
+      ) {
+        bestMatch = { sentenceIndex: entry.sentenceIndex, score: matchScore };
+      }
+    }
+
+    if (bestMatch) return bestMatch.sentenceIndex;
+  }
+
+  return orderedPools[0][0]?.sentenceIndex ?? orderedPools[1][0]?.sentenceIndex;
+}
+
+function rebuildWorkingSentences(
+  reAnalysisSentences: Array<{ sentence: string; score: number }>,
+  originalSentences: SentenceEntry[],
+  mergedRewrites: Record<number, string>,
+): WorkingSentence[] {
+  const lookup = buildSentenceIndexLookup(originalSentences, mergedRewrites);
+  const usedIndices = new Set<number>();
+  let lastAssignedIndex = -1;
+
+  return reAnalysisSentences.map((entry) => {
+    const normalizedSentence = normalizeSentenceForMatching(entry.sentence);
+    const lookupMatch = takeLookupMatch(lookup.get(normalizedSentence), usedIndices, lastAssignedIndex);
+    const sentenceIndex = lookupMatch
+      ?? getFallbackSentenceIndex(
+        entry.sentence,
+        originalSentences,
+        mergedRewrites,
+        usedIndices,
+        lastAssignedIndex,
+      )
+      ?? originalSentences.at(-1)?.sentenceIndex
+      ?? 0;
+
+    usedIndices.add(sentenceIndex);
+    lastAssignedIndex = sentenceIndex;
+
+    return {
+      sentence: entry.sentence,
+      score: entry.score,
+      sentenceIndex,
+    };
+  });
 }
 
 async function runWithConcurrency<T>(
@@ -91,11 +259,11 @@ export async function executeBulkRewrite(
   const originalSentences = request.sentences
     .slice()
     .sort((a, b) => a.sentenceIndex - b.sentenceIndex)
-    .map((entry) => ({ sentence: entry.sentence }));
+    .map((entry) => ({ sentence: entry.sentence, sentenceIndex: entry.sentenceIndex }));
 
   const apiKey = config?.llmApiKey;
   const llmProvider = config?.llmProvider;
-  let workingSentences = request.sentences.slice();
+  let workingSentences: WorkingSentence[] = request.sentences.slice();
   let iterations = 0;
   let previousScore = achievedScore;
   let plateauCount = 0;
@@ -149,15 +317,11 @@ export async function executeBulkRewrite(
     emit(iterations, MAX_ROUNDS, 'analyzing');
 
     const mergedRewrites = { ...preserveReplacements, ...rewrites };
-    const revisedText = deriveTextWithRewrites(originalSentences, mergedRewrites);
+    const revisedText = deriveTextWithRewrites(request.text, originalSentences, mergedRewrites);
     if (nowFn() >= deadline) break;
     const reAnalysis = await analyzeText(revisedText, detectionAdapter);
     achievedScore = reAnalysis.score;
-    workingSentences = reAnalysis.sentences.map((entry, sentenceIndex) => ({
-      sentence: entry.sentence,
-      score: entry.score,
-      sentenceIndex,
-    }));
+    workingSentences = rebuildWorkingSentences(reAnalysis.sentences, originalSentences, mergedRewrites);
 
     for (const entry of workingSentences) {
       const attemptedRewrite = attemptedRewrites[entry.sentenceIndex];

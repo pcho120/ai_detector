@@ -76,24 +76,40 @@ function makeRequest(overrides: Partial<BulkRewriteRequest> = {}): BulkRewriteRe
 
 describe('deriveTextWithRewrites', () => {
   it('returns original sentences when no rewrites', () => {
+    const originalText = 'First. Second.';
     const originals = [{ sentence: 'First.' }, { sentence: 'Second.' }];
-    expect(deriveTextWithRewrites(originals, {})).toBe('First. Second.');
+    expect(deriveTextWithRewrites(originalText, originals, {})).toBe(originalText);
   });
 
   it('substitutes rewritten sentences at matching indices', () => {
+    const originalText = 'Original A. Original B. Original C.';
     const originals = [{ sentence: 'Original A.' }, { sentence: 'Original B.' }, { sentence: 'Original C.' }];
     const rewrites = { 1: 'Rewritten B.' };
-    expect(deriveTextWithRewrites(originals, rewrites)).toBe('Original A. Rewritten B. Original C.');
+    expect(deriveTextWithRewrites(originalText, originals, rewrites)).toBe('Original A. Rewritten B. Original C.');
   });
 
   it('applies multiple rewrites across the text', () => {
+    const originalText = 'A. B. C.';
     const originals = [{ sentence: 'A.' }, { sentence: 'B.' }, { sentence: 'C.' }];
     const rewrites = { 0: 'New A.', 2: 'New C.' };
-    expect(deriveTextWithRewrites(originals, rewrites)).toBe('New A. B. New C.');
+    expect(deriveTextWithRewrites(originalText, originals, rewrites)).toBe('New A. B. New C.');
   });
 
   it('returns empty string for empty sentences array', () => {
-    expect(deriveTextWithRewrites([], {})).toBe('');
+    expect(deriveTextWithRewrites('', [], {})).toBe('');
+  });
+
+  it('preserves paragraph breaks and original whitespace when applying rewrites', () => {
+    const originalText = 'First sentence.\n\nSecond sentence.  Third sentence.';
+    const originals = [
+      { sentence: 'First sentence.', sentenceIndex: 0 },
+      { sentence: 'Second sentence.', sentenceIndex: 1 },
+      { sentence: 'Third sentence.', sentenceIndex: 2 },
+    ];
+
+    expect(deriveTextWithRewrites(originalText, originals, { 1: 'Updated second sentence.' })).toBe(
+      'First sentence.\n\nUpdated second sentence.  Third sentence.',
+    );
   });
 });
 
@@ -732,6 +748,62 @@ describe('executeBulkRewrite – manual replacements preservation', () => {
     expect(calledIndices).toEqual([1, 1]);
     expect(result.rewrites[0]).toBe('Manual replacement.');
     expect(result.rewrites[1]).toBe('rewrite-v2');
+  });
+
+  it('keeps original sentence indices stable across re-analysis rounds', async () => {
+    mockAnalyzeText
+      .mockResolvedValueOnce(makeAnalysisResult(0.9, [
+        { sentence: 'Original first.', score: 0.95 },
+        { sentence: 'Original second.', score: 0.85 },
+      ]))
+      .mockResolvedValueOnce(makeAnalysisResult(0.5, [
+        { sentence: 'Rewrite first v1.', score: 0.4 },
+        { sentence: 'Rewrite second v1.', score: 0.35 },
+      ]))
+      .mockResolvedValueOnce(makeAnalysisResult(0.2, [
+        { sentence: 'Rewrite first v2.', score: 0.1 },
+        { sentence: 'Rewrite second v2.', score: 0.08 },
+      ]));
+
+    mockGenerateSingleSuggestion
+      .mockResolvedValueOnce(makeSuggestion(4, 'Rewrite first v1.'))
+      .mockResolvedValueOnce(makeSuggestion(9, 'Rewrite second v1.'))
+      .mockResolvedValueOnce(makeSuggestion(4, 'Rewrite first v2.'))
+      .mockResolvedValueOnce(makeSuggestion(9, 'Rewrite second v2.'));
+
+    const result = await executeBulkRewrite(makeRequest({
+      text: 'Original first.\n\nOriginal second.',
+      targetScore: 10,
+      sentences: [
+        makeSentence('Original first.', 0.95, 4),
+        makeSentence('Original second.', 0.85, 9),
+      ],
+    }), undefined, { llmApiKey: 'test-key' });
+
+    expect(mockGenerateSingleSuggestionWithProvider).toHaveBeenNthCalledWith(
+      3,
+      'test-key',
+      'Rewrite first v1.',
+      4,
+      0.4,
+      undefined,
+      undefined,
+      undefined,
+    );
+    expect(mockGenerateSingleSuggestionWithProvider).toHaveBeenNthCalledWith(
+      4,
+      'test-key',
+      'Rewrite second v1.',
+      9,
+      0.35,
+      undefined,
+      undefined,
+      undefined,
+    );
+    expect(result.rewrites).toEqual({
+      4: 'Rewrite first v2.',
+      9: 'Rewrite second v2.',
+    });
   });
 });
 
