@@ -1,0 +1,13 @@
+Task 3 QA: Score-aware prompt tests pass
+=========================================
+Command: npx vitest run src/lib/suggestions/__tests__/llm.test.ts --reporter=verbose
+Exit Code: 0
+Result: PASS
+
+Score-aware tests passing:
+✓ score-aware prompts > should include detection score in user prompt when score is provided
+✓ score-aware prompts > should not include score context when score is 0
+✓ score-aware prompts > should not include score context when score is very low (below threshold)
+
+Test Files: 1 passed (1)
+Tests: 19 passed (19)

@@ -1,0 +1,2 @@
+﻿{"error":"TEXT_TOO_SHORT","message":"Text must be at least 500 characters."}
+HTTP_STATUS: 400

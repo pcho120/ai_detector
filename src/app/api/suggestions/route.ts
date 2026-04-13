@@ -15,6 +15,7 @@ export interface SuggestionRequest {
   sentence: string;
   score: number;
   voiceProfile?: string;
+  fewShotExamples?: string[];
 }
 
 export interface SuggestionAvailableResponse {
@@ -76,6 +77,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
   const rawVoiceProfile = (body as unknown as Record<string, unknown>).voiceProfile;
   const voiceProfile =
     typeof rawVoiceProfile === 'string' ? sanitizeVoiceProfile(rawVoiceProfile) : undefined;
+  const rawFewShotExamples = (body as unknown as Record<string, unknown>).fewShotExamples;
+  const fewShotExamples = Array.isArray(rawFewShotExamples) && rawFewShotExamples.every((s) => typeof s === 'string')
+    ? (rawFewShotExamples as string[])
+    : undefined;
 
   const settings = getRequestSettings(request);
   const llmApiKey = settings.llmApiKey;
@@ -90,6 +95,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       score,
       voiceProfile || undefined,
       llmProvider,
+      fewShotExamples,
     );
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';

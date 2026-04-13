@@ -32,3 +32,16 @@
 
 - The time-budget tests are most stable when `now()` mocks hold the same timestamp across all checks inside a single round, because the engine now calls the clock at deadline setup, loop guards, in-loop prechecks, per-candidate skips, and pre-analysis exits.
 - Returning partial bulk rewrite results does not require changing `BulkRewriteResult`; breaking before re-analysis preserves the latest best score/rewrites while keeping the API contract intact.
+
+## [2026-04-12] Task 4 learnings
+
+- Retry behavior was already enabled by the `workingSentences` re-analysis loop; regression protection needed a separate `bestRewrites` map keyed by sentence index.
+- The safest regression flow is to compare each attempted rewrite against the newly re-analyzed sentence score, revert `workingSentences` immediately on regressions, and build final `rewrites` from `bestRewrites` plus preserved manual replacements.
+
+## [2026-04-12] Task 3 learnings (score-aware prompts)
+
+- `buildUserPrompt` score context uses `score && score > 0` guard — both zero and undefined are excluded.
+- Score context is prepended before the base "Rewrite..." text, not after contextBlock. The `scoreContext` string is inlined into `base`.
+- Only pass 1 of `twoPassRewrite` receives the score; pass 2 intentionally omits it so the refinement pass isn't biased by the original detection score.
+- The score text "flagged as X% likely AI-generated" is safe against all guardrail banned patterns — verified against regex list.
+- TDD red phase: only 1 of 3 tests failed initially (the one asserting score presence); the other 2 tested absence which was already the default behavior.

@@ -1,0 +1,35 @@
+== F3 Manual QA: Final Sweep Scenarios ==
+Date: 2026-04-11
+
+--- Scenario 15: Zero process.env in ALL production source code ---
+Command: Get-ChildItem -Path src -Recurse -Include *.ts,*.tsx | Where-Object { $_.FullName -notmatch '__tests__' -and $_.FullName -notmatch '\.test\.' } | Select-String 'process\.env'
+Result: PASS — zero matches (empty output)
+
+--- Scenario 16: Full test suite ALL pass ---
+Command: npm run test
+Result: PASS
+  Test Files: 26 passed (26)
+  Tests: 618 passed (618)
+
+--- Scenario 17: TypeScript typecheck clean ---
+Command: npm run typecheck
+Result: PASS — exit code 0, zero type errors
+
+--- Scenario 18: Lint clean ---
+Command: npm run lint
+Result: PASS — exit code 0, zero errors (confirmed in scenario 14)
+
+--- Cross-Task Integration Check ---
+Verified: src/app/api/analyze/route.ts
+  - Line 94: settings = getRequestSettings(request) ✓
+  - Lines 95-100: createAnalysisDetectionAdapter({ provider, apiKey, copyleaksEmail, copyleaksApiKey }) from settings ✓
+  - Zero process.env in file ✓
+
+Verified: src/app/api/suggestions/route.ts
+  - Line 85: settings = getRequestSettings(request) ✓
+  - Lines 86-87: llmApiKey and llmProvider from settings ✓
+  - Lines 118-121: createAnalysisDetectionAdapter({ provider, apiKey }) from settings ✓
+  - Zero process.env in file ✓
+
+Chain: User Settings UI → localStorage → request headers → getRequestSettings() → downstream adapters
+No process.env anywhere in the chain ✓

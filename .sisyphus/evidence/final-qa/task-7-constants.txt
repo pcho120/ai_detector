@@ -1,0 +1,18 @@
+Task 7 QA: Key constants verified
+===================================
+Command: Select-String -Path "src\lib\bulk-rewrite\bulkRewrite.ts" -Pattern "MAX_ROUNDS|DEFAULT_DEADLINE_MS|PLATEAU_THRESHOLD|PLATEAU_ROUNDS"
+Result: PASS
+
+Found values:
+- MAX_ROUNDS = 10 ✓ (line 13: const MAX_ROUNDS = 10;)
+- DEFAULT_DEADLINE_MS = 50_000 ✓ (line 14: const DEFAULT_DEADLINE_MS = 50_000;)
+- PLATEAU_THRESHOLD = 0.02 ✓ (line 18: const PLATEAU_THRESHOLD = 0.02;)
+- PLATEAU_ROUNDS = 2 ✓ (line 19: const PLATEAU_ROUNDS = 2;)
+
+Additional usage verified:
+- line 67: const deadlineMs = config?.deadlineMs ?? DEFAULT_DEADLINE_MS;
+- line 103: while (iterations < MAX_ROUNDS && achievedScore > targetScore && nowFn() < deadline)
+- line 180: if ((previousScore - achievedScore) < PLATEAU_THRESHOLD)
+- line 185: if (plateauCount >= PLATEAU_ROUNDS) break;
+
+All constants match expected values.

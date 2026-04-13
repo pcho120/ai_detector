@@ -6,6 +6,7 @@ import {
 } from '@/lib/suggestions/voiceProfile';
 import type { AppSettings } from '@/lib/settings/types';
 import { buildRequestHeaders } from '@/hooks/useSettings';
+import { MyPaperTab } from './MyPaperTab';
 
 interface VoiceProfilePanelProps {
   vpSelectedPresets: string[];
@@ -21,6 +22,9 @@ interface VoiceProfilePanelProps {
   vpCopied: boolean;
   setVpCopied: (copied: boolean) => void;
   settings: AppSettings;
+  fewShotExamples: string[];
+  setFewShotExamples: (examples: string[]) => void;
+  onStyleTabChange: (tab: 'voice-profile' | 'my-paper') => void;
 }
 
 export function VoiceProfilePanel({
@@ -37,8 +41,22 @@ export function VoiceProfilePanel({
   vpCopied,
   setVpCopied,
   settings,
+  fewShotExamples,
+  setFewShotExamples,
+  onStyleTabChange,
 }: VoiceProfilePanelProps) {
   const [isProfileRevealed, setIsProfileRevealed] = useState(false);
+  const [localActiveTab, setLocalActiveTab] = useState<'voice-profile' | 'my-paper'>('voice-profile');
+
+  const handleTabChange = (tab: 'voice-profile' | 'my-paper') => {
+    setLocalActiveTab(tab);
+    onStyleTabChange(tab);
+    if (tab === 'my-paper') {
+      setVoiceProfile(''); // clear voice profile when switching to My Paper
+    } else {
+      setFewShotExamples([]); // clear few-shot when switching to Voice Profile
+    }
+  };
 
   const handlePresetToggle = (key: string) => {
     if (vpSelectedPresets.includes(key)) {
@@ -105,115 +123,152 @@ export function VoiceProfilePanel({
       className="flex flex-col gap-6"
       data-testid="voice-profile-panel"
     >
-      <header className="flex flex-col gap-2">
-        <h2 className="text-xl font-bold tracking-tight text-slate-900">Voice Profile Setup</h2>
-        <p className="text-sm text-slate-500">
-          Define a writing style to use for rewrites. Select up to 2 presets, provide a writing sample, or both.
-        </p>
-      </header>
-
-      <div className="flex flex-col gap-6">
-        <div className="flex flex-col gap-3">
-          <span className="text-sm font-semibold text-slate-700">Style Presets (max 2)</span>
-          <div className="flex flex-wrap gap-2">
-            {(Object.entries(PRESET_DESCRIPTORS) as [VoicePresetKey, string][]).map(([key, desc]) => {
-              const isSelected = vpSelectedPresets.includes(key);
-              const isDisabled = !isSelected && vpSelectedPresets.length >= 2;
-              return (
-                <button
-                  key={key}
-                  onClick={() => handlePresetToggle(key)}
-                  disabled={vpLoading || isDisabled}
-                  data-testid={`voice-preset-${key}`}
-                  title={desc}
-                  className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors border ${
-                    isSelected
-                      ? 'bg-blue-100 text-blue-800 border-blue-200'
-                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                  } ${isDisabled ? 'opacity-50 cursor-not-allowed hover:bg-white' : ''}`}
-                >
-                  {key}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="flex flex-col gap-3">
-          <label className="text-sm font-semibold text-slate-700" htmlFor="voice-sample">
-            Writing Sample (Optional)
-          </label>
-          <textarea
-            id="voice-sample"
-            value={vpWritingSampleDraft}
-            onChange={(e) => setVpWritingSampleDraft(e.target.value)}
-            disabled={vpLoading}
-            data-testid="voice-sample-input"
-            className="w-full min-h-[100px] rounded-md border border-slate-300 p-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-slate-50 disabled:text-slate-500"
-            placeholder="Paste a sample of your writing here..."
-          />
-        </div>
-
-        {vpError && (
-          <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">
-            {vpError}
-          </div>
-        )}
-
+      <div className="flex border-b border-slate-200 mb-6">
         <button
-          onClick={handleGenerate}
-          disabled={vpLoading || !hasInput}
-          data-testid="generate-voice-profile-btn"
-          className="w-fit rounded-md bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition-all hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
+          onClick={() => handleTabChange('voice-profile')}
+          data-testid="tab-voice-profile"
+          className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
+            localActiveTab === 'voice-profile'
+              ? 'border-slate-900 text-slate-900'
+              : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
         >
-          {vpLoading ? 'Generating...' : 'Generate Profile'}
+          Voice Profile
         </button>
-
-        {!isProfileRevealed ? (
-          <div className="mt-4 flex justify-center">
-            <button
-              onClick={() => setIsProfileRevealed(true)}
-              data-testid="reveal-voice-profile-btn"
-              className="text-sm font-medium text-slate-500 hover:text-slate-800 underline transition-colors"
-            >
-              I already have a profile!
-            </button>
-          </div>
-        ) : (
-          <div className="mt-4 flex flex-col gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
-            <label className="text-sm font-semibold text-slate-700" htmlFor="voice-profile-result">
-              Your Voice Profile
-            </label>
-            <textarea
-              id="voice-profile-result"
-              value={voiceProfile}
-              onChange={(e) => setVoiceProfile(e.target.value)}
-              disabled={vpLoading}
-              data-testid="voice-profile-textarea"
-              placeholder="Paste a previously copied profile here, or generate one above."
-              className="w-full min-h-[120px] rounded-md border border-slate-300 p-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
-            />
-            <div className="flex items-center gap-3">
-              <button
-                onClick={handleCopy}
-                disabled={!voiceProfile}
-                data-testid="copy-voice-profile-btn"
-                className="rounded-md bg-white border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition-all hover:bg-slate-50 hover:text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Copy for AI Tools
-              </button>
-              {vpCopied && (
-                <span data-testid="voice-profile-status" className="text-sm font-medium text-green-600">
-                  Copied!
-                </span>
-              )}
-            </div>
-            <p className="text-xs text-slate-500">
-              You can edit this profile directly or copy it to use in other AI tools. It will be automatically used when applying rewrite suggestions on this page.
-            </p>
-          </div>
-        )}
+        <button
+          onClick={() => handleTabChange('my-paper')}
+          data-testid="tab-my-paper"
+          className={`px-4 py-2 text-sm font-medium transition-colors border-b-2 -mb-px ${
+            localActiveTab === 'my-paper'
+              ? 'border-slate-900 text-slate-900'
+              : 'border-transparent text-slate-500 hover:text-slate-700'
+          }`}
+        >
+          My Paper
+        </button>
       </div>
+
+      {localActiveTab === 'voice-profile' && (
+        <>
+          <header className="flex flex-col gap-2">
+            <h2 className="text-xl font-bold tracking-tight text-slate-900">Voice Profile Setup</h2>
+            <p className="text-sm text-slate-500">
+              Define a writing style to use for rewrites. Select up to 2 presets, provide a writing sample, or both.
+            </p>
+          </header>
+
+          <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-3">
+              <span className="text-sm font-semibold text-slate-700">Style Presets (max 2)</span>
+              <div className="flex flex-wrap gap-2">
+                {(Object.entries(PRESET_DESCRIPTORS) as [VoicePresetKey, string][]).map(([key, desc]) => {
+                  const isSelected = vpSelectedPresets.includes(key);
+                  const isDisabled = !isSelected && vpSelectedPresets.length >= 2;
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => handlePresetToggle(key)}
+                      disabled={vpLoading || isDisabled}
+                      data-testid={`voice-preset-${key}`}
+                      title={desc}
+                      className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors border ${
+                        isSelected
+                          ? 'bg-blue-100 text-blue-800 border-blue-200'
+                          : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                      } ${isDisabled ? 'opacity-50 cursor-not-allowed hover:bg-white' : ''}`}
+                    >
+                      {key}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-3">
+              <label className="text-sm font-semibold text-slate-700" htmlFor="voice-sample">
+                Writing Sample (Optional)
+              </label>
+              <textarea
+                id="voice-sample"
+                value={vpWritingSampleDraft}
+                onChange={(e) => setVpWritingSampleDraft(e.target.value)}
+                disabled={vpLoading}
+                data-testid="voice-sample-input"
+                className="w-full min-h-[100px] rounded-md border border-slate-300 p-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 disabled:bg-slate-50 disabled:text-slate-500"
+                placeholder="Paste a sample of your writing here..."
+              />
+            </div>
+
+            {vpError && (
+              <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+                {vpError}
+              </div>
+            )}
+
+            <button
+              onClick={handleGenerate}
+              disabled={vpLoading || !hasInput}
+              data-testid="generate-voice-profile-btn"
+              className="w-fit rounded-md bg-slate-900 px-5 py-2.5 text-sm font-semibold text-white transition-all hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {vpLoading ? 'Generating...' : 'Generate Profile'}
+            </button>
+
+            {!isProfileRevealed ? (
+              <div className="mt-4 flex justify-center">
+                <button
+                  onClick={() => setIsProfileRevealed(true)}
+                  data-testid="reveal-voice-profile-btn"
+                  className="text-sm font-medium text-slate-500 hover:text-slate-800 underline transition-colors"
+                >
+                  I already have a profile!
+                </button>
+              </div>
+            ) : (
+              <div className="mt-4 flex flex-col gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
+                <label className="text-sm font-semibold text-slate-700" htmlFor="voice-profile-result">
+                  Your Voice Profile
+                </label>
+                <textarea
+                  id="voice-profile-result"
+                  value={voiceProfile}
+                  onChange={(e) => setVoiceProfile(e.target.value)}
+                  disabled={vpLoading}
+                  data-testid="voice-profile-textarea"
+                  placeholder="Paste a previously copied profile here, or generate one above."
+                  className="w-full min-h-[120px] rounded-md border border-slate-300 p-3 text-sm focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white"
+                />
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={handleCopy}
+                    disabled={!voiceProfile}
+                    data-testid="copy-voice-profile-btn"
+                    className="rounded-md bg-white border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700 transition-all hover:bg-slate-50 hover:text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Copy for AI Tools
+                  </button>
+                  {vpCopied && (
+                    <span data-testid="voice-profile-status" className="text-sm font-medium text-green-600">
+                      Copied!
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-slate-500">
+                  You can edit this profile directly or copy it to use in other AI tools. It will be automatically used when applying rewrite suggestions on this page.
+                </p>
+              </div>
+            )}
+          </div>
+        </>
+      )}
+
+      {localActiveTab === 'my-paper' && (
+        <MyPaperTab
+          fewShotExamples={fewShotExamples}
+          setFewShotExamples={setFewShotExamples}
+          settings={settings}
+        />
+      )}
     </div>
   );
 }

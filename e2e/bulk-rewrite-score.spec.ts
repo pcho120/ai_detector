@@ -2,12 +2,15 @@ import path from 'path';
 import { expect, test } from '@playwright/test';
 
 const SAPLING_API_KEY = process.env.SAPLING_API_KEY ?? '';
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY ?? '';
+const LLM_API_KEY = process.env.OPENAI_API_KEY ?? process.env.ANTHROPIC_API_KEY ?? process.env.LLM_API_KEY ?? '';
+// Detect provider from key format: Anthropic keys start with 'sk-ant-'
+const LLM_PROVIDER = (process.env.LLM_PROVIDER as 'openai' | 'anthropic') ??
+  (LLM_API_KEY.startsWith('sk-ant-') ? 'anthropic' : 'openai');
 
 test.describe('Bulk Rewrite Score Reduction (real API)', () => {
   test.skip(
-    !SAPLING_API_KEY || !OPENAI_API_KEY,
-    'Skipped: SAPLING_API_KEY and OPENAI_API_KEY env vars are required',
+    !SAPLING_API_KEY || !LLM_API_KEY,
+    'Skipped: SAPLING_API_KEY and OPENAI_API_KEY (or ANTHROPIC_API_KEY/LLM_API_KEY) env vars are required',
   );
 
   test('bulk rewrite reduces AI score to ≤70%', async ({ page }) => {
@@ -19,8 +22,8 @@ test.describe('Bulk Rewrite Score Reduction (real API)', () => {
         localStorage.setItem('ai_detector_settings', JSON.stringify(settings));
       },
       {
-        llmProvider: 'openai',
-        llmApiKey: OPENAI_API_KEY,
+        llmProvider: LLM_PROVIDER,
+        llmApiKey: LLM_API_KEY,
         detectionProvider: 'sapling',
         detectionApiKey: SAPLING_API_KEY,
         copyleaksEmail: '',

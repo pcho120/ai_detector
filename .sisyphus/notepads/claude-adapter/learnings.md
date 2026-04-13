@@ -39,3 +39,7 @@ This approach avoids hoisting conflicts while still allowing constructor argumen
 - Tests: PASS (574/574 across 23 test files, including 14 in llm-adapter.test.ts)
 - anthropic.ts: No `as any`, no `@ts-ignore`, no `console.log`, no stub throws; bare `catch {}` is intentional null-return-on-error pattern (correct)
 - Test coverage verified: factory branch selection (openai default, openai explicit, anthropic, unknown provider error), success path, empty content guard, non-text block guard, SDK throws → null, completeMulti delegation (1 SDK call), temperature clamp 1.5→1.0, constructor apiKey forwarding
+## 2026-04-11
+- Anthropic messages API rejects requests when both `temperature` and `top_p` are present; the adapter must choose one branch exclusively.
+- Keep clamping temperature to `1.0` only on the temperature path; when `topP` is provided, omit `temperature` entirely.
+- Adapter tests should assert both presence of the chosen field and absence of the excluded one.

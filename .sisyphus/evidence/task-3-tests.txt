@@ -1,0 +1,34 @@
+Task 3: Few-Shot Context Integration — Test Evidence
+=====================================================
+
+## Typecheck
+> npm run typecheck
+> tsc --noEmit
+✅ PASSED — no errors
+
+## Unit Tests (few-shot specific)
+> npx vitest run src/lib/suggestions/__tests__/fewShot.test.ts
+✅ 10 tests passed (0 failed)
+
+Tests:
+1. buildFewShotContextBlock — formats numbered sentences with correct prefix ✅
+2. buildFewShotContextBlock — returns empty string for empty array ✅
+3. buildFewShotContextBlock — returns empty string for undefined-ish input ✅
+4. buildFewShotContextBlock — truncates at MAX_FEWSHOT_CONTEXT_LENGTH ✅
+5. few-shot mutual exclusivity (single) — uses few-shot context instead of voiceProfile when both provided ✅
+6. few-shot mutual exclusivity (single) — falls back to voiceProfile when fewShotExamples is empty array ✅
+7. few-shot mutual exclusivity (single) — uses voiceProfile when fewShotExamples is undefined ✅
+8. few-shot mutual exclusivity (alternative) — uses few-shot context in multi prompt when both provided ✅
+9. few-shot mutual exclusivity (alternative) — uses voiceProfile in multi prompt when no few-shot ✅
+10. few-shot mutual exclusivity (alternative) — falls back to voiceProfile when fewShotExamples is empty array ✅
+
+## Full Test Suite
+> npm run test
+✅ 592 tests passed across 26 test files (0 failed)
+
+## Files Modified
+- src/lib/suggestions/voiceProfile.ts — added MAX_FEWSHOT_CONTEXT_LENGTH, buildFewShotContextBlock
+- src/lib/suggestions/llm.ts — added fewShotExamples param to buildUserPrompt, buildMultiUserPrompt, twoPassRewrite, generateSingleSuggestionWithProvider, generateAlternativeSuggestions
+
+## Files Created
+- src/lib/suggestions/__tests__/fewShot.test.ts — 10 unit tests

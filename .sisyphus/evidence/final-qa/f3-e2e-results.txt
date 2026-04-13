@@ -1,0 +1,22 @@
+=== F3: REAL MANUAL QA ===
+
+E2E Test Suite:
+  Total: 43 pass / 0 fail (57.6s, 8 workers, chromium)
+  e2e/f3-qa-screenshots.spec.ts: 5/5 pass
+  e2e/evidence-screenshots.spec.ts: 4/4 pass
+  e2e/home.spec.ts: 15/15 pass
+  e2e/my-paper-flow.spec.ts: 4/4 pass
+  e2e/task4-qa.spec.ts: 5/5 pass
+  e2e/task8-regression.spec.ts: 2/2 pass
+  e2e/voice-rewrite.spec.ts: 8/8 pass
+
+Key Data-testids:
+  my-paper-textarea in MyPaperTab.tsx: FOUND (line 144)
+  tab-my-paper in VoiceProfilePanel.tsx: FOUND (line 140)
+  extract-style-btn in MyPaperTab.tsx: FOUND (line 159)
+  my-paper-success in MyPaperTab.tsx: FOUND (line 166)
+  active-style-tab-state in page.tsx: FOUND (line 185)
+  voice-profile-state in page.tsx: FOUND (line 184)
+
+VERDICT: APPROVE
+Reason: All 43 E2E tests pass. All 6 key data-testids confirmed present in source.

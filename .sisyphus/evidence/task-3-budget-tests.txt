@@ -1,0 +1,19 @@
+> ai-detector@0.1.0 typecheck
+> tsc --noEmit
+
+Typecheck: PASS
+
+> ai-detector@0.1.0 test
+> vitest run
+
+RUN v3.2.4 C:/Users/kunch/OneDrive/Desktop/Program/ai_detector
+
+✓ src/lib/suggestions/__tests__/fewShot.test.ts (19 tests)
+✓ 26 test files passed
+
+Test Files  26 passed (26)
+Tests       622 passed (622)
+
+Budget verification covered by targeted few-shot tests:
+- output with 5 typical examples fits within MAX_FEWSHOT_CONTEXT_LENGTH
+- truncation remains sentence-boundary safe

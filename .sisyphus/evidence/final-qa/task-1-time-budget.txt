@@ -1,0 +1,16 @@
+Task 1 QA: Time-budget engine replaces fixed rounds
+====================================================
+Command: npx vitest run src/lib/bulk-rewrite/__tests__/bulkRewrite.test.ts --reporter=verbose
+Exit Code: 0
+Result: PASS
+
+All 34 tests passed. Time-budget specific tests:
+✓ executeBulkRewrite – time-budget engine > should use time budget instead of fixed MAX_ROUNDS
+✓ executeBulkRewrite – time-budget engine > should return partial results when deadline is reached mid-run
+✓ executeBulkRewrite – time-budget engine > should accept injectable now() function and call it
+✓ executeBulkRewrite – time-budget engine > should cap at MAX_ROUNDS=10 even with remaining time budget
+✓ executeBulkRewrite – time-budget engine > should check deadline before starting each round
+✓ executeBulkRewrite – time-budget engine > should return immediately if deadline already passed before first round
+
+Test Files: 1 passed (1)
+Tests: 34 passed (34)

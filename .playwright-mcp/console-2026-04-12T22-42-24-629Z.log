@@ -1,0 +1,85 @@
+[     143ms] [ERROR] Failed to load resource: the server responded with a status of 500 (Internal Server Error) @ http://localhost:3001/:0
+[     465ms] [INFO] %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold @ webpack-internal:///(pages-dir-browser)/./node_modules/react-dom/cjs/react-dom-client.development.js:28004
+[     605ms] ModuleBuildError: Module build failed: UnhandledSchemeError: Reading from "node:crypto" is not handled by plugins (Unhandled scheme).
+Webpack supports "data:" and "file:" URIs by default.
+You may need an additional plugin to handle "node:" URIs.
+    at C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:29:408351
+    at Hook.eval [as callAsync] (eval at create (C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:14:9224), <anonymous>:6:1)
+    at Hook.CALL_ASYNC_DELEGATE [as _callAsync] (C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:14:6378)
+    at Object.processResource (C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:29:408276)
+    at processResource (C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\loader-runner\LoaderRunner.js:1:5308)
+    at iteratePitchingLoaders (C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\loader-runner\LoaderRunner.js:1:4667)
+    at runLoaders (C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\loader-runner\LoaderRunner.js:1:8590)
+    at NormalModule._doBuild (C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:29:408138)
+    at NormalModule.build (C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:29:410151)
+    at C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:29:82479
+    at NormalModule.needBuild (C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:29:414135)
+    at Compilation._buildModule (C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:29:82196)
+    at C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:29:1378123
+    at Hook.eval [as callAsync] (eval at create (C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:14:9224), <anonymous>:6:1)
+    at AsyncQueue._startProcessing (C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:29:1377994)
+    at AsyncQueue._ensureProcessing (C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:29:1377843)
+    at process.processImmediate (node:internal/timers:505:21)
+    at C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:29:408351
+    at Hook.eval [as callAsync] (eval at create (C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:14:9224), <anonymous>:6:1)
+    at Hook.CALL_ASYNC_DELEGATE [as _callAsync] (C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:14:6378)
+    at Object.processResource (C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:29:408276)
+    at processResource (C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\loader-runner\LoaderRunner.js:1:5308)
+    at iteratePitchingLoaders (C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\loader-runner\LoaderRunner.js:1:4667)
+    at runLoaders (C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\loader-runner\LoaderRunner.js:1:8590)
+    at NormalModule._doBuild (C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:29:408138)
+    at NormalModule.build (C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:29:410151)
+    at C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:29:82479
+    at NormalModule.needBuild (C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:29:414135)
+    at Compilation._buildModule (C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:29:82196)
+    at C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:29:1378123
+    at Hook.eval [as callAsync] (eval at create (C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:14:9224), <anonymous>:6:1)
+    at AsyncQueue._startProcessing (C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:29:1377994)
+    at AsyncQueue._ensureProcessing (C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:29:1377843)
+    at process.processImmediate (node:internal/timers:505:21)
+    at <unknown> (Webpack supports "data:" and "file:" URIs by default.)
+    at <unknown> (file://C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:29:408351)
+    at Hook.eval [as callAsync] (file://C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:14:9224)
+    at Hook.CALL_ASYNC_DELEGATE [as _callAsync] (file://C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:14:6378)
+    at Object.processResource (file://C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:29:408276)
+    at processResource (file://C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\loader-runner\LoaderRunner.js:1:5308)
+    at iteratePitchingLoaders (file://C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\loader-runner\LoaderRunner.js:1:4667)
+    at runLoaders (file://C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\loader-runner\LoaderRunner.js:1:8590)
+    at NormalModule._doBuild (file://C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:29:408138)
+    at NormalModule.build (file://C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:29:410151)
+    at <unknown> (file://C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:29:82479)
+    at NormalModule.needBuild (file://C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:29:414135)
+    at Compilation._buildModule (file://C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:29:82196)
+    at <unknown> (file://C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:29:1378123)
+    at Hook.eval [as callAsync] (file://C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:14:9224)
+    at AsyncQueue._startProcessing (file://C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:29:1377994)
+    at AsyncQueue._ensureProcessing (file://C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:29:1377843)
+    at process.processImmediate (node:internal/timers:505:21)
+    at processResult (file://C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:29:407086)
+    at <unknown> (file://C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:29:408881)
+    at <unknown> (file://C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\loader-runner\LoaderRunner.js:1:8645)
+    at <unknown> (file://C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\loader-runner\LoaderRunner.js:1:5353)
+    at <unknown> (file://C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:29:408349)
+    at Hook.eval [as callAsync] (file://C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:14:9224)
+    at Hook.CALL_ASYNC_DELEGATE [as _callAsync] (file://C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:14:6378)
+    at Object.processResource (file://C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:29:408276)
+    at processResource (file://C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\loader-runner\LoaderRunner.js:1:5308)
+    at iteratePitchingLoaders (file://C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\loader-runner\LoaderRunner.js:1:4667)
+    at runLoaders (file://C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\loader-runner\LoaderRunner.js:1:8590)
+    at NormalModule._doBuild (file://C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:29:408138)
+    at NormalModule.build (file://C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:29:410151)
+    at <unknown> (file://C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:29:82479)
+    at NormalModule.needBuild (file://C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:29:414135)
+    at Compilation._buildModule (file://C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:29:82196)
+    at <unknown> (file://C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:29:1378123)
+    at Hook.eval [as callAsync] (file://C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:14:9224)
+    at AsyncQueue._startProcessing (file://C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:29:1377994)
+    at AsyncQueue._ensureProcessing (file://C:\Users\kunch\OneDrive\Desktop\Program\ai_detector\node_modules\next\dist\compiled\webpack\bundle5.js:29:1377843)
+    at process.processImmediate (node:internal/timers:505:21)
+[     602ms] [LOG] [HMR] connected @ webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/client/dev/hot-reloader/pages/websocket.js:45
+[     610ms] [ERROR] node:crypto
+Module build failed: UnhandledSchemeError: Reading from "node:crypto" is not handled by plugins (Unhandled scheme).
+Webpack supports "data:" and "file:" URIs by default.
+You may need an additional plugin to handle "node:" URIs. @ webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/next-devtools/userspace/pages/pages-dev-overlay-setup.js:76
+[     619ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:3001/favicon.ico:0
+[     703ms] [LOG] {file: Object} @ webpack-internal:///(pages-dir-browser)/./node_modules/next/dist/compiled/next-devtools/index.js:1630

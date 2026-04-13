@@ -1,0 +1,15 @@
+
+> ai-detector@0.1.0 dev
+> next dev
+
+   ▲ Next.js 15.5.14
+   - Local:        http://localhost:3001
+   - Network:      http://10.5.0.2:3001
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 2.8s
+ ○ Compiling / ...
+ GET / 500 in 3928ms
+ GET / 500 in 58ms
+ ✓ Compiled /_error in 1813ms (599 modules)

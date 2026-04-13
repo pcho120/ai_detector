@@ -1,0 +1,78 @@
+﻿
+> ai-detector@0.1.0 test
+> vitest run
+
+
+[1m[46m RUN [49m[22m [36mv3.2.4 [39m[90mC:/Users/kunch/OneDrive/Desktop/Program/ai_detector[39m
+
+ [32m??[39m src/lib/api/__tests__/requestSettings.test.ts [2m([22m[2m25 tests[22m[2m)[22m[32m 182[2mms[22m[39m
+ [32m??[39m tests/unit/doc-mocked.test.ts [2m([22m[2m8 tests[22m[2m)[22m[32m 289[2mms[22m[39m
+ [32m??[39m tests/unit/highlights.test.ts [2m([22m[2m38 tests[22m[2m)[22m[32m 78[2mms[22m[39m
+ [32m??[39m src/lib/bulk-rewrite/__tests__/bulkRewrite.test.ts [2m([22m[2m21 tests[22m[2m)[22m[32m 72[2mms[22m[39m
+ [32m??[39m tests/unit/detection.test.ts [2m([22m[2m20 tests[22m[2m)[22m[32m 79[2mms[22m[39m
+ [32m??[39m tests/unit/temp.test.ts [2m([22m[2m9 tests[22m[2m)[22m[33m 356[2mms[22m[39m
+ [32m??[39m tests/unit/doc.test.ts [2m([22m[2m20 tests[22m[2m)[22m[32m 279[2mms[22m[39m
+ [31m??[39m src/lib/style-extraction/__tests__/extractSentences.test.ts [2m([22m[2m6 tests[22m[2m | [22m[31m1 failed[39m[2m)[22m[32m 71[2mms[22m[39m
+   [32m??[39m splitIntoSentences[2m > [22mdoes not split on common abbreviations[32m 8[2mms[22m[39m
+   [32m??[39m filterCandidates[2m > [22mremoves garbage patterns and preserves real prose[32m 3[2mms[22m[39m
+   [32m??[39m selectDiverse[2m > [22mdraws from at least two length buckets[32m 9[2mms[22m[39m
+   [32m??[39m extractStyleSentences[2m > [22mextracts six diverse sentences from normal academic text within size bounds[32m 7[2mms[22m[39m
+[31m   [31m횞[31m extractStyleSentences[2m > [22mreturns fewer sentences without duplicates when only three usable sentences exist[39m[32m 33[2mms[22m[39m
+[31m     ??expected false to be true // Object.is equality[39m
+   [32m??[39m extractStyleSentences[2m > [22mreturns an empty result when the source text is below the minimum length[32m 1[2mms[22m[39m
+ [32m??[39m src/lib/detection/__tests__/copyleaks.test.ts [2m([22m[2m21 tests[22m[2m)[22m[32m 151[2mms[22m[39m
+ [32m??[39m tests/unit/docx.test.ts [2m([22m[2m17 tests[22m[2m)[22m[33m 573[2mms[22m[39m
+ [32m??[39m tests/unit/suggestions.test.ts [2m([22m[2m106 tests[22m[2m)[22m[32m 274[2mms[22m[39m
+ [32m??[39m src/components/__tests__/TargetScorePanel.test.tsx [2m([22m[2m34 tests[22m[2m)[22m[33m 1017[2mms[22m[39m
+ [32m??[39m src/lib/detection/__tests__/detection-factory.test.ts [2m([22m[2m26 tests[22m[2m)[22m[32m 69[2mms[22m[39m
+ [32m??[39m src/hooks/__tests__/useSettings.test.ts [2m([22m[2m11 tests[22m[2m)[22m[33m 504[2mms[22m[39m
+ [32m??[39m tests/unit/homepage.test.tsx [2m([22m[2m5 tests[22m[2m)[22m[33m 1071[2mms[22m[39m
+   [33m[2m??[22m[39m HomePage[2m > [22mrenders the upload shell [33m 543[2mms[22m[39m
+ [32m??[39m tests/integration/voice-profile-route.test.ts [2m([22m[2m27 tests[22m[2m)[22m[32m 146[2mms[22m[39m
+ [32m??[39m tests/integration/analyze-revised-route.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 151[2mms[22m[39m
+ [32m??[39m tests/integration/suggestions-route.test.ts [2m([22m[2m41 tests[22m[2m)[22m[33m 434[2mms[22m[39m
+ [32m??[39m src/lib/suggestions/__tests__/llm-adapter.test.ts [2m([22m[2m14 tests[22m[2m)[22m[32m 39[2mms[22m[39m
+ [32m??[39m src/lib/detection/__tests__/copyleaks-sentences.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 37[2mms[22m[39m
+ [32m??[39m src/lib/detection/__tests__/composite.test.ts [2m([22m[2m13 tests[22m[2m)[22m[32m 41[2mms[22m[39m
+ [32m??[39m src/lib/suggestions/__tests__/llm.test.ts [2m([22m[2m1 test[22m[2m)[22m[32m 14[2mms[22m[39m
+ [32m??[39m tests/unit/validate.test.ts [2m([22m[2m16 tests[22m[2m)[22m[32m 41[2mms[22m[39m
+ [32m??[39m tests/unit/revisedAnalysisReducer.test.ts [2m([22m[2m50 tests[22m[2m)[22m[32m 70[2mms[22m[39m
+ [32m??[39m tests/integration/analyze-route.test.ts [2m([22m[2m24 tests[22m[2m)[22m[33m 2155[2mms[22m[39m
+   [33m[2m??[22m[39m POST /api/analyze ??success path (docx)[2m > [22mreturns 200 with score, sentences, highlights, suggestions on valid English docx [33m 453[2mms[22m[39m
+node.exe : 
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[31m??렞??렞??렞??[39m[1m[41m Failed Tests 1 [49m[22m[31m??렞??렞??렞??[39m
+
+[41m[1m FAIL [22m[49m src/lib/style-extraction/__tests__/extractSentences.test.ts[2m > 
+[22mextractStyleSentences[2m > [22mreturns fewer sentences without duplicates when only three usable sentences exist
+[31m[1mAssertionError[22m: expected false to be true // Object.is equality[39m
+
+[32m- Expected[39m
+[31m+ Received[39m
+
+[32m- true[39m
+[31m+ false[39m
+
+[36m [2m??[22m src/lib/style-extraction/__tests__/extractSentences.test.ts:[2m138:77[22m[39m
+    [90m136| [39m    
+[34mexpect[39m(result[33m.[39msentences)[33m.[39m[34mtoHaveLength[39m([34m4[39m)[33m;[39m
+    [90m137| [39m    [34mexpect[39m([35mnew[39m 
+[33mSet[39m(result[33m.[39msentences)[33m.[39msize)[33m.[39m[34mtoBe[39m([34m4[39m)[33m;[39m
+    [90m138| [39m    expect(result.sentences.every((sentence) => usable.includes(senten??    [90m   | [39m         
+                                                                   [31m^[39m
+    [90m139| [39m    [34mexpect[39m(result[33m.[39mcount)[33m.[39m[34mtoBe[39m([34m4[39m)[33m;[39m
+    [90m140| [39m  })[33m;[39m
+
+[31m[2m??렞??렞??렞??렞??렞??렞??렞??렞??렞??렞??렞??렞[1/1]??[22m[39m
+
+
+[2m Test Files [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m24 passed[39m[22m[90m (25)[39m
+[2m      Tests [22m [1m[31m1 failed[39m[22m[2m | [22m[1m[32m581 passed[39m[22m[90m (582)[39m
+[2m   Start at [22m 17:26:45
+[2m   Duration [22m 20.91s[2m (transform 25.60s, setup 26.99s, collect 39.47s, tests 8.19s, environment 125.72s, prepare 34.02s)[22m
+

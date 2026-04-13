@@ -1,0 +1,14 @@
+﻿
+> ai-detector@0.1.0 test
+> vitest run src/lib/style-extraction/__tests__/extractSentences.test.ts
+
+
+[1m[46m RUN [49m[22m [36mv3.2.4 [39m[90mC:/Users/kunch/OneDrive/Desktop/Program/ai_detector[39m
+
+ [32m??[39m src/lib/style-extraction/__tests__/extractSentences.test.ts [2m([22m[2m12 tests[22m[2m)[22m[32m 16[2mms[22m[39m
+
+[2m Test Files [22m [1m[32m1 passed[39m[22m[90m (1)[39m
+[2m      Tests [22m [1m[32m12 passed[39m[22m[90m (12)[39m
+[2m   Start at [22m 01:22:48
+[2m   Duration [22m 2.39s[2m (transform 96ms, setup 136ms, collect 83ms, tests 16ms, environment 779ms, prepare 139ms)[22m
+
