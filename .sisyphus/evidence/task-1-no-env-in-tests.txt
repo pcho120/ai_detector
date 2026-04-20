@@ -1,6 +1,0 @@
-Task 1 env reference check
-
-Command: Select-String -Path "src/lib/api/__tests__/requestSettings.test.ts" -Pattern "process\.env"
-Result: no matches
-
-The test file contains zero process.env references after the red-phase update.

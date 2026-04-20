@@ -1,3 +1,0 @@
-`npm run typecheck` ✅
-
-Result: 0 TypeScript errors.

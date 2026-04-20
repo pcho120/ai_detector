@@ -1,7 +1,0 @@
-Task 2 verification snapshot
-
-- lsp_diagnostics: clean for src/lib/style-extraction (0 diagnostics)
-- npm run typecheck: PASS
-- npm run test: latest executed run still failed in src/lib/style-extraction/__tests__/extractSentences.test.ts
-  before final test-fixture adjustment to isolate garbage filler as standalone sentences.
-- No additional status check was run after that fixture-only adjustment due status-check cap.

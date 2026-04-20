@@ -1,4 +1,0 @@
-Exported `findSentenceInText` from `src/lib/highlights/spans.ts` without changing its signature or behavior; `bun run typecheck` will confirm the module still typechecks cleanly.
-Updated `src/app/api/suggestions/route.ts` to use fuzzy sentence matching plus slice-based replacement for previewScore enrichment, preserving the original alternative when no match exists; verification pending typecheck.
-Added regression coverage in `tests/integration/suggestions-route.test.ts` for whitespace-mismatched sentence replacement; the test captures the Sapling request body and verifies revised full text is sent before previewScore enrichment.
-Strengthened the previewScore regression to use a normalized sentence against newline-separated source text and assert captured Sapling requests contain rewritten full text.

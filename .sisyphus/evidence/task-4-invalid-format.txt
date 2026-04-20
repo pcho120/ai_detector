@@ -1,2 +1,0 @@
-﻿{"error":"UNSUPPORTED_FORMAT","message":"Only .docx and .doc files are supported."}
-HTTP_STATUS: 400

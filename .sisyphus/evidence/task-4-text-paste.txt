@@ -1,2 +1,0 @@
-﻿{"sentences":["The quick brown fox jumps over the lazy dog."],"count":1}
-HTTP_STATUS: 200

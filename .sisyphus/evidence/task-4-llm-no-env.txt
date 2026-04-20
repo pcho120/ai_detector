@@ -1,1 +1,0 @@
-PASS: Zero process.env references found in src/lib/suggestions/llm-adapter.ts and src/lib/suggestions/llm.ts
